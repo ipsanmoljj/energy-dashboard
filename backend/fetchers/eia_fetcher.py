@@ -57,13 +57,16 @@ MOCK_DATA = {
 
 def fetch_series(series_id: str, retries: int = 3) -> list:
     """Fetch last 2 data points for a series with retry + backoff."""
-    url = f"{BASE}/seriesid/{series_id}"
+    url = f"{BASE}/petroleum/supply/weekly/wpsup"
     params = {
         "api_key": API_KEY,
-        "out": "json",
-        "num": 2,
+        "frequency": "weekly",
+        "data[0]": "value",
+        "facets[series][]": series_id,
         "sort[0][column]": "period",
         "sort[0][direction]": "desc",
+        "length": 2,
+        "offset": 0,
     }
     for attempt in range(retries):
         try:
