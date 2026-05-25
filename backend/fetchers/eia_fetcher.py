@@ -9,7 +9,6 @@ import json
 import time
 import requests
 import pandas as pd
-from io import StringIO
 from datetime import datetime, timezone
 
 CACHE = {}
@@ -52,8 +51,19 @@ def fetch_wpsr_csv(url: str, retries: int = 3) -> pd.DataFrame:
         try:
             r = requests.get(url, headers=headers, timeout=15)
             r.raise_for_status()
-            # EIA CSVs have a few header rows to skip
-            df = pd.read_csv(StringIO(r.text), skiprows=4, header=0)
+            # EIA CSVs have inconsistent column counts — read raw lines
+            lines = r.text.splitlines()
+            rows = []
+            for line in lines:
+                parts = [p.strip().strip('"') for p in line.split(",")]
+                if len(parts) >= 4:
+                    rows.append(parts[:4])
+            if not rows:
+                return pd.DataFrame()
+            df = pd.DataFrame(rows[1:], columns=["label", "current", "prev", "diff"])
+            df["label"]   = df["label"].str.strip()
+            df["current"] = pd.to_numeric(df["current"].str.replace(",", ""), errors="coerce")
+            df["prev"]    = pd.to_numeric(df["prev"].str.replace(",", ""), errors="coerce")
             return df
         except Exception as e:
             if attempt < retries - 1:
@@ -77,102 +87,54 @@ def parse_wpsr(mock: bool = False) -> dict:
         # Table 1 — Stocks
         df = fetch_wpsr_csv(WPSR_URLS["stocks"])
         if not df.empty:
-            # EIA table 1 columns: Description, Current Week, Week Ago, Year Ago
-            # Row names contain the series labels
-            df.columns = [str(c).strip() for c in df.columns]
-            df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
-
             def get_row(keyword):
-                mask = df.iloc[:, 0].str.contains(keyword, case=False, na=False)
+                mask = df["label"].str.contains(keyword, case=False, na=False, regex=True)
                 rows = df[mask]
-                return rows.iloc[0] if not rows.empty else None
+                if not rows.empty:
+                    return rows.iloc[0]["current"], rows.iloc[0]["prev"]
+                return None, None
 
-            # Cushing crude stocks (million barrels)
-            row = get_row("Cushing")
-            if row is not None:
-                raw["cushing_stocks"] = {
-                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
-                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
-                    "unit":  "mmbbls"
-                }
+            v, p = get_row("Cushing")
+            if v is not None:
+                raw["cushing_stocks"] = {"value": v/1000, "prev": p/1000, "unit": "mmbbls"}
 
-            # Total commercial crude stocks
-            row = get_row("Commercial.*Excluding SPR")
-            if row is None:
-                row = get_row("Crude Oil.*Excluding")
-            if row is not None:
-                raw["total_crude_stocks"] = {
-                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
-                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
-                    "unit":  "mmbbls"
-                }
+            v, p = get_row("Commercial.*Exclud")
+            if v is not None:
+                raw["total_crude_stocks"] = {"value": v/1000, "prev": p/1000, "unit": "mmbbls"}
 
-            # Gasoline stocks
-            row = get_row("Total Motor Gasoline")
-            if row is not None:
-                raw["gasoline_stocks"] = {
-                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
-                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
-                    "unit":  "mmbbls"
-                }
+            v, p = get_row("Total Motor Gasoline")
+            if v is not None:
+                raw["gasoline_stocks"] = {"value": v/1000, "prev": p/1000, "unit": "mmbbls"}
 
-            # Distillate stocks
-            row = get_row("Distillate Fuel Oil")
-            if row is not None:
-                raw["distillate_stocks"] = {
-                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
-                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
-                    "unit":  "mmbbls"
-                }
+            v, p = get_row("Distillate Fuel Oil")
+            if v is not None:
+                raw["distillate_stocks"] = {"value": v/1000, "prev": p/1000, "unit": "mmbbls"}
 
         # Table 2 — Supply (production, imports, exports)
         df2 = fetch_wpsr_csv(WPSR_URLS["supply"])
         if not df2.empty:
-            df2.columns = [str(c).strip() for c in df2.columns]
-            df2.iloc[:, 0] = df2.iloc[:, 0].astype(str).str.strip()
-
             def get_row2(keyword):
-                mask = df2.iloc[:, 0].str.contains(keyword, case=False, na=False)
+                mask = df2["label"].str.contains(keyword, case=False, na=False, regex=True)
                 rows = df2[mask]
-                return rows.iloc[0] if not rows.empty else None
+                if not rows.empty:
+                    return rows.iloc[0]["current"], rows.iloc[0]["prev"]
+                return None, None
 
-            # Crude production (mbd)
-            row = get_row2("Domestic Production")
-            if row is not None:
-                raw["crude_production"] = {
-                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
-                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
-                    "unit":  "mbd"
-                }
+            v, p = get_row2("Domestic Production")
+            if v is not None:
+                raw["crude_production"] = {"value": v/1000, "prev": p/1000, "unit": "mbd"}
 
-            # Crude imports
-            row = get_row2("Total Crude Oil.*Import")
-            if row is None:
-                row = get_row2("Crude Oil Import")
-            if row is not None:
-                raw["crude_imports"] = {
-                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
-                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
-                    "unit":  "mbd"
-                }
+            v, p = get_row2("Crude Oil.*Import")
+            if v is not None:
+                raw["crude_imports"] = {"value": v/1000, "prev": p/1000, "unit": "mbd"}
 
-            # Crude exports
-            row = get_row2("Crude Oil.*Export")
-            if row is not None:
-                raw["crude_exports"] = {
-                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
-                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
-                    "unit":  "mbd"
-                }
+            v, p = get_row2("Crude Oil.*Export")
+            if v is not None:
+                raw["crude_exports"] = {"value": v/1000, "prev": p/1000, "unit": "mbd"}
 
-            # Refinery utilisation
-            row = get_row2("Refinery Utilization")
-            if row is not None:
-                raw["refinery_util"] = {
-                    "value": float(str(row.iloc[1]).replace(",", "")),
-                    "prev":  float(str(row.iloc[2]).replace(",", "")),
-                    "unit":  "%"
-                }
+            v, p = get_row2("Refinery Utilization")
+            if v is not None:
+                raw["refinery_util"] = {"value": v, "prev": p, "unit": "%"}
 
     except Exception as e:
         print(f"  Parse error: {e}")
