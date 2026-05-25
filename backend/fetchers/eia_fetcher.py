@@ -16,8 +16,8 @@ CACHE = {}
 
 # EIA WPSR CSV tables published every Wednesday after 10:30 EST
 WPSR_URLS = {
-    "stocks": "https://www.eia.gov/petroleum/supply/weekly/csv/table1.csv",
-    "supply":  "https://www.eia.gov/petroleum/supply/weekly/csv/table2.csv",
+    "stocks": "https://ir.eia.gov/wpsr/table1.csv",
+    "supply":  "https://ir.eia.gov/wpsr/table2.csv",
 }
 
 # 5-year seasonal averages (approximate baselines in mmbbls / mbd)
