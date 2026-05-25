@@ -15,22 +15,20 @@ from datetime import datetime, timezone
 CACHE = {}
 
 WPSR_URLS = {
-    "table1":  "https://ir.eia.gov/wpsr/table1.csv",  # stocks + products supplied
-    "table2":  "https://ir.eia.gov/wpsr/table2.csv",  # refinery inputs + utilization
-    "table4":  "https://ir.eia.gov/wpsr/table4.csv",  # regional stocks (Cushing)
+    "table1":  "https://ir.eia.gov/wpsr/table1.csv",
+    "table2":  "https://ir.eia.gov/wpsr/table2.csv",
+    "table4":  "https://ir.eia.gov/wpsr/table4.csv",
 }
 
-# 5-year seasonal averages (approximate baselines)
 FIVE_YR_AVG = {
-    "cushing_stocks":     27.0,   # mmbbls
-    "total_crude_stocks": 450.0,  # mmbbls
-    "gasoline_stocks":    235.0,  # mmbbls
-    "distillate_stocks":  120.0,  # mmbbls
-    "crude_production":   13.2,   # mbd
-    "refinery_util":      90.0,   # %
+    "cushing_stocks":     27.0,
+    "total_crude_stocks": 450.0,
+    "gasoline_stocks":    235.0,
+    "distillate_stocks":  120.0,
+    "crude_production":   13.2,
+    "refinery_util":      90.0,
 }
 
-# Mock data for offline testing (--mock flag)
 MOCK_DATA = {
     "cushing_stocks":     {"value": 25.8,  "prev": 27.4,  "unit": "mmbbls"},
     "total_crude_stocks": {"value": 445.0, "prev": 452.9, "unit": "mmbbls"},
@@ -46,7 +44,6 @@ MOCK_DATA = {
 
 
 def fetch_raw_lines(url: str, retries: int = 3) -> list:
-    """Fetch CSV and return raw lines as list of strings."""
     headers = {"User-Agent": "Mozilla/5.0 (energy-dashboard)"}
     for attempt in range(retries):
         try:
@@ -61,28 +58,35 @@ def fetch_raw_lines(url: str, retries: int = 3) -> list:
                 return []
 
 
-def parse_row(line: str) -> list:
-    """Split a CSV line into clean string parts."""
-    return [p.strip().strip('"') for p in line.split(",")]
+def parse_quoted_line(line: str) -> list:
+    """
+    Split a quoted CSV line correctly.
+    Splits on '","' so numbers like "13,702" stay intact inside quotes.
+    Strips leading/trailing quotes from the whole line first.
+    """
+    line = line.strip()
+    if line.startswith('"'):
+        line = line[1:]
+    if line.endswith('"'):
+        line = line[:-1]
+    return [p.strip() for p in line.split('","')]
 
 
 def to_float(s: str):
-    """Convert string to float, return None if not possible."""
     try:
         return float(s.replace(",", "").strip())
     except Exception:
         return None
 
 
-def find_in_lines(lines: list, keyword: str,
-                  col_current: int, col_prev: int):
+def find_in_lines(lines: list, keyword: str, col_current: int, col_prev: int):
     """
-    Search lines for keyword, return (current, prev) from specified columns.
-    keyword is matched as regex against the full line.
+    Search lines for keyword regex, return (current, prev) from specified columns.
+    Uses parse_quoted_line so comma-in-numbers are handled correctly.
     """
     for line in lines:
         if re.search(keyword, line, re.IGNORECASE):
-            parts = parse_row(line)
+            parts = parse_quoted_line(line)
             if len(parts) > max(col_current, col_prev):
                 v = to_float(parts[col_current])
                 p = to_float(parts[col_prev])
@@ -98,17 +102,8 @@ def parse_wpsr(mock: bool = False) -> dict:
     raw = {}
 
     # ── TABLE 1 ─────────────────────────────────────────────────────────────
-    # Structure:
-    #   Section A (before STUB_2): single label col
-    #     col0=label, col1=current week, col2=prev week
-    #     Values in MILLION BARRELS (stocks)
-    #   Section B (after STUB_2): two label cols
-    #     col0=category, col1=label, col2=current week, col3=prev week
-    #     Values in THOUSAND BARRELS/DAY (supply/demand) → divide by 1000
-
     lines1 = fetch_raw_lines(WPSR_URLS["table1"])
     if lines1:
-        # Split sections
         section_a, section_b = [], []
         in_b = False
         for line in lines1:
@@ -120,7 +115,8 @@ def parse_wpsr(mock: bool = False) -> dict:
             else:
                 section_a.append(line)
 
-        # Section A — stocks (mmbbls, no conversion)
+        # Section A — stocks (mmbbls, no conversion needed)
+        # col0=label, col1=current, col2=prev
         v, p = find_in_lines(section_a, "Commercial.*Exclud", 1, 2)
         if v: raw["total_crude_stocks"] = {"value": v, "prev": p, "unit": "mmbbls"}
 
@@ -135,13 +131,12 @@ def parse_wpsr(mock: bool = False) -> dict:
         v, p = find_in_lines(section_b, r"\(1\).*Domestic Production", 2, 3)
         if v: raw["crude_production"] = {"value": round(v/1000, 3), "prev": round(p/1000, 3), "unit": "mbd"}
 
-        v, p = find_in_lines(section_b, r"\(8\).*Imports\"", 2, 3)
+        v, p = find_in_lines(section_b, r"\(8\).*Imports", 2, 3)
         if v: raw["crude_imports"] = {"value": round(v/1000, 3), "prev": round(p/1000, 3), "unit": "mbd"}
 
         v, p = find_in_lines(section_b, r"\(12\).*Exports", 2, 3)
         if v: raw["crude_exports"] = {"value": round(v/1000, 3), "prev": round(p/1000, 3), "unit": "mbd"}
 
-        # Products supplied (kbd → mbd)
         v, p = find_in_lines(section_b, r"\(31\).*Finished Motor Gasoline", 2, 3)
         if v: raw["gasoline_demand"] = {"value": round(v/1000, 3), "prev": round(p/1000, 3), "unit": "mbd"}
 
@@ -149,18 +144,14 @@ def parse_wpsr(mock: bool = False) -> dict:
         if v: raw["distillate_demand"] = {"value": round(v/1000, 3), "prev": round(p/1000, 3), "unit": "mbd"}
 
     # ── TABLE 2: refinery utilization ───────────────────────────────────────
-    # Structure: col0=category, col1=label, col2=current, col3=prev
-    # "Percent Utilization" row — already in %
-
+    # col0=category, col1=label, col2=current, col3=prev
     lines2 = fetch_raw_lines(WPSR_URLS["table2"])
     if lines2:
         v, p = find_in_lines(lines2, "Percent Utilization", 2, 3)
         if v: raw["refinery_util"] = {"value": v, "prev": p, "unit": "%"}
 
-    # ── TABLE 4: regional stocks — Cushing ──────────────────────────────────
-    # Structure: col0=label, col1=current, col2=prev
-    # Values already in million barrels
-
+    # ── TABLE 4: Cushing stocks ──────────────────────────────────────────────
+    # col0=label, col1=current, col2=prev
     lines4 = fetch_raw_lines(WPSR_URLS["table4"])
     if lines4:
         v, p = find_in_lines(lines4, r"^Cushing$", 1, 2)
@@ -176,7 +167,6 @@ def parse_wpsr(mock: bool = False) -> dict:
 
 
 def fetch_all(mock: bool = False) -> dict:
-    """Main entry point. Returns unified signals dict."""
     cache_key = "eia_all"
     now = datetime.now(timezone.utc).timestamp()
     if cache_key in CACHE and now - CACHE[cache_key]["ts"] < 3600:
@@ -185,7 +175,6 @@ def fetch_all(mock: bool = False) -> dict:
     print(f"Fetching EIA data {'(mock)' if mock else '(live — EIA WPSR CSV)'}...")
     raw = parse_wpsr(mock=mock)
 
-    # Compute derived metrics
     result = {}
     for key, data in raw.items():
         v, p = data.get("value"), data.get("prev")
@@ -193,20 +182,17 @@ def fetch_all(mock: bool = False) -> dict:
         vs5yr = round(v - FIVE_YR_AVG[key], 2) if key in FIVE_YR_AVG and v is not None else None
         result[key] = {**data, "wow": wow, "vs_5yr_avg": vs5yr}
 
-    # Days of forward demand cover
     total  = sum(result[k]["value"] or 0
                  for k in ["total_crude_stocks", "gasoline_stocks", "distillate_stocks"])
     demand = sum(result[k]["value"] or 0
                  for k in ["gasoline_demand", "distillate_demand"])
     result["days_cover"] = round(total / demand, 1) if demand else None
 
-    # Net supply balance (production + imports - exports)
     prod = result.get("crude_production", {}).get("value") or 0
     imp  = result.get("crude_imports",    {}).get("value") or 0
     exp  = result.get("crude_exports",    {}).get("value") or 0
     result["net_supply_mbd"] = round(prod + imp - exp, 2)
 
-    # Composite bull/bear score
     score = 0
     wow_c = result.get("cushing_stocks", {}).get("wow")
     if wow_c is not None:
