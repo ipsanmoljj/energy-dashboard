@@ -1,36 +1,26 @@
 """
 EIA Data Fetcher — Energy Markets Dashboard
-Fetches live weekly petroleum data from EIA Open API v2
+Downloads EIA Weekly Petroleum Status Report CSV directly.
+No API route confusion — uses the same CSV EIA publishes every Wednesday.
 """
 
 import os
 import json
 import time
 import requests
+import pandas as pd
+from io import StringIO
 from datetime import datetime, timezone
-from dotenv import load_dotenv
 
-load_dotenv()
+CACHE = {}
 
-API_KEY = os.getenv("EIA_API_KEY", "DEMO_KEY")
-BASE    = "https://api.eia.gov/v2"
-CACHE   = {}
-
-# ── Series definitions ──────────────────────────────────────────────────────
-SERIES = {
-    "cushing_stocks":     ("WCSSTUS1", "Cushing crude stocks",      "mmbbls"),
-    "total_crude_stocks": ("WCRSTUS1", "Total US crude stocks",     "mmbbls"),
-    "gasoline_stocks":    ("WGTSTUS1", "US gasoline stocks",        "mmbbls"),
-    "distillate_stocks":  ("WDISTUS1", "US distillate stocks",      "mmbbls"),
-    "crude_production":   ("WCRFPUS2", "US crude production",       "mbd"),
-    "refinery_util":      ("WCRRIUS2", "Refinery utilisation",      "%"),
-    "gasoline_demand":    ("WGFUPUS2", "Gasoline implied demand",   "mbd"),
-    "distillate_demand":  ("WDITUUS2", "Distillate implied demand", "mbd"),
-    "crude_exports":      ("WCREXUS2", "Crude exports",             "mbd"),
-    "crude_imports":      ("WCRIMUS2", "Crude imports",             "mbd"),
+# EIA WPSR CSV tables published every Wednesday after 10:30 EST
+WPSR_URLS = {
+    "stocks": "https://www.eia.gov/petroleum/supply/weekly/csv/table1.csv",
+    "supply":  "https://www.eia.gov/petroleum/supply/weekly/csv/table2.csv",
 }
 
-# ── 5-year seasonal averages (approximate baselines) ────────────────────────
+# 5-year seasonal averages (approximate baselines in mmbbls / mbd)
 FIVE_YR_AVG = {
     "cushing_stocks":     430,
     "total_crude_stocks": 450,
@@ -40,7 +30,7 @@ FIVE_YR_AVG = {
     "refinery_util":      90.0,
 }
 
-# ── Mock data for offline testing ────────────────────────────────────────────
+# Mock data for offline testing
 MOCK_DATA = {
     "cushing_stocks":     {"value": 422.1, "prev": 435.2, "unit": "mmbbls"},
     "total_crude_stocks": {"value": 441.5, "prev": 447.0, "unit": "mmbbls"},
@@ -55,64 +45,158 @@ MOCK_DATA = {
 }
 
 
-def fetch_series(series_id: str, retries: int = 3) -> list:
-    """Fetch last 2 data points for a series with retry + backoff."""
-    url = f"{BASE}/petroleum/supply/weekly/wpsup"
-    params = {
-        "api_key": API_KEY,
-        "frequency": "weekly",
-        "data[0]": "value",
-        "facets[series][]": series_id,
-        "sort[0][column]": "period",
-        "sort[0][direction]": "desc",
-        "length": 2,
-        "offset": 0,
-    }
+def fetch_wpsr_csv(url: str, retries: int = 3) -> pd.DataFrame:
+    """Download and parse an EIA WPSR CSV table."""
+    headers = {"User-Agent": "Mozilla/5.0 (energy-dashboard research project)"}
     for attempt in range(retries):
         try:
-            r = requests.get(url, params=params, timeout=10)
+            r = requests.get(url, headers=headers, timeout=15)
             r.raise_for_status()
-            return r.json().get("response", {}).get("data", [])
+            # EIA CSVs have a few header rows to skip
+            df = pd.read_csv(StringIO(r.text), skiprows=4, header=0)
+            return df
         except Exception as e:
             if attempt < retries - 1:
                 time.sleep(2 ** attempt)
             else:
-                print(f"  Failed to fetch {series_id}: {e}")
-                return []
+                print(f"  Failed to fetch {url}: {e}")
+                return pd.DataFrame()
+
+
+def parse_wpsr(mock: bool = False) -> dict:
+    """
+    Parse EIA WPSR CSVs into a clean dict.
+    Returns latest week value + prior week value for each series.
+    """
+    if mock:
+        return MOCK_DATA
+
+    raw = {}
+
+    try:
+        # Table 1 — Stocks
+        df = fetch_wpsr_csv(WPSR_URLS["stocks"])
+        if not df.empty:
+            # EIA table 1 columns: Description, Current Week, Week Ago, Year Ago
+            # Row names contain the series labels
+            df.columns = [str(c).strip() for c in df.columns]
+            df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
+
+            def get_row(keyword):
+                mask = df.iloc[:, 0].str.contains(keyword, case=False, na=False)
+                rows = df[mask]
+                return rows.iloc[0] if not rows.empty else None
+
+            # Cushing crude stocks (million barrels)
+            row = get_row("Cushing")
+            if row is not None:
+                raw["cushing_stocks"] = {
+                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
+                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
+                    "unit":  "mmbbls"
+                }
+
+            # Total commercial crude stocks
+            row = get_row("Commercial.*Excluding SPR")
+            if row is None:
+                row = get_row("Crude Oil.*Excluding")
+            if row is not None:
+                raw["total_crude_stocks"] = {
+                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
+                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
+                    "unit":  "mmbbls"
+                }
+
+            # Gasoline stocks
+            row = get_row("Total Motor Gasoline")
+            if row is not None:
+                raw["gasoline_stocks"] = {
+                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
+                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
+                    "unit":  "mmbbls"
+                }
+
+            # Distillate stocks
+            row = get_row("Distillate Fuel Oil")
+            if row is not None:
+                raw["distillate_stocks"] = {
+                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
+                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
+                    "unit":  "mmbbls"
+                }
+
+        # Table 2 — Supply (production, imports, exports)
+        df2 = fetch_wpsr_csv(WPSR_URLS["supply"])
+        if not df2.empty:
+            df2.columns = [str(c).strip() for c in df2.columns]
+            df2.iloc[:, 0] = df2.iloc[:, 0].astype(str).str.strip()
+
+            def get_row2(keyword):
+                mask = df2.iloc[:, 0].str.contains(keyword, case=False, na=False)
+                rows = df2[mask]
+                return rows.iloc[0] if not rows.empty else None
+
+            # Crude production (mbd)
+            row = get_row2("Domestic Production")
+            if row is not None:
+                raw["crude_production"] = {
+                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
+                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
+                    "unit":  "mbd"
+                }
+
+            # Crude imports
+            row = get_row2("Total Crude Oil.*Import")
+            if row is None:
+                row = get_row2("Crude Oil Import")
+            if row is not None:
+                raw["crude_imports"] = {
+                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
+                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
+                    "unit":  "mbd"
+                }
+
+            # Crude exports
+            row = get_row2("Crude Oil.*Export")
+            if row is not None:
+                raw["crude_exports"] = {
+                    "value": float(str(row.iloc[1]).replace(",", "")) / 1000,
+                    "prev":  float(str(row.iloc[2]).replace(",", "")) / 1000,
+                    "unit":  "mbd"
+                }
+
+            # Refinery utilisation
+            row = get_row2("Refinery Utilization")
+            if row is not None:
+                raw["refinery_util"] = {
+                    "value": float(str(row.iloc[1]).replace(",", "")),
+                    "prev":  float(str(row.iloc[2]).replace(",", "")),
+                    "unit":  "%"
+                }
+
+    except Exception as e:
+        print(f"  Parse error: {e}")
+
+    # Fill any missing series with mock data
+    for key in MOCK_DATA:
+        if key not in raw:
+            print(f"  Using mock for missing series: {key}")
+            raw[key] = MOCK_DATA[key]
+
+    return raw
 
 
 def fetch_all(mock: bool = False) -> dict:
     """
-    Fetch all series. Returns dict of:
-    { key: { value, prev, unit, period, wow, vs_5yr } }
+    Main entry point. Returns unified signals dict.
     """
-    # Check cache (1 hour TTL)
     cache_key = "eia_all"
     now = datetime.now(timezone.utc).timestamp()
     if cache_key in CACHE and now - CACHE[cache_key]["ts"] < 3600:
         return CACHE[cache_key]["data"]
 
-    raw = MOCK_DATA if mock else {}
-
-    if not mock:
-        for key, (sid, label, unit) in SERIES.items():
-            rows = fetch_series(sid)
-            if len(rows) >= 2:
-                raw[key] = {
-                    "value":  float(rows[0].get("value", 0)),
-                    "prev":   float(rows[1].get("value", 0)),
-                    "unit":   unit,
-                    "period": rows[0].get("period", ""),
-                }
-            elif len(rows) == 1:
-                raw[key] = {
-                    "value":  float(rows[0].get("value", 0)),
-                    "prev":   None,
-                    "unit":   unit,
-                    "period": rows[0].get("period", ""),
-                }
-            else:
-                raw[key] = {"value": None, "prev": None, "unit": unit, "period": ""}
+    print(f"Fetching EIA data {'(mock)' if mock else '(live — EIA WPSR CSV)'}...")
+    raw = parse_wpsr(mock=mock)
 
     # Compute derived metrics
     result = {}
@@ -123,8 +207,10 @@ def fetch_all(mock: bool = False) -> dict:
         result[key] = {**data, "wow": wow, "vs_5yr_avg": vs5yr}
 
     # Days of forward demand cover
-    total  = sum(result[k]["value"] or 0 for k in ["total_crude_stocks","gasoline_stocks","distillate_stocks"])
-    demand = sum(result[k]["value"] or 0 for k in ["gasoline_demand","distillate_demand"])
+    total  = sum(result[k]["value"] or 0
+                 for k in ["total_crude_stocks", "gasoline_stocks", "distillate_stocks"])
+    demand = sum(result[k]["value"] or 0
+                 for k in ["gasoline_demand", "distillate_demand"])
     result["days_cover"] = round(total / demand, 1) if demand else None
 
     # Net supply balance
@@ -135,8 +221,9 @@ def fetch_all(mock: bool = False) -> dict:
 
     # Composite bull/bear score
     score = 0
-    if result.get("cushing_stocks", {}).get("wow") is not None:
-        score += -1 if result["cushing_stocks"]["wow"] < -1 else (1 if result["cushing_stocks"]["wow"] > 1 else 0)
+    wow_c = result.get("cushing_stocks", {}).get("wow")
+    if wow_c is not None:
+        score += -1 if wow_c < -1 else (1 if wow_c > 1 else 0)
     for key in ["cushing_stocks", "total_crude_stocks", "distillate_stocks"]:
         dev = result.get(key, {}).get("vs_5yr_avg")
         if dev is not None:
@@ -144,13 +231,13 @@ def fetch_all(mock: bool = False) -> dict:
     dc = result.get("days_cover")
     if dc:
         score += 2 if dc < 54 else (-2 if dc > 62 else 0)
-    result["composite_score"] = score
-    result["composite_signal"] = "BULLISH" if score >= 2 else ("BEARISH" if score <= -2 else "NEUTRAL")
+    result["composite_score"]  = score
+    result["composite_signal"] = ("BULLISH" if score >= 2
+                                  else "BEARISH" if score <= -2
+                                  else "NEUTRAL")
 
-    # Cache result
     CACHE[cache_key] = {"ts": now, "data": result}
 
-    # Save raw to file
     os.makedirs("backend/data", exist_ok=True)
     with open("backend/data/eia_latest.json", "w") as f:
         json.dump(result, f, indent=2, default=str)
@@ -161,9 +248,11 @@ def fetch_all(mock: bool = False) -> dict:
 if __name__ == "__main__":
     import sys
     mock = "--mock" in sys.argv
-    print(f"Fetching EIA data {'(mock)' if mock else '(live)'}...")
     data = fetch_all(mock=mock)
+    dc   = data.get("days_cover")
+    wow  = data.get("cushing_stocks", {}).get("wow")
+    ns   = data.get("net_supply_mbd")
     print(f"\nComposite signal: {data['composite_signal']} ({data['composite_score']:+d})")
-    print(f"Days of cover:    {data['days_cover']}d")
-    print(f"Cushing WoW:      {data['cushing_stocks']['wow']:+.1f} mmbbls")
-    print(f"Net supply:       {data['net_supply_mbd']} mbd")
+    print(f"Days of cover:    {dc}d")
+    print(f"Cushing WoW:      {wow:+.1f} mmbbls" if wow is not None else "Cushing WoW:      N/A")
+    print(f"Net supply:       {ns} mbd")
