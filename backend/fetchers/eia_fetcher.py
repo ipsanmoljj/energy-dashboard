@@ -154,7 +154,7 @@ def parse_wpsr(mock: bool = False) -> dict:
     # col0=label, col1=current, col2=prev
     lines4 = fetch_raw_lines(WPSR_URLS["table4"])
     if lines4:
-        v, p = find_in_lines(lines4, r"^Cushing$", 1, 2)
+        v, p = find_in_lines(lines4, r"Cushing", 1, 2)
         if v: raw["cushing_stocks"] = {"value": v, "prev": p, "unit": "mmbbls"}
 
     # Fill missing with mock
