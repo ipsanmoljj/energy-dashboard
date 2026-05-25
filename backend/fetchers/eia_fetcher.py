@@ -8,6 +8,7 @@ import os
 import json
 import time
 import requests
+import re
 import pandas as pd
 from datetime import datetime, timezone
 
@@ -83,46 +84,118 @@ def parse_wpsr(mock: bool = False) -> dict:
 
     raw = {}
 
-    # ── Table 1: stocks + production ────────────────────────────────────────
-    df1 = fetch_csv(WPSR_URLS["stocks"])
-    if not df1.empty:
-        # Stocks — already in million barrels
-        v, p = get_val(df1, "Commercial.*Exclud")
+    # ── Table 1 ─────────────────────────────────────────────────────────────
+    headers = {"User-Agent": "Mozilla/5.0 (energy-dashboard)"}
+    try:
+        r = requests.get(WPSR_URLS["stocks"], headers=headers, timeout=15)
+        r.raise_for_status()
+        lines = r.text.splitlines()
+
+        # Split into two sections:
+        # Section A: single label column (stocks) — rows before STUB_2 appears
+        # Section B: two label columns (supply/demand) — rows after STUB_2 appears
+        section_a = []
+        section_b = []
+        in_b = False
+        for line in lines:
+            if "STUB_2" in line:
+                in_b = True
+                continue
+            parts = [p.strip().strip('"') for p in line.split(",")]
+            if in_b:
+                if len(parts) >= 4:
+                    section_b.append(parts)
+            else:
+                if len(parts) >= 3:
+                    section_a.append(parts)
+
+        # Section A — stocks (col0=label, col1=current, col2=prev)
+        # already in million barrels
+        def find_a(keyword):
+            for row in section_a:
+                if re.search(keyword, row[0], re.IGNORECASE):
+                    try:
+                        return float(row[1].replace(",","")), float(row[2].replace(",",""))
+                    except:
+                        pass
+            return None, None
+
+        v, p = find_a("Commercial.*Exclud")
         if v: raw["total_crude_stocks"] = {"value": v, "prev": p, "unit": "mmbbls"}
 
-        v, p = get_val(df1, "Total Motor Gasoline")
+        v, p = find_a("Total Motor Gasoline")
         if v: raw["gasoline_stocks"] = {"value": v, "prev": p, "unit": "mmbbls"}
 
-        v, p = get_val(df1, "Distillate Fuel Oil")
+        v, p = find_a("Distillate Fuel Oil")
         if v: raw["distillate_stocks"] = {"value": v, "prev": p, "unit": "mmbbls"}
 
-        # Production — table1 col2 is in kbd, divide by 1000 for mbd
-        v, p = get_val(df1, r"\(1\).*Domestic Production")
+        # Section B — supply/demand (col0=category, col1=label, col2=current, col3=prev)
+        # values in kbd — divide by 1000 for mbd
+        def find_b(keyword):
+            for row in section_b:
+                label = row[1] if len(row) > 1 else ""
+                if re.search(keyword, label, re.IGNORECASE):
+                    try:
+                        return float(row[2].replace(",","")), float(row[3].replace(",",""))
+                    except:
+                        pass
+            return None, None
+
+        v, p = find_b(r"\(1\).*Domestic Production")
         if v: raw["crude_production"] = {"value": v/1000, "prev": p/1000, "unit": "mbd"}
 
-        # Imports / exports — also in kbd
-        v, p = get_val(df1, "Crude Oil Import")
+        v, p = find_b(r"\(8\).*Imports$")
         if v: raw["crude_imports"] = {"value": v/1000, "prev": p/1000, "unit": "mbd"}
 
-        v, p = get_val(df1, "Crude Oil Export")
+        v, p = find_b(r"\(12\).*Exports")
         if v: raw["crude_exports"] = {"value": v/1000, "prev": p/1000, "unit": "mbd"}
 
-        # Refinery utilisation — already in %
-        v, p = get_val(df1, "Refinery Utilization")
+    except Exception as e:
+        print(f"  Table1 parse error: {e}")
+
+    # ── Table 4: regional stocks — Cushing ──────────────────────────────────
+    try:
+        df4 = fetch_csv(WPSR_URLS["regions"])
+        if not df4.empty:
+            v, p = get_val(df4, "^Cushing$")
+            if v: raw["cushing_stocks"] = {"value": v, "prev": p, "unit": "mmbbls"}
+    except Exception as e:
+        print(f"  Table4 parse error: {e}")
+
+    # ── Table 1 extra: refinery util + implied demand ────────────────────────
+    # These are in a third section of table1 — fetch again and scan all lines
+    try:
+        r = requests.get(WPSR_URLS["stocks"], headers=headers, timeout=15)
+        lines = r.text.splitlines()
+
+        def scan_all(keyword):
+            for line in lines:
+                if re.search(keyword, line, re.IGNORECASE):
+                    parts = [p.strip().strip('"') for p in line.split(",")]
+                    # Find first two numeric values
+                    nums = []
+                    for p in parts:
+                        try:
+                            nums.append(float(p.replace(",","")))
+                        except:
+                            pass
+                        if len(nums) == 2:
+                            break
+                    if len(nums) == 2:
+                        return nums[0], nums[1]
+            return None, None
+
+        v, p = scan_all("Refinery Utilization Rate")
         if v: raw["refinery_util"] = {"value": v, "prev": p, "unit": "%"}
 
-        # Implied demand (product supplied) — in kbd
-        v, p = get_val(df1, "Motor Gasoline.*Product Supplied")
+        v, p = scan_all("Motor Gasoline.*Product Supplied")
         if v: raw["gasoline_demand"] = {"value": v/1000, "prev": p/1000, "unit": "mbd"}
 
-        v, p = get_val(df1, "Distillate.*Product Supplied")
+        v, p = scan_all("Distillate Fuel Oil.*Product Supplied")
         if v: raw["distillate_demand"] = {"value": v/1000, "prev": p/1000, "unit": "mbd"}
 
-    # ── Table 4: regional stocks — Cushing is here ──────────────────────────
-    df4 = fetch_csv(WPSR_URLS["regions"])
-    if not df4.empty:
-        v, p = get_val(df4, "^Cushing$")
-        if v: raw["cushing_stocks"] = {"value": v, "prev": p, "unit": "mmbbls"}
+    except Exception as e:
+        print(f"  Extra scan error: {e}")
 
     # Fill missing with mock
     for key in MOCK_DATA:
@@ -131,8 +204,7 @@ def parse_wpsr(mock: bool = False) -> dict:
             raw[key] = MOCK_DATA[key]
 
     return raw
-
-
+    
 def fetch_all(mock: bool = False) -> dict:
     cache_key = "eia_all"
     now = datetime.now(timezone.utc).timestamp()
