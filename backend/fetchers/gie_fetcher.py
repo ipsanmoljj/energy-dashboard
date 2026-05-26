@@ -239,7 +239,7 @@ def parse_record(rec: dict) -> dict:
         five_yr = None  # reject values that are clearly wrong (< 5% is not a valid 5yr avg)
 
     return {
-        "date":          rec.get("gasDayStartedOn") or rec.get("date") or rec.get("gasDay"),
+        "date":          rec.get("gasDayStart") or rec.get("gasDayStartedOn") or rec.get("date") or rec.get("gasDay"),
         "fill_pct":      fill_pct,
         "prev_fill_pct": safe_float(rec.get("trend")),   # GIE 'trend' = prev day fill
         "inject_twh":    safe_float(rec.get("injection") or rec.get("inject")),
@@ -256,8 +256,7 @@ def run() -> dict:
 
     output = {
         "fetcher":    "gie_fetcher",
-        "fetched_at": datetime.now(datetime.timezone.utc if hasattr(datetime, 'timezone') else None).isoformat() + "Z"
-                      if False else datetime.utcnow().isoformat() + "Z",
+        "fetched_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source":     "GIE AGSI+ (https://agsi.gie.eu)",
         "season":     "injection" if is_injection_season() else "withdrawal",
         "note":       "5yr average not provided by GIE country endpoints; using absolute fill thresholds.",
@@ -265,8 +264,7 @@ def run() -> dict:
         "composite":  {},
     }
 
-    # Fix for deprecation warning
-    output["fetched_at"] = datetime.utcnow().isoformat() + "Z"
+    # season and note
 
     weighted_score = 0.0
     total_weight   = 0.0
