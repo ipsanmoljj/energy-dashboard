@@ -1,0 +1,616 @@
+"""
+cftc_fetcher.py
+---------------
+Downloads CFTC Commitments of Traders (COT) report and extracts
+speculative positioning for the 5 core energy futures contracts.
+
+Free public data — no API key needed.
+Published every Friday at 3:30 PM ET (covers Tuesday positions).
+URL pattern: https://www.cftc.gov/dea/newcot/fut_disagg_txtonly_{YEAR}.zip
+
+Why CFTC positioning matters:
+  Managed Money net longs/shorts reveal how hedge funds and CTAs
+  are positioned in energy markets. Extreme positioning = crowded trade.
+
+  CROWDED LONG  → mean-reversion risk: any bad news triggers rapid unwind
+                  → sharp sell-off even if fundamentals unchanged
+  CROWDED SHORT  → short-squeeze risk: bullish catalyst = rapid covering
+                  → sharp rally
+  BUILDING LONGS → trend-following; confirms bullish fundamental view
+  BUILDING SHORTS → confirms bearish fundamental view
+
+  Key threshold (from oil macro analysis):
+  Net managed money longs as % of open interest:
+    > +25%  = CROWDED LONG
+    +10–25% = BULLISH positioning
+    -5–+10% = NEUTRAL
+    -5–-15% = BEARISH positioning
+    < -15%  = CROWDED SHORT
+
+Contracts tracked:
+  Brent (ICE), WTI (NYMEX), RBOB Gasoline, Heating Oil, Natural Gas
+
+Saves to: backend/data/cftc_latest.json
+
+CFTC COT data: https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm
+"""
+
+import io
+import json
+import logging
+import zipfile
+import requests
+from datetime import datetime, date, timedelta
+from pathlib import Path
+
+# ── Config ────────────────────────────────────────────────────────────────────
+
+OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "cftc_latest.json"
+# CFTC moved to Socrata public API at publicreporting.cftc.gov
+# Dataset: Disaggregated Futures Only — ID: 72hh-3qpy
+# No API token needed (CFTC confirmed public access)
+CFTC_API_BASE = "https://publicreporting.cftc.gov/resource/72hh-3qpy.json"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+log = logging.getLogger(__name__)
+
+# ── Contract registry ─────────────────────────────────────────────────────────
+# Map CFTC report "Market and Exchange Names" → dashboard key
+# These strings must match what appears in the CFTC CSV exactly
+
+# Market names confirmed from CFTC Socrata dataset (2026-05-19 snapshot)
+# Run: python -c "import cftc_fetcher; cftc_fetcher.discover_markets()" to refresh
+CFTC_CONTRACTS = {
+    "CRUDE OIL, LIGHT SWEET-WTI - NEW YORK MERCANTILE EXCHANGE": {
+        "key":         "wti",
+        "label":       "WTI Crude Oil (NYMEX)",
+        "lot_bbl":     1000,
+        "signal_note": "Primary US crude positioning. Crowded longs (>25% OI) = mean-reversion risk.",
+    },
+    "BRENT CRUDE OIL LAST DAY - NEW YORK MERCANTILE EXCHANGE": {
+        "key":         "brent",
+        "label":       "Brent Crude (NYMEX-listed)",
+        "lot_bbl":     1000,
+        "signal_note": "Global crude benchmark positioning. Watch divergence vs WTI.",
+    },
+    "GASOLINE BLENDSTOCK (RBOB)-NEW YORK - NEW YORK MERCANTILE EXCHANGE": {
+        "key":         "rbob",
+        "label":       "RBOB Gasoline (NYMEX)",
+        "lot_bbl":     1000,
+        "signal_note": "Gasoline positioning. Seasonal crowding Feb-Apr (driving season).",
+    },
+    "NO. 2 HEATING OIL, N.Y. HARBOR - NEW YORK MERCANTILE EXCHANGE": {
+        "key":         "heating_oil",
+        "label":       "Heating Oil / ULSD (NYMEX)",
+        "lot_bbl":     1000,
+        "signal_note": "Distillate positioning. Crowding Oct-Nov (winter heating season).",
+    },
+    "NATURAL GAS (HENRY HUB) - NEW YORK MERCANTILE EXCHANGE": {
+        "key":         "natural_gas",
+        "label":       "Natural Gas Henry Hub (NYMEX)",
+        "lot_bbl":     None,
+        "signal_note": "Gas positioning. Extreme shorts = squeeze risk vs HDD/CDD data.",
+    },
+}
+
+# ── COT CSV column indices (Disaggregated COT format) ────────────────────────
+# The CFTC disaggregated format has fixed column positions.
+# We parse by header name for robustness.
+
+COLUMNS_NEEDED = [
+    "Market_and_Exchange_Names",
+    "As_of_Date_In_Form_YYMMDD",
+    "Open_Interest_All",
+    "M_Money_Positions_Long_All",
+    "M_Money_Positions_Short_All",
+    "M_Money_Positions_Spread_All",
+    "Prod_Merc_Positions_Long_All",
+    "Prod_Merc_Positions_Short_All",
+    "Swap_Positions_Long_All",
+    "Swap__Positions_Short_All",
+    "NonRept_Positions_Long_All",
+    "NonRept_Positions_Short_All",
+]
+
+# ── Download + parse ──────────────────────────────────────────────────────────
+
+def _get_latest_report_date(headers: dict) -> str | None:
+    """Find the most recent report date available in the dataset."""
+    try:
+        r = requests.get(
+            CFTC_API_BASE,
+            params={"$select": "report_date_as_yyyy_mm_dd",
+                    "$order":  "report_date_as_yyyy_mm_dd DESC",
+                    "$limit":  1},
+            headers=headers, timeout=15,
+        )
+        r.raise_for_status()
+        rows = r.json()
+        if rows:
+            return rows[0].get("report_date_as_yyyy_mm_dd", "")
+    except Exception as exc:
+        log.warning("Could not get latest date: %s", exc)
+    return None
+
+
+def download_cot_api(market_names: list[str], limit: int = 8) -> dict[str, list[dict]]:
+    """
+    Fetch COT positioning data from CFTC Socrata API.
+
+    Strategy:
+      1. Find the latest available report date
+      2. Download ALL rows for that date (energy sector only via keyword filter)
+      3. Match rows to our contracts using flexible substring matching
+      4. Fall back to last 8 weeks of data per contract if date query fails
+
+    Returns {market_name: [row, ...]} — keyed by our canonical market_name strings.
+    """
+    headers = {"User-Agent": "EnergyDashboard/1.0", "Accept": "application/json"}
+    results = {}
+
+    # Step 1: find latest date
+    latest_date = _get_latest_report_date(headers)
+    if latest_date:
+        # Trim to date portion only (API may return ISO datetime)
+        latest_date = latest_date[:10]
+        log.info("  Latest CFTC report date: %s", latest_date)
+    else:
+        log.warning("  Could not determine latest date — will query per contract")
+
+    # Step 2: fetch recent energy rows (petroleum + gas sector)
+    # Use keyword filter to avoid downloading millions of agriculture rows
+    energy_rows = []
+    if latest_date:
+        for keyword in ["CRUDE OIL", "BRENT", "GASOLINE", "HEATING OIL", "NATURAL GAS"]:
+            try:
+                r = requests.get(
+                    CFTC_API_BASE,
+                    params={
+                        "$where": f"report_date_as_yyyy_mm_dd>='{latest_date}' "
+                                  f"AND upper(market_and_exchange_names) like '%{keyword}%'",
+                        "$order": "report_date_as_yyyy_mm_dd DESC",
+                        "$limit": 20,
+                    },
+                    headers=headers, timeout=20,
+                )
+                r.raise_for_status()
+                rows = r.json()
+                energy_rows.extend(rows)
+                log.debug("  Keyword %s: %d rows", keyword, len(rows))
+            except Exception as exc:
+                log.warning("  Keyword query failed for %s: %s", keyword, exc)
+
+    log.info("  Total energy rows fetched: %d", len(energy_rows))
+
+    # Step 3: flexible matching — find best row for each contract
+    def best_match(rows: list[dict], target_name: str) -> list[dict]:
+        """
+        Match rows to a target market name.
+        Tries exact match first, then token-based partial match.
+        """
+        target_upper = target_name.upper()
+        # Exact match
+        exact = [r for r in rows
+                 if r.get("market_and_exchange_names", "").upper() == target_upper]
+        if exact:
+            return exact
+
+        # Token match: all significant words of target must appear in row name
+        tokens = [t for t in target_upper.split() if len(t) > 3
+                  and t not in ("YORK", "FUTURES", "EXCHANGE", "MERCANTILE", "NYMEX")]
+        # Also require same exchange (NYMEX vs ICE) to avoid cross-matching
+        target_exchange = "MERCANTILE" if "MERCANTILE" in target_upper else "ICE" if "ICE" in target_upper else ""
+        partial = [
+            r for r in rows
+            if all(t in r.get("market_and_exchange_names", "").upper() for t in tokens)
+            and (not target_exchange or target_exchange in r.get("market_and_exchange_names", "").upper())
+        ]
+        return partial
+
+    # Also fetch last N weeks per contract as fallback (catches mismatches)
+    for market_name in market_names:
+        matched = best_match(energy_rows, market_name)
+        if matched:
+            results[market_name] = matched[:limit]
+            log.info("    Matched '%s' → '%s' (%d rows)",
+                     market_name[:40],
+                     matched[0].get("market_and_exchange_names", "")[:40],
+                     len(matched))
+        else:
+            # Fallback: direct query with a looser filter
+            log.info("  Fallback query for: %s", market_name[:50])
+            # Extract the first two words as a simpler filter
+            first_words = " ".join(market_name.split()[:3]).upper()
+            try:
+                r = requests.get(
+                    CFTC_API_BASE,
+                    params={
+                        "$where": f"upper(market_and_exchange_names) like '%{first_words}%'",
+                        "$order": "report_date_as_yyyy_mm_dd DESC",
+                        "$limit": limit,
+                    },
+                    headers=headers, timeout=20,
+                )
+                r.raise_for_status()
+                rows = r.json()
+                if rows:
+                    results[market_name] = rows
+                    log.info("    Fallback found: %s (%d rows)",
+                             rows[0].get("market_and_exchange_names", "")[:50], len(rows))
+                else:
+                    log.warning("    No match for: %s", market_name)
+            except Exception as exc:
+                log.error("    Fallback failed: %s", exc)
+
+    return results
+
+
+def parse_cot_csv(csv_text: str) -> list[dict]:
+    """
+    Parse the CFTC disaggregated COT CSV.
+    Returns list of all rows as dicts with column headers as keys.
+    """
+    lines  = csv_text.strip().splitlines()
+    if not lines:
+        return []
+
+    # Header is the first line
+    header = [col.strip().strip('"') for col in lines[0].split(",")]
+
+    rows = []
+    for line in lines[1:]:
+        # Handle quoted fields with commas inside
+        fields = []
+        in_quote = False
+        current  = []
+        for char in line:
+            if char == '"':
+                in_quote = not in_quote
+            elif char == ',' and not in_quote:
+                fields.append("".join(current).strip().strip('"'))
+                current = []
+            else:
+                current.append(char)
+        fields.append("".join(current).strip().strip('"'))
+
+        if len(fields) != len(header):
+            continue
+
+        rows.append(dict(zip(header, fields)))
+
+    return rows
+
+
+def extract_contract(rows: list[dict], market_name: str) -> list[dict]:
+    """
+    Filter rows for a specific market name and return most recent entries,
+    sorted descending by date.
+    """
+    matches = [
+        r for r in rows
+        if r.get("Market_and_Exchange_Names", "").strip().upper() == market_name.upper()
+    ]
+    # Sort by date descending (YYMMDD format)
+    matches.sort(key=lambda x: x.get("As_of_Date_In_Form_YYMMDD", ""), reverse=True)
+    return matches
+
+
+def safe_int(val: str | None) -> int | None:
+    try:
+        return int(val.replace(",", "")) if val else None
+    except (ValueError, AttributeError):
+        return None
+
+# ── Signal computation ────────────────────────────────────────────────────────
+
+def compute_positioning_signal(net_lots: int | None,
+                                open_interest: int | None) -> dict:
+    """
+    Compute positioning signal from managed money net position.
+
+    net_lots      = MM longs - MM shorts
+    open_interest = total open interest (all participants)
+    net_pct_of_oi = net_lots / open_interest × 100
+
+    Thresholds:
+      > +25%  → CROWDED_LONG  (mean-reversion risk)
+      +10–25% → BULLISH
+      -5–+10% → NEUTRAL
+      -15–-5% → BEARISH
+      < -15%  → CROWDED_SHORT (short-squeeze risk)
+    """
+    if net_lots is None or open_interest is None or open_interest == 0:
+        return {"signal": "NEUTRAL", "net_pct_of_oi": None}
+
+    net_pct = round(net_lots / open_interest * 100, 2)
+
+    if net_pct > 25:
+        signal = "CROWDED_LONG"
+        note   = (
+            f"Net long {net_pct:.1f}% of OI — crowded position. "
+            "Mean-reversion risk: any bearish surprise triggers forced unwind. "
+            "Do not chase this long; look for short entry on next catalyst."
+        )
+    elif net_pct > 10:
+        signal = "BULLISH"
+        note   = (
+            f"Net long {net_pct:.1f}% of OI — managed money building long exposure. "
+            "Trend-following confirmation of bullish fundamental view."
+        )
+    elif net_pct > -5:
+        signal = "NEUTRAL"
+        note   = f"Net {net_pct:+.1f}% of OI — balanced positioning. No strong speculative trend."
+    elif net_pct > -15:
+        signal = "BEARISH"
+        note   = (
+            f"Net short {abs(net_pct):.1f}% of OI — managed money building short exposure. "
+            "Trend-following confirmation of bearish view."
+        )
+    else:
+        signal = "CROWDED_SHORT"
+        note   = (
+            f"Net short {abs(net_pct):.1f}% of OI — crowded short. "
+            "Short-squeeze risk: any bullish catalyst triggers rapid covering. "
+            "Contrarian long opportunity if fundamentals improve."
+        )
+
+    return {
+        "signal":       signal,
+        "net_pct_of_oi": net_pct,
+        "note":         note,
+    }
+
+
+def compute_weekly_change(current: dict, previous: dict | None) -> dict:
+    """Compute week-over-week changes in positioning."""
+    if previous is None:
+        return {}
+
+    def chg(key):
+        c = safe_int(current.get(key))
+        p = safe_int(previous.get(key))
+        if c is None or p is None:
+            return None
+        return c - p
+
+    return {
+        "wow_net_lots":   chg("M_Money_Positions_Long_All") and (
+            (safe_int(current.get("M_Money_Positions_Long_All")) or 0) -
+            (safe_int(current.get("M_Money_Positions_Short_All")) or 0) -
+            ((safe_int(previous.get("M_Money_Positions_Long_All")) or 0) -
+             (safe_int(previous.get("M_Money_Positions_Short_All")) or 0))
+        ),
+        "wow_longs":      chg("M_Money_Positions_Long_All"),
+        "wow_shorts":     chg("M_Money_Positions_Short_All"),
+        "wow_direction":  (
+            "ADDING_LONGS" if (chg("M_Money_Positions_Long_All") or 0) > 5000
+            else "COVERING_SHORTS" if (chg("M_Money_Positions_Short_All") or 0) < -5000
+            else "ADDING_SHORTS" if (chg("M_Money_Positions_Short_All") or 0) > 5000
+            else "REDUCING_LONGS" if (chg("M_Money_Positions_Long_All") or 0) < -5000
+            else "MIXED"
+        ),
+    }
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+
+
+
+def discover_markets() -> None:
+    """
+    Print all energy contract names available in CFTC dataset.
+    Run when contracts stop matching to find updated names.
+    Usage: python -c "from cftc_fetcher import discover_markets; discover_markets()"
+    """
+    headers = {"User-Agent": "EnergyDashboard/1.0"}
+    r = requests.get(CFTC_API_BASE,
+                     params={"$select": "report_date_as_yyyy_mm_dd",
+                             "$order":  "report_date_as_yyyy_mm_dd DESC",
+                             "$limit":  1},
+                     headers=headers, timeout=15)
+    latest = r.json()[0]["report_date_as_yyyy_mm_dd"][:10]
+    print("Latest CFTC date:", latest)
+    keywords = ["OIL", "GAS", "BRENT", "CRUDE", "GASOLINE", "HEATING", "RBOB"]
+    names = set()
+    for kw in keywords:
+        r2 = requests.get(
+            CFTC_API_BASE,
+            params={"$where": ("report_date_as_yyyy_mm_dd>='" + latest + "'"
+                               " AND upper(market_and_exchange_names) like '%" + kw + "%'"),
+                    "$limit": 50},
+            headers=headers, timeout=20,
+        )
+        for row in r2.json():
+            names.add(row.get("market_and_exchange_names", ""))
+    print("\nAvailable energy contracts:")
+    for n in sorted(names):
+        print(" ", n)
+
+
+
+def run() -> dict:
+    log.info("Starting CFTC COT fetch")
+
+    output = {
+        "fetcher":    "cftc_fetcher",
+        "fetched_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "source":     "CFTC Disaggregated Commitments of Traders (public)",
+        "note":       "Data published Fridays 3:30 PM ET; covers Tuesday positions. ~3-day lag.",
+        "contracts":  {},
+        "composite":  {},
+    }
+
+    # Fetch from CFTC Socrata API — one call per contract
+    market_names = list(CFTC_CONTRACTS.keys())
+    api_data     = download_cot_api(market_names, limit=8)
+
+    if not api_data:
+        log.error("Could not fetch any CFTC data from API")
+        output["error"] = "api_fetch_failed"
+        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        OUTPUT_PATH.write_text(json.dumps(output, indent=2))
+        return output
+
+    # ── Process each contract ─────────────────────────────────────────────────
+    composite_scores = []
+
+    for market_name, cfg in CFTC_CONTRACTS.items():
+        log.info("Processing: %s", cfg["label"])
+        contract_rows = api_data.get(market_name, [])
+
+        if not contract_rows:
+            log.warning("  No data for: %s", market_name)
+            output["contracts"][cfg["key"]] = {
+                "error": "not_found",
+                "label": cfg["label"],
+                "market_name_searched": market_name,
+            }
+            continue
+
+        # Socrata returns snake_case field names — map to what our parser expects
+        def remap(row):
+            return {
+                "Market_and_Exchange_Names":      row.get("market_and_exchange_names", ""),
+                "As_of_Date_In_Form_YYMMDD":     row.get("report_date_as_yyyy_mm_dd", ""),
+                "Open_Interest_All":              row.get("open_interest_all", ""),
+                "M_Money_Positions_Long_All":     row.get("m_money_positions_long_all", ""),
+                "M_Money_Positions_Short_All":    row.get("m_money_positions_short_all", ""),
+                "M_Money_Positions_Spread_All":   row.get("m_money_positions_spread_all", ""),
+                "Prod_Merc_Positions_Long_All":   row.get("prod_merc_positions_long_all", ""),
+                "Prod_Merc_Positions_Short_All":  row.get("prod_merc_positions_short_all", ""),
+                "NonRept_Positions_Long_All":     row.get("nonrept_positions_long_all", ""),
+                "NonRept_Positions_Short_All":    row.get("nonrept_positions_short_all", ""),
+            }
+
+        contract_rows = [remap(r) for r in contract_rows]
+        latest   = contract_rows[0]
+        previous = contract_rows[1] if len(contract_rows) > 1 else None
+
+        # Parse key fields
+        oi           = safe_int(latest.get("Open_Interest_All"))
+        mm_long      = safe_int(latest.get("M_Money_Positions_Long_All"))
+        mm_short     = safe_int(latest.get("M_Money_Positions_Short_All"))
+        mm_spread    = safe_int(latest.get("M_Money_Positions_Spread_All"))
+        prod_long    = safe_int(latest.get("Prod_Merc_Positions_Long_All"))
+        prod_short   = safe_int(latest.get("Prod_Merc_Positions_Short_All"))
+        nonrep_long  = safe_int(latest.get("NonRept_Positions_Long_All"))
+        nonrep_short = safe_int(latest.get("NonRept_Positions_Short_All"))
+
+        net_lots = (
+            ((mm_long or 0) - (mm_short or 0))
+            if mm_long is not None and mm_short is not None
+            else None
+        )
+
+        # Date: Socrata returns YYYY-MM-DD directly; legacy CSV was YYMMDD
+        raw_date = latest.get("As_of_Date_In_Form_YYMMDD", "")
+        try:
+            if len(raw_date) == 10 and "-" in raw_date:
+                report_date = raw_date  # already YYYY-MM-DD from Socrata
+            else:
+                report_date = datetime.strptime(raw_date, "%y%m%d").strftime("%Y-%m-%d")
+        except ValueError:
+            report_date = raw_date
+
+        signal_data = compute_positioning_signal(net_lots, oi)
+        wow_data    = compute_weekly_change(latest, previous)
+
+        output["contracts"][cfg["key"]] = {
+            "label":           cfg["label"],
+            "market_name":     market_name,
+            "report_date":     report_date,
+            "open_interest":   oi,
+            "mm_longs":        mm_long,
+            "mm_shorts":       mm_short,
+            "mm_spread":       mm_spread,
+            "mm_net_lots":     net_lots,
+            "net_pct_of_oi":   signal_data.get("net_pct_of_oi"),
+            "prod_longs":      prod_long,
+            "prod_shorts":     prod_short,
+            "nonrep_longs":    nonrep_long,
+            "nonrep_shorts":   nonrep_short,
+            "signal":          signal_data["signal"],
+            "signal_note":     signal_data.get("note", ""),
+            "oil_market_note": cfg["signal_note"],
+            **wow_data,
+        }
+
+        log.info(
+            "  %s: OI=%s | MM_net=%s lots | net_pct=%.1f%% | signal=%s | wow=%s",
+            cfg["label"],
+            f"{oi:,}" if oi else "N/A",
+            f"{net_lots:,}" if net_lots else "N/A",
+            signal_data.get("net_pct_of_oi") or 0,
+            signal_data["signal"],
+            wow_data.get("wow_direction", "N/A"),
+        )
+
+        score_map = {
+            "CROWDED_LONG":  -0.5,   # contrarian bearish — mean-reversion risk
+            "BULLISH":        1.0,
+            "NEUTRAL":        0.0,
+            "BEARISH":       -1.0,
+            "CROWDED_SHORT":  0.5,   # contrarian bullish — squeeze risk
+        }
+        composite_scores.append(score_map.get(signal_data["signal"], 0))
+
+    # ── Composite positioning signal ──────────────────────────────────────────
+    if composite_scores:
+        avg_score = sum(composite_scores) / len(composite_scores)
+        composite_signal = (
+            "BULLISH"        if avg_score > 0.4
+            else "BEARISH"   if avg_score < -0.4
+            else "NEUTRAL"
+        )
+    else:
+        avg_score        = 0
+        composite_signal = "NEUTRAL"
+
+    crowded_longs  = [k for k, v in output["contracts"].items()
+                      if isinstance(v, dict) and v.get("signal") == "CROWDED_LONG"]
+    crowded_shorts = [k for k, v in output["contracts"].items()
+                      if isinstance(v, dict) and v.get("signal") == "CROWDED_SHORT"]
+
+    output["composite"] = {
+        "signal":            composite_signal,
+        "avg_score":         round(avg_score, 3),
+        "crowded_longs":     crowded_longs,
+        "crowded_shorts":    crowded_shorts,
+        "crowding_risk_note": (
+            f"CROWDED LONGS detected in: {', '.join(crowded_longs)}. Mean-reversion risk."
+            if crowded_longs else
+            f"CROWDED SHORTS detected in: {', '.join(crowded_shorts)}. Short-squeeze risk."
+            if crowded_shorts else
+            "No extreme crowding detected across energy contracts."
+        ),
+        "market_context": (
+            "CFTC positioning is a sentiment/flow indicator, not a fundamental driver. "
+            "Crowded positioning amplifies price moves — it does not cause them. "
+            "Most powerful when combined with physical signals: "
+            "Cushing draw + crowded long = unsustainable; "
+            "Cushing draw + crowded short = short-squeeze setup."
+        ),
+    }
+
+    # ── Save ──────────────────────────────────────────────────────────────────
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(OUTPUT_PATH, "w") as f:
+        json.dump(output, f, indent=2)
+
+    log.info("Saved → %s", OUTPUT_PATH)
+    log.info(
+        "CFTC composite: %s | crowded_longs=%s | crowded_shorts=%s",
+        composite_signal,
+        crowded_longs or "none",
+        crowded_shorts or "none",
+    )
+
+    return output
+
+
+if __name__ == "__main__":
+    run()
