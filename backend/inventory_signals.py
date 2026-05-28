@@ -295,20 +295,20 @@ def compute_signals(fetch_results: dict = None) -> dict:
     month = date.today().month
 
     # Raw values from EIA
-    cushing        = safe(sigs, "cushing_stocks",    "value_mmbbls")
-    total_crude    = safe(sigs, "total_crude_stocks","value_mmbbls")
-    gasoline       = safe(sigs, "gasoline_stocks",   "value_mmbbls")
-    distillate     = safe(sigs, "distillate_stocks", "value_mmbbls")
+    cushing        = safe(sigs, "cushing_stocks",    "value")
+    total_crude    = safe(sigs, "total_crude_stocks","value")
+    gasoline       = safe(sigs, "gasoline_stocks",   "value")
+    distillate     = safe(sigs, "distillate_stocks", "value")
     refinery_util  = safe(sigs, "refinery_util",     "value")
-    gasoline_dem   = safe(sigs, "gasoline_demand",   "value_mbd")
-    distillate_dem = safe(sigs, "distillate_demand", "value_mbd")
-    crude_imports  = safe(sigs, "crude_imports",     "value_mbd")
-    crude_exports  = safe(sigs, "crude_exports",     "value_mbd")
-    crude_prod     = safe(sigs, "crude_production",  "value_mbd")
-    cushing_wow    = safe(sigs, "cushing_stocks",    "wow_change")
-    crude_wow      = safe(sigs, "total_crude_stocks","wow_change")
-    gasoline_wow   = safe(sigs, "gasoline_stocks",   "wow_change")
-    distillate_wow = safe(sigs, "distillate_stocks", "wow_change")
+    gasoline_dem   = safe(sigs, "gasoline_demand",   "value")
+    distillate_dem = safe(sigs, "distillate_demand", "value")
+    crude_imports  = safe(sigs, "crude_imports",     "value")
+    crude_exports  = safe(sigs, "crude_exports",     "value")
+    crude_prod     = safe(sigs, "crude_production",  "value")
+    cushing_wow    = safe(sigs, "cushing_stocks",    "wow")
+    crude_wow      = safe(sigs, "total_crude_stocks","wow")
+    gasoline_wow   = safe(sigs, "gasoline_stocks",   "wow")
+    distillate_wow = safe(sigs, "distillate_stocks", "wow")
 
     # 5yr averages
     cushing_5yr    = CUSHING_5YR_AVG.get(sk)
@@ -329,10 +329,10 @@ def compute_signals(fetch_results: dict = None) -> dict:
         return round((c - a) / a * 100, 2) if (c and a and a != 0) else None
 
     # Trends
-    cushing_trend    = compute_trend(safe(sigs,"cushing_stocks","series") or [],    "value_mmbbls")
-    crude_trend      = compute_trend(safe(sigs,"total_crude_stocks","series") or [], "value_mmbbls")
-    gasoline_trend   = compute_trend(safe(sigs,"gasoline_stocks","series") or [],   "value_mmbbls")
-    distillate_trend = compute_trend(safe(sigs,"distillate_stocks","series") or [],  "value_mmbbls")
+    cushing_trend    = compute_trend(safe(sigs,"cushing_stocks","series") or [],    "value")
+    crude_trend      = compute_trend(safe(sigs,"total_crude_stocks","series") or [], "value")
+    gasoline_trend   = compute_trend(safe(sigs,"gasoline_stocks","series") or [],   "value")
+    distillate_trend = compute_trend(safe(sigs,"distillate_stocks","series") or [],  "value")
 
     # Scores
     s_days_cover   = score_days_cover(days_cover)
