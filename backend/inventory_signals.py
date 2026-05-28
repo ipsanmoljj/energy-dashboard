@@ -290,7 +290,7 @@ def compute_signals(fetch_results: dict = None) -> dict:
     """Compute inventory signals from cached JSON files."""
 
     eia   = load_json(EIA_PATH)
-    sigs  = eia.get("signals", {})
+    sigs  = eia  # EIA fetcher writes data at top level, no "signals" wrapper
     sk    = get_season_key()
     month = date.today().month
 
