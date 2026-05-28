@@ -10,12 +10,12 @@ Contracts:
   CL=F   → NYMEX WTI Crude (front-month)
   RB=F   → NYMEX RBOB Gasoline
   HO=F   → NYMEX Heating Oil / ULSD
-  NG=F   → NYMEX Henry Hub Natural Gas
+  BG=F   → ICE Gasoil (European diesel benchmark)
 
 Derived outputs (saved alongside raw prices):
   - 3-2-1 crack spread  [(2×RBOB + 1×ULSD − 3×WTI) / 3]  $/bbl
   - Brent-WTI spread    (Brent − WTI)                       $/bbl
-  - Brent-NG spread     (crude vs gas switching signal)
+  - ICE Gasoil crack    (GO - Brent, European diesel margin)
   - All in $/bbl (unit-converted from $/gal for RBOB/HO)
 
 Saves to: backend/data/futures_latest.json
@@ -121,18 +121,20 @@ FUTURES = {
             "HO-RBOB spread: wide diesel premium → industrial/commercial demand > driving demand."
         ),
     },
-    "NG=F": {
-        "key":          "henry_hub",
-        "label":        "NYMEX Henry Hub Natural Gas (front-month)",
-        "exchange":     "CME/NYMEX",
-        "unit":         "usd_per_mmbtu",
-        "lot_size_bbl": None,         # gas measured in mmBTU, not barrels
-        "multiplier":   1.0,
+    "BG=F": {
+        "key":          "ice_gasoil",
+        "label":        "ICE Gasoil (front-month)",
+        "exchange":     "ICE Futures Europe",
+        "unit":         "usd_per_mt",
+        "lot_size_bbl": 745,
+        "multiplier":   0.1342,
         "benchmark":    False,
         "signal_note":  (
-            "US gas benchmark. When gas prices spike, power sector switches to oil/diesel → "
-            "oil demand boost. Key for winter heating season analysis. "
-            "Low gas price → reduces heating oil demand; bearish for HO crack."
+            "European diesel benchmark. Gasoil crack (GO - Brent) is the most actively "
+            "traded crack spread in European hours. Reference price for jet fuel and "
+            "heating oil in Europe. Key for transatlantic diesel arb (HO vs GO spread). "
+            "Wide gasoil crack > $25/bbl = European diesel tight = bullish crude demand. "
+            "Unit: $/MT — divide by 7.45 to convert to $/bbl for crack calculations."
         ),
     },
 }
@@ -478,10 +480,27 @@ def run() -> dict:
         prices_bbl.get("rbob"),
     )
 
-    output["derived"]["gas_oil_ratio"] = compute_gas_oil_ratio(
-        prices_bbl.get("wti"),
-        output["contracts"].get("henry_hub", {}).get("raw_price"),  # HH in $/mmBTU, not $/bbl
-    )
+    # ICE Gasoil crack: gasoil_bbl - brent_bbl
+    gasoil_bbl = prices_bbl.get("ice_gasoil")
+    brent_bbl  = prices_bbl.get("brent")
+    output["derived"]["gasoil_crack"] = {
+        "value_bbl":  round(gasoil_bbl - brent_bbl, 2) if (gasoil_bbl and brent_bbl) else None,
+        "gasoil_bbl": gasoil_bbl,
+        "brent_bbl":  brent_bbl,
+        "signal":     (
+            "BULLISH" if gasoil_bbl and brent_bbl and (gasoil_bbl - brent_bbl) > 25
+            else "BEARISH" if gasoil_bbl and brent_bbl and (gasoil_bbl - brent_bbl) < 10
+            else "NEUTRAL"
+        ),
+        "note": (
+            f"ICE Gasoil crack ${round(gasoil_bbl-brent_bbl,2):.1f}/bbl: "
+            + ("Wide > $25 → European diesel tight → bullish crude demand"
+               if gasoil_bbl and brent_bbl and (gasoil_bbl - brent_bbl) > 25
+               else "Compressed < $10 → diesel margins weak"
+               if gasoil_bbl and brent_bbl and (gasoil_bbl - brent_bbl) < 10
+               else "Normal range")
+        ) if (gasoil_bbl and brent_bbl) else "Insufficient data",
+    }
 
     # ── Step 3: composite futures signal ────────────────────────────────────
     crack_sig  = output["derived"]["crack_321"].get("signal", "NEUTRAL")
