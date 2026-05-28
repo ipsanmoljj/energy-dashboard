@@ -243,3 +243,7 @@ if __name__ == "__main__":
         wow_s = f"WoW:{w:+.3f}" if w is not None else "WoW:N/A"
         v5_s  = f"vs5yr:{s:+.2f}" if s is not None else ""
         print(f"  {k:<24} {str(v):<10} {u:<8} {wow_s}  {v5_s}")
+ 
+def run(): 
+    """Wrapper so orchestrator can call run()""" 
+    return fetch_all() 
