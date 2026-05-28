@@ -30,7 +30,7 @@ from pathlib import Path
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
-FRED_API_KEY = os.getenv("FRED_API_KEY", "YOUR_FRED_KEY_HERE")  # free at fred.stlouisfed.org
+FRED_API_KEY = os.getenv("FRED_API_KEY", "1d73bedd4f0c41fe197581d267892389")  # free at fred.stlouisfed.org
 BASE_URL     = "https://api.stlouisfed.org/fred/series/observations"
 OUTPUT_PATH  = Path(__file__).resolve().parents[1] / "data" / "fred_latest.json"
 
