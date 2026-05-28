@@ -27,7 +27,7 @@ from pathlib import Path
 
 # ── Config ───────────────────────────────────────────────────────────────────
 
-GIE_API_KEY = os.getenv("GIE_API_KEY", "YOUR_GIE_KEY_HERE")
+GIE_API_KEY = os.getenv("GIE_API_KEY", "68f45b4ded5605be76ee1887830027cc")
 BASE_URL    = "https://agsi.gie.eu/api"
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "gie_latest.json"
 
