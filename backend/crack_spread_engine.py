@@ -330,7 +330,7 @@ def compute_crack_signals() -> dict:
     wti      = safe(futures, "contracts", "wti",         "price_bbl")
     rbob_bbl = safe(futures, "contracts", "rbob",        "price_bbl")
     ho_bbl   = safe(futures, "contracts", "heating_oil", "price_bbl")
-    ng       = safe(futures, "contracts", "henry_hub",   "raw_price")
+    ice_gasoil_bbl = safe(futures, "contracts", "ice_gasoil", "price_bbl")
 
     # ── Extract EIA data ──────────────────────────────────────────────────────
     refinery_util  = safe(eia, "refinery_util",  "value")
@@ -345,7 +345,7 @@ def compute_crack_signals() -> dict:
     log.info("  WTI:      %s $/bbl", f"{wti:.2f}"   if wti   else "N/A")
     log.info("  RBOB:     %s $/bbl", f"{rbob_bbl:.2f}" if rbob_bbl else "N/A")
     log.info("  HO/ULSD:  %s $/bbl", f"{ho_bbl:.2f}" if ho_bbl else "N/A")
-    log.info("  Nat Gas:  %s $/mmBTU", f"{ng:.2f}" if ng else "N/A")
+    log.info("  ICE GO:   %s $/bbl",   f"{ice_gasoil_bbl:.2f}" if ice_gasoil_bbl else "N/A")
     log.info("─" * 60)
 
     # ── Compute spreads ───────────────────────────────────────────────────────
@@ -353,6 +353,10 @@ def compute_crack_signals() -> dict:
     gasoline_crack = compute_gasoline_crack(rbob_bbl, wti)
     ho_crack       = compute_ho_crack(ho_bbl, brent)
     ho_rbob_spread = compute_ho_rbob_spread(ho_bbl, rbob_bbl)
+    # ICE Gasoil crack (European diesel) — also check derived from futures_fetcher
+    gasoil_crack_direct = safe(futures, "derived", "gasoil_crack", "value_bbl")
+    gasoil_crack   = gasoil_crack_direct or compute_ho_crack(ice_gasoil_bbl, brent)
+
     brent_wti      = safe(futures, "derived", "brent_wti_spread", "value_bbl")
     if brent_wti is None and brent and wti:
         brent_wti = round(brent - wti, 2)
@@ -470,6 +474,17 @@ def compute_crack_signals() -> dict:
                 "deviation_pct": deviation_pct(gasoline_crack, gas_crack_5yr),
                 "signal":        "BULLISH" if gasoline_crack and gasoline_crack > 22 else
                                  "BEARISH" if gasoline_crack and gasoline_crack < 10 else "NEUTRAL",
+            },
+            "gasoil_crack_ice": {
+                "value_bbl":     gasoil_crack,
+                "five_yr_avg":   ho_crack_5yr,
+                "deviation":     deviation(gasoil_crack, ho_crack_5yr),
+                "signal":        "BULLISH" if gasoil_crack and gasoil_crack > 25 else
+                                 "BEARISH" if gasoil_crack and gasoil_crack < 10 else "NEUTRAL",
+                "note": (
+                    f"ICE Gasoil crack ${gasoil_crack:.1f}/bbl"
+                    if gasoil_crack else "Insufficient data (BG=F unavailable)"
+                ),
             },
             "ho_crack": {
                 "value_bbl":     ho_crack,
