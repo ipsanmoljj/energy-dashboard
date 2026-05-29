@@ -1,9 +1,9 @@
 """
-futures_fetchers.py
+futures_fetcher.py
 ------------------
-Fetches delayed futures prices for the 5 core energy contracts.
-Primary:  Yahoo Finance (delayed ~15 min, free)
-Fallback: Your Cloudflare Worker proxy (configured in config/settings.json)
+Fetches delayed futures prices for the 4 core energy contracts + ICE Gasoil.
+Primary:  Stooq (free, no rate limiting, no key needed)
+Fallback: Yahoo Finance (delayed ~15 min, free)
 
 Contracts:
   BZ=F   → ICE Brent Crude (front-month)
@@ -12,11 +12,11 @@ Contracts:
   HO=F   → NYMEX Heating Oil / ULSD
   BG=F   → ICE Gasoil (European diesel benchmark)
 
-Derived outputs (saved alongside raw prices):
+Derived outputs:
   - 3-2-1 crack spread  [(2×RBOB + 1×ULSD − 3×WTI) / 3]  $/bbl
   - Brent-WTI spread    (Brent − WTI)                       $/bbl
-  - ICE Gasoil crack    (GO - Brent, European diesel margin)
-  - All in $/bbl (unit-converted from $/gal for RBOB/HO)
+  - HO-RBOB spread      (diesel premium over gasoline)       $/bbl
+  - ICE Gasoil crack    (GO − Brent, European diesel margin) $/bbl
 
 Saves to: backend/data/futures_latest.json
 
@@ -33,7 +33,7 @@ from pathlib import Path
 
 import requests
 
-# ── Config ──────────────────────────────────────────────────────────────────
+# ── Config ───────────────────────────────────────────────────────────────────
 
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "futures_latest.json"
 
@@ -44,28 +44,22 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# Yahoo Finance endpoints (try multiple to avoid rate limits)
 YF_ENDPOINTS = [
     "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",
     "https://query2.finance.yahoo.com/v8/finance/chart/{ticker}",
 ]
-
 YF_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
 
-# ── Stooq tickers (primary source — no rate limiting, no key needed) ──────────
-# Stooq uses lowercase with dots: cl.f, bz.f etc.
-# CSV endpoint: https://stooq.com/q/d/l/?s={ticker}&i=d
+# Stooq tickers — primary source, no rate limiting, no key needed
 STOOQ_TICKERS = {
     "BZ=F": "bz.f",   # Brent
     "CL=F": "cl.f",   # WTI
     "RB=F": "rb.f",   # RBOB Gasoline
     "HO=F": "ho.f",   # Heating Oil / ULSD
-    "NG=F": "ng.f",   # Natural Gas
-    "BG=F": None,     # ICE Gasoil — not on Stooq, Yahoo only
+    "BG=F": None,     # ICE Gasoil — not on Stooq
 }
 STOOQ_BASE = "https://stooq.com/q/d/l/?s={ticker}&i=d"
 
-# Polite headers — rotate between requests
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -74,7 +68,7 @@ USER_AGENTS = [
     "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
 ]
 
-# ── Contract definitions ─────────────────────────────────────────────────────
+# ── Contract definitions ──────────────────────────────────────────────────────
 
 FUTURES = {
     "BZ=F": {
@@ -83,7 +77,7 @@ FUTURES = {
         "exchange":     "ICE Futures Europe",
         "unit":         "usd_per_bbl",
         "lot_size_bbl": 1000,
-        "multiplier":   1.0,          # already $/bbl
+        "multiplier":   1.0,
         "benchmark":    True,
         "signal_note":  (
             "Global crude benchmark (~70% of internationally traded crude). "
@@ -102,8 +96,7 @@ FUTURES = {
         "signal_note":  (
             "US domestic crude benchmark. Physical delivery at Cushing, Oklahoma. "
             "WTI-Brent < $2/bbl → US exports flooding market. "
-            "WTI-Brent > $8/bbl → US export bottleneck or North Sea disruption. "
-            "EIA release Wed 10:30 ET = peak vol event."
+            "WTI-Brent > $8/bbl → US export bottleneck or North Sea disruption."
         ),
     },
     "RB=F": {
@@ -111,13 +104,12 @@ FUTURES = {
         "label":        "NYMEX RBOB Gasoline (front-month)",
         "exchange":     "CME/NYMEX",
         "unit":         "usd_per_gal",
-        "lot_size_bbl": 1000,         # 42,000 gal = 1000 bbl
-        "multiplier":   42.0,         # × 42 to convert $/gal → $/bbl
+        "lot_size_bbl": 1000,
+        "multiplier":   42.0,
         "benchmark":    False,
         "signal_note":  (
-            "US gasoline benchmark. Seasonal peak crack Feb–May (driving season build). "
-            "Long RBOB crack vs WTI in Feb–Apr = most reliable seasonal energy trade. "
-            "Summer/winter RVP spec change at Apr/Oct roll creates predictable discontinuity."
+            "US gasoline benchmark. Seasonal peak crack Feb-May (driving season build). "
+            "Long RBOB crack vs WTI in Feb-Apr = most reliable seasonal energy trade."
         ),
     },
     "HO=F": {
@@ -130,8 +122,8 @@ FUTURES = {
         "benchmark":    False,
         "signal_note":  (
             "US distillate benchmark (ULSD 15ppm). Proxy for global diesel tightness. "
-            "HO crack widens = diesel/heating oil supply tight; supports crude demand. "
-            "HO-RBOB spread: wide diesel premium → industrial/commercial demand > driving demand."
+            "HO crack widens = diesel supply tight = supports crude demand. "
+            "HO-RBOB spread: wide diesel premium → industrial demand > driving demand."
         ),
     },
     "BG=F": {
@@ -145,50 +137,32 @@ FUTURES = {
         "signal_note":  (
             "European diesel benchmark. Gasoil crack (GO - Brent) is the most actively "
             "traded crack spread in European hours. Reference price for jet fuel and "
-            "heating oil in Europe. Key for transatlantic diesel arb (HO vs GO spread). "
-            "Wide gasoil crack > $25/bbl = European diesel tight = bullish crude demand. "
-            "Note: Yahoo Finance BG=F may return stale prices. "
-            "If price < $500/MT, use HO=F as proxy (USD/gal x 42 x 6.29 for MT equiv)."
-        ),
-    },
-    "NG=F": {
-        "key":          "henry_hub",
-        "label":        "NYMEX Henry Hub Natural Gas (front-month)",
-        "exchange":     "CME/NYMEX",
-        "unit":         "usd_per_mmbtu",
-        "lot_size_bbl": None,
-        "multiplier":   1.0,
-        "benchmark":    False,
-        "signal_note":  (
-            "US gas benchmark. Kept as macro cross-commodity signal. "
-            "WTI/HH ratio > 20x = gas cheap vs oil → power switching to gas → oil demand softens. "
-            "Moved to macro layer — primary diesel signal now uses ICE Gasoil (BG=F)."
+            "heating oil in Europe. Wide gasoil crack > $25/bbl = European diesel tight. "
+            "Note: Yahoo BG=F returns stale data — Barchart LFY00 to be added when API key available."
         ),
     },
 }
 
-# ── Yahoo Finance fetch ──────────────────────────────────────────────────────
+# ── Fetch functions ───────────────────────────────────────────────────────────
 
 def _yf_headers() -> dict:
     return {
-        "User-Agent": random.choice(USER_AGENTS),
-        "Accept": "application/json, */*",
+        "User-Agent":      random.choice(USER_AGENTS),
+        "Accept":          "application/json, */*",
         "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://finance.yahoo.com/",
+        "Referer":         "https://finance.yahoo.com/",
     }
 
 
 def fetch_stooq(yahoo_ticker: str) -> dict | None:
     """
-    Fetch latest price from Stooq CSV endpoint.
-    Primary source — no rate limiting, no API key, completely free.
-
-    Returns same dict format as fetch_single_chart for compatibility.
+    Fetch latest price from Stooq CSV.
+    Primary source — no rate limits, no API key, completely free.
     CSV format: Date,Open,High,Low,Close,Volume (newest last)
     """
     stooq_ticker = STOOQ_TICKERS.get(yahoo_ticker)
     if not stooq_ticker:
-        return None   # ticker not on Stooq (e.g. BG=F ICE Gasoil)
+        return None
 
     url = STOOQ_BASE.format(ticker=stooq_ticker)
     try:
@@ -204,7 +178,6 @@ def fetch_stooq(yahoo_ticker: str) -> dict | None:
             log.warning("  Stooq %s: empty response", stooq_ticker)
             return None
 
-        # Header: Date,Open,High,Low,Close,Volume
         header = [h.strip() for h in lines[0].split(",")]
         latest = dict(zip(header, lines[-1].split(",")))
         prev   = dict(zip(header, lines[-2].split(","))) if len(lines) > 2 else {}
@@ -213,13 +186,12 @@ def fetch_stooq(yahoo_ticker: str) -> dict | None:
         prev_price = float(prev.get("Close", price) or price)
 
         if price == 0:
-            log.warning("  Stooq %s: zero price returned", stooq_ticker)
+            log.warning("  Stooq %s: zero price", stooq_ticker)
             return None
 
         change     = round(price - prev_price, 4)
         change_pct = round(change / prev_price * 100, 3) if prev_price else None
 
-        # Build 30-day history
         history = []
         for line in lines[1:]:
             parts = line.split(",")
@@ -232,7 +204,7 @@ def fetch_stooq(yahoo_ticker: str) -> dict | None:
                 except ValueError:
                     continue
 
-        log.info("  Stooq %s (%s): $%.4f", yahoo_ticker, stooq_ticker, price)
+        log.info("  [Stooq] %s (%s): $%.4f", yahoo_ticker, stooq_ticker, price)
         return {
             "price":        round(price, 4),
             "prev_close":   round(prev_price, 4),
@@ -246,20 +218,19 @@ def fetch_stooq(yahoo_ticker: str) -> dict | None:
         }
 
     except Exception as exc:
-        log.debug("  Stooq failed for %s: %s", stooq_ticker, exc)
+        log.debug("  Stooq failed %s: %s", stooq_ticker, exc)
         return None
 
 
 def fetch_quote_batch(tickers: list[str]) -> dict[str, dict]:
-    """
-    Fetch multiple tickers in one Yahoo Finance v7 quote call.
-    Returns {ticker: {price, change, changePct, previousClose, ...}}
-    """
+    """Yahoo Finance batch quote — fallback when Stooq fails."""
     symbols = ",".join(tickers)
-    url     = f"{YF_QUOTE_URL}?symbols={symbols}"
-
     try:
-        r = requests.get(url, headers=_yf_headers(), timeout=12)
+        r = requests.get(
+            f"{YF_QUOTE_URL}?symbols={symbols}",
+            headers=_yf_headers(),
+            timeout=12,
+        )
         r.raise_for_status()
         results = r.json()["quoteResponse"]["result"]
         return {item["symbol"]: item for item in results}
@@ -269,26 +240,23 @@ def fetch_quote_batch(tickers: list[str]) -> dict[str, dict]:
 
 
 def fetch_single_chart(ticker: str, days: int = 30) -> dict | None:
-    """
-    Fetch OHLCV history via Yahoo Finance v8. Retries 3x with delays on rate limits.
-    """
+    """Yahoo Finance individual chart — last resort. Retries 3x with delays."""
     max_retries = 3
-
     for attempt in range(max_retries):
         for endpoint_tmpl in YF_ENDPOINTS:
-            url    = endpoint_tmpl.format(ticker=ticker)
-            params = {"interval": "1d", "range": f"{days}d"}
+            url = endpoint_tmpl.format(ticker=ticker)
             try:
-                r = requests.get(url, headers=_yf_headers(), params=params, timeout=15)
-
-                # Handle rate limiting explicitly before raise_for_status
+                r = requests.get(
+                    url,
+                    headers=_yf_headers(),
+                    params={"interval": "1d", "range": f"{days}d"},
+                    timeout=15,
+                )
                 if r.status_code in (429, 401):
                     wait = (attempt + 1) * 5
-                    log.debug("  Rate limited (%d) %s — retry in %ds (attempt %d/%d)",
-                              r.status_code, ticker, wait, attempt + 1, max_retries)
+                    log.debug("  Rate limited %s — retry in %ds", ticker, wait)
                     time.sleep(wait)
-                    break   # break inner loop, retry outer
-
+                    break
                 r.raise_for_status()
                 data   = r.json()
                 result = data["chart"]["result"][0]
@@ -306,7 +274,6 @@ def fetch_single_chart(ticker: str, days: int = 30) -> dict | None:
                      "close": round(c, 4) if c else None}
                     for ts, c in zip(timestamps, closes) if c is not None
                 ]
-
                 return {
                     "price":        round(price, 4) if price else None,
                     "prev_close":   round(prev_close, 4) if prev_close else None,
@@ -316,34 +283,31 @@ def fetch_single_chart(ticker: str, days: int = 30) -> dict | None:
                     "low_52w":      meta.get("fiftyTwoWeekLow"),
                     "history":      list(reversed(history)),
                     "market_state": meta.get("marketState", "unknown"),
+                    "source":       "yahoo",
                 }
-
             except Exception as exc:
-                log.debug("Chart fetch failed %s for %s: %s", endpoint_tmpl, ticker, exc)
+                log.debug("  Yahoo chart failed %s: %s", ticker, exc)
                 time.sleep(1.0)
                 continue
-
         if attempt < max_retries - 1:
-            time.sleep(random.uniform(3, 6))  # pause between retries
-
+            time.sleep(random.uniform(3, 6))
     return None
 
-# ── Unit conversion helpers ──────────────────────────────────────────────────
+# ── Unit conversion ───────────────────────────────────────────────────────────
 
 def to_bbl(price: float | None, multiplier: float) -> float | None:
-    """Convert $/gal → $/bbl using multiplier (42 for RBOB/HO). Brent/WTI passthrough."""
     if price is None:
         return None
     return round(price * multiplier, 4)
 
-
-# ── Fallback price estimation ────────────────────────────────────────────────
+# ── Fallback price estimation ─────────────────────────────────────────────────
 
 def estimate_missing_prices(contracts: dict) -> dict:
     """
     Only estimates RBOB from HO when unavailable.
     Brent and WTI are NOT estimated — they are separate benchmarks.
-    Missing Brent/WTI shows as INSUFFICIENT_DATA on next run.
+    A missing Brent-WTI spread is better than a fake one.
+    Re-fetch in 30 min to get real prices.
     """
     rbob = contracts.get("rbob", {}).get("price_bbl")
     ho   = contracts.get("heating_oil", {}).get("price_bbl")
@@ -353,155 +317,80 @@ def estimate_missing_prices(contracts: dict) -> dict:
         contracts["rbob"]["price_bbl"]     = est_rbob
         contracts["rbob"]["estimated"]     = True
         contracts["rbob"]["estimate_note"] = (
-            f"Estimated from HO (${ho:.2f}/bbl) × 0.875 seasonal ratio — "
+            f"Estimated from HO (${ho:.2f}/bbl) x 0.875 seasonal ratio. "
             f"Yahoo rate limited RBOB. Re-fetch in 30 min for real price."
         )
         log.info("  [ESTIMATE] RBOB $%.2f/bbl (HO proxy — temporary)", est_rbob)
     elif rbob is None:
-        log.warning("  RBOB unavailable — no HO to estimate from. Showing INSUFFICIENT_DATA.")
+        log.warning("  RBOB unavailable — no HO to estimate from. INSUFFICIENT_DATA.")
 
     return contracts
 
-# ── Derived spread calculations ──────────────────────────────────────────────
+# ── Derived spread calculations ───────────────────────────────────────────────
 
-def compute_crack_321(wti_bbl: float | None, rbob_bbl: float | None,
-                      ho_bbl: float | None) -> dict:
+def compute_crack_321(wti_bbl, rbob_bbl, ho_bbl) -> dict:
     """
-    3-2-1 crack spread: [(2×RBOB + 1×ULSD) − (3×WTI)] / 3  (all in $/bbl)
-
-    Signal thresholds (from OilMacroTrading book):
-      > $20/bbl  → product demand outpaces crude; BULLISH crude demand
-      $12-20     → normal refinery margin
-      < $12      → compressed margins; runs may be cut; BEARISH crude demand
+    3-2-1 crack: [(2xRBOB + 1xHO) - (3xWTI)] / 3  (all $/bbl)
+    > $20 = BULLISH | $12-20 = NEUTRAL | < $12 = BEARISH
     """
     if None in (wti_bbl, rbob_bbl, ho_bbl):
         return {"value_bbl": None, "signal": "INSUFFICIENT_DATA"}
-
     value = round(((2 * rbob_bbl) + (1 * ho_bbl) - (3 * wti_bbl)) / 3, 2)
-
     if value > 20:
         signal = "BULLISH"
-        note   = f"3-2-1 crack ${value:.2f}/bbl > $20: product demand outpaces crude supply → refiners incentivised to run harder → crude demand grows."
+        note   = f"3-2-1 crack ${value:.2f}/bbl > $20: product demand outpaces crude → refiners run harder → crude demand grows."
     elif value > 12:
         signal = "NEUTRAL"
-        note   = f"3-2-1 crack ${value:.2f}/bbl ($12–$20): normal refinery margin range."
+        note   = f"3-2-1 crack ${value:.2f}/bbl ($12-$20): normal refinery margin range."
     else:
         signal = "BEARISH"
-        note   = f"3-2-1 crack ${value:.2f}/bbl < $12: compressed margins → runs may be cut → crude demand softens."
-
+        note   = f"3-2-1 crack ${value:.2f}/bbl < $12: compressed margins → run cuts risk → crude demand softens."
     return {
         "value_bbl":  value,
-        "components": {
-            "wti_bbl":  wti_bbl,
-            "rbob_bbl": rbob_bbl,
-            "ho_bbl":   ho_bbl,
-        },
-        "formula": "[(2×RBOB + 1×HO) − (3×WTI)] / 3",
-        "signal":  signal,
-        "note":    note,
+        "components": {"wti_bbl": wti_bbl, "rbob_bbl": rbob_bbl, "ho_bbl": ho_bbl},
+        "formula":    "[(2xRBOB + 1xHO) - (3xWTI)] / 3",
+        "signal":     signal,
+        "note":       note,
     }
 
 
-def compute_brent_wti_spread(brent: float | None, wti: float | None) -> dict:
+def compute_brent_wti_spread(brent, wti) -> dict:
     """
-    Brent-WTI spread: Brent − WTI ($/bbl)
-
-    Signal thresholds (from OilMacroTrading book):
-      > $8/bbl  → US export bottleneck OR North Sea disruption
-      $2-8      → normal range
-      < $2      → US exports flooding market (shale surplus reaching export terminals)
+    Brent-WTI spread ($/bbl).
+    > $8 = US export bottleneck or North Sea disruption
+    $2-8 = normal
+    < $2 = US exports flooding market
     """
     if None in (brent, wti):
         return {"value_bbl": None, "signal": "INSUFFICIENT_DATA"}
-
     value = round(brent - wti, 2)
-
     if value > 8:
         signal = "ALERT"
-        note   = f"Brent-WTI ${value:.2f}/bbl > $8: US export bottleneck OR North Sea supply disruption. Watch Cushing stocks + BFOET cargo counts."
+        note   = f"Brent-WTI ${value:.2f} > $8: US export bottleneck OR North Sea disruption."
     elif value >= 2:
         signal = "NORMAL"
-        note   = f"Brent-WTI ${value:.2f}/bbl: normal range ($2-$8). US exports flowing; North Sea supply intact."
+        note   = f"Brent-WTI ${value:.2f}: normal range. US exports flowing."
     else:
         signal = "ALERT"
-        note   = f"Brent-WTI ${value:.2f}/bbl < $2: US shale exports flooding Atlantic basin. Bearish for Brent relative to WTI."
-
-    return {
-        "value_bbl": value,
-        "brent_bbl": brent,
-        "wti_bbl":   wti,
-        "signal":    signal,
-        "note":      note,
-    }
+        note   = f"Brent-WTI ${value:.2f} < $2: US exports flooding Atlantic basin."
+    return {"value_bbl": value, "brent_bbl": brent, "wti_bbl": wti, "signal": signal, "note": note}
 
 
-def compute_ho_rbob_spread(ho_bbl: float | None, rbob_bbl: float | None) -> dict:
+def compute_ho_rbob_spread(ho_bbl, rbob_bbl) -> dict:
     """
-    HO-RBOB spread: Heating Oil − RBOB ($/bbl)
-    Diesel premium over gasoline.
-
-    Wide (> $15/bbl):  diesel tight vs gasoline → industrial/commercial demand dominant
-    Normal ($5-$15):   balanced product slate
-    Narrow/negative:   gasoline scarce vs diesel → driving season pressure
+    HO-RBOB spread ($/bbl) — diesel premium over gasoline.
+    > $15 = DIESEL_TIGHT | $5-15 = NORMAL | < $5 = GASOLINE_TIGHT
     """
     if None in (ho_bbl, rbob_bbl):
         return {"value_bbl": None, "signal": "INSUFFICIENT_DATA"}
-
     value = round(ho_bbl - rbob_bbl, 2)
-
     if value > 15:
-        signal, note = "DIESEL_TIGHT", f"HO-RBOB ${value:.2f}/bbl: diesel significantly outperforming → industrial/logistics demand dominant. Check European gasoil crack alignment."
+        signal, note = "DIESEL_TIGHT", f"HO-RBOB ${value:.2f}: diesel outperforming — industrial/logistics demand dominant."
     elif value >= 5:
-        signal, note = "NORMAL", f"HO-RBOB ${value:.2f}/bbl: normal diesel premium over gasoline."
+        signal, note = "NORMAL", f"HO-RBOB ${value:.2f}: normal diesel premium over gasoline."
     else:
-        signal, note = "GASOLINE_TIGHT", f"HO-RBOB ${value:.2f}/bbl < $5: gasoline outperforming → driving season or refinery reconfiguration towards gasoline yield."
-
-    return {
-        "value_bbl": value,
-        "ho_bbl":    ho_bbl,
-        "rbob_bbl":  rbob_bbl,
-        "signal":    signal,
-        "note":      note,
-    }
-
-
-def compute_gas_oil_ratio(wti: float | None, ng: float | None) -> dict:
-    """
-    Crude-to-gas price ratio (WTI $/bbl ÷ HH $/mmBTU).
-    Historical norm: ~10-15x. High ratio → gas cheap → power switching from oil/coal to gas.
-    Low ratio → oil cheap relative to gas.
-
-    Energy equivalence: 1 bbl crude ≈ 5.8 mmBTU
-    Oil-equivalent gas price = NG × 5.8
-    """
-    if None in (wti, ng):
-        return {"ratio": None, "signal": "INSUFFICIENT_DATA"}
-
-    ratio            = round(wti / ng, 2) if ng else None
-    oil_equiv_gas    = round(ng * 5.8, 2) if ng else None   # $/bbl equivalent
-
-    if ratio is None:
-        return {"ratio": None, "signal": "INSUFFICIENT_DATA"}
-
-    if ratio > 20:
-        signal = "GAS_CHEAP"
-        note   = f"WTI/HH ratio {ratio}x (> 20x): gas very cheap vs oil → power sector switches to gas; gas demand rises; oil demand softens at margin."
-    elif ratio >= 10:
-        signal = "NORMAL"
-        note   = f"WTI/HH ratio {ratio}x: normal range (10-20x). No strong cross-commodity switching pressure."
-    else:
-        signal = "OIL_CHEAP"
-        note   = f"WTI/HH ratio {ratio}x (< 10x): oil cheap vs gas → oil demand supported; gas substitution less attractive."
-
-    return {
-        "ratio":         ratio,
-        "wti_bbl":       wti,
-        "ng_mmbtu":      ng,
-        "oil_equiv_gas": oil_equiv_gas,
-        "signal":        signal,
-        "note":          note,
-    }
-
+        signal, note = "GASOLINE_TIGHT", f"HO-RBOB ${value:.2f}: gasoline outperforming — driving season pressure."
+    return {"value_bbl": value, "ho_bbl": ho_bbl, "rbob_bbl": rbob_bbl, "signal": signal, "note": note}
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
@@ -511,103 +400,101 @@ def run() -> dict:
     output = {
         "fetcher":    "futures_fetcher",
         "fetched_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "source":     "Stooq (primary) + Yahoo Finance fallback",
+        "source":     "Stooq (primary) + Yahoo Finance (fallback)",
         "contracts":  {},
         "derived":    {},
     }
 
-    prices_bbl: dict[str, float | None] = {}  # keyed by contract key, all $/bbl
-
-    # ── Step 1: batch quote for current prices ───────────────────────────────
-    tickers   = list(FUTURES.keys())
-    batch     = fetch_quote_batch(tickers)
+    prices_bbl: dict[str, float | None] = {}
+    tickers = list(FUTURES.keys())
+    batch   = fetch_quote_batch(tickers)
 
     for ticker, cfg in FUTURES.items():
         log.info("Processing %s (%s)", ticker, cfg["label"])
 
-        # ── Fetch: Stooq FIRST (no rate limit), Yahoo as fallback ──────────────
-        chart = fetch_stooq(ticker)   # try Stooq first — fast, free, no limits
+        # 1. Stooq first — no rate limits
+        chart = fetch_stooq(ticker)
 
-        if chart is None:
-            # Stooq miss (ticker not on Stooq e.g. BG=F) → try Yahoo batch
-            if ticker in batch:
-                b = batch[ticker]
-                chart = {
-                    "price":        b.get("regularMarketPrice"),
-                    "prev_close":   b.get("regularMarketPreviousClose"),
-                    "change":       b.get("regularMarketChange"),
-                    "change_pct":   b.get("regularMarketChangePercent"),
-                    "high_52w":     b.get("fiftyTwoWeekHigh"),
-                    "low_52w":      b.get("fiftyTwoWeekLow"),
-                    "history":      [],
-                    "market_state": b.get("marketState", "unknown"),
-                    "source":       "yahoo_batch",
-                }
-            else:
-                # Last resort: Yahoo individual chart
-                time.sleep(random.uniform(1.0, 2.0))
-                chart = fetch_single_chart(ticker, days=30)
+        # 2. Yahoo batch fallback
+        if chart is None and ticker in batch:
+            b = batch[ticker]
+            chart = {
+                "price":        b.get("regularMarketPrice"),
+                "prev_close":   b.get("regularMarketPreviousClose"),
+                "change":       b.get("regularMarketChange"),
+                "change_pct":   b.get("regularMarketChangePercent"),
+                "high_52w":     b.get("fiftyTwoWeekHigh"),
+                "low_52w":      b.get("fiftyTwoWeekLow"),
+                "history":      [],
+                "market_state": b.get("marketState", "unknown"),
+                "source":       "yahoo_batch",
+            }
+
+        # 3. Yahoo individual chart — last resort
+        if chart is None or chart.get("price") is None:
+            time.sleep(random.uniform(1.0, 2.0))
+            chart = fetch_single_chart(ticker, days=30)
 
         if chart is None or chart.get("price") is None:
             log.error("  Could not fetch %s from Stooq or Yahoo", ticker)
             output["contracts"][cfg["key"]] = {
-                "error": "fetch_failed",
-                "ticker": ticker,
-                "label": cfg["label"],
+                "error": "fetch_failed", "ticker": ticker, "label": cfg["label"],
             }
             prices_bbl[cfg["key"]] = None
             continue
 
-        raw_price  = chart["price"]
-        prev_close = chart["prev_close"]
-        change     = chart["change"]
-        change_pct = chart["change_pct"]
-        high_52w   = chart.get("high_52w")
-        low_52w    = chart.get("low_52w")
-        market_st  = chart.get("market_state", "unknown")
-        history    = chart.get("history", [])
+        raw_price = chart["price"]
+        price_bbl = to_bbl(raw_price, cfg["multiplier"])
 
-        # Unit-convert to $/bbl for spread maths
-        price_bbl  = to_bbl(raw_price, cfg["multiplier"])
+        # Sanity check BG=F — Yahoo returns stale ~$126/MT, real ~$600-900/MT
+        # Real price should be > $50/bbl after conversion
+        if cfg["key"] == "ice_gasoil" and price_bbl and price_bbl < 50:
+            log.warning("  BG=F $%.2f/bbl too low (stale Yahoo data) — ignoring", price_bbl)
+            output["contracts"][cfg["key"]] = {
+                "error":    "stale_price",
+                "ticker":   ticker,
+                "label":    cfg["label"],
+                "raw_price": raw_price,
+                "note":     "Yahoo BG=F returns stale data. Barchart LFY00 to be added when API key available.",
+            }
+            prices_bbl[cfg["key"]] = None
+            continue
+
         prices_bbl[cfg["key"]] = price_bbl
 
         output["contracts"][cfg["key"]] = {
-            "ticker":          ticker,
-            "label":           cfg["label"],
-            "exchange":        cfg["exchange"],
-            "raw_price":       raw_price,
-            "raw_unit":        cfg["unit"],
-            "price_bbl":       price_bbl,
-            "prev_close":      prev_close,
-            "change":          change,
-            "change_pct":      change_pct,
-            "high_52w":        high_52w,
-            "low_52w":         low_52w,
-            "market_state":    market_st,
-            "lot_size_bbl":    cfg["lot_size_bbl"],
-            "signal_note":     cfg["signal_note"],
-            "history":         history,
+            "ticker":       ticker,
+            "label":        cfg["label"],
+            "exchange":     cfg["exchange"],
+            "raw_price":    raw_price,
+            "raw_unit":     cfg["unit"],
+            "price_bbl":    price_bbl,
+            "prev_close":   chart.get("prev_close"),
+            "change":       chart.get("change"),
+            "change_pct":   chart.get("change_pct"),
+            "high_52w":     chart.get("high_52w"),
+            "low_52w":      chart.get("low_52w"),
+            "market_state": chart.get("market_state", "unknown"),
+            "lot_size_bbl": cfg["lot_size_bbl"],
+            "signal_note":  cfg["signal_note"],
+            "history":      chart.get("history", []),
+            "source":       chart.get("source", "yahoo"),
         }
 
-        log.info(
-            "  %s  raw=%.4f %s | $/bbl=%.2f | chg=%.2f%%",
-            ticker,
-            raw_price or 0,
-            cfg["unit"],
-            price_bbl or 0,
-            change_pct or 0,
-        )
+        log.info("  %s  raw=%.4f %s | $/bbl=%.2f | chg=%.2f%%",
+                 ticker, raw_price or 0, cfg["unit"],
+                 price_bbl or 0, chart.get("change_pct") or 0)
 
-        time.sleep(random.uniform(2.0, 4.0))   # longer pause to avoid Yahoo rate limits
+        time.sleep(random.uniform(1.5, 3.0))
 
-    # ── Step 1b: estimate missing prices if Yahoo blocked some tickers ─────────
+    # ── Estimate missing prices ───────────────────────────────────────────────
     output["contracts"] = estimate_missing_prices(output["contracts"])
-    # Update prices_bbl dict with any newly estimated values
     for key in ["brent", "wti", "rbob", "heating_oil", "ice_gasoil"]:
-        if output["contracts"].get(key, {}).get("price_bbl"):
-            prices_bbl[key] = output["contracts"][key]["price_bbl"]
+        v = output["contracts"].get(key, {})
+        if isinstance(v, dict) and v.get("price_bbl") and "error" not in v:
+            prices_bbl[key] = v["price_bbl"]
 
-    # ── Step 2: derived spreads ──────────────────────────────────────────────
+    # ── Derived spreads ───────────────────────────────────────────────────────
     log.info("Computing derived spreads...")
 
     output["derived"]["crack_321"] = compute_crack_321(
@@ -615,103 +502,85 @@ def run() -> dict:
         prices_bbl.get("rbob"),
         prices_bbl.get("heating_oil"),
     )
-
     output["derived"]["brent_wti_spread"] = compute_brent_wti_spread(
         prices_bbl.get("brent"),
         prices_bbl.get("wti"),
     )
-
     output["derived"]["ho_rbob_spread"] = compute_ho_rbob_spread(
         prices_bbl.get("heating_oil"),
         prices_bbl.get("rbob"),
     )
 
-    # ICE Gasoil crack: gasoil_bbl - brent_bbl
+    # ICE Gasoil crack
     gasoil_bbl = prices_bbl.get("ice_gasoil")
     brent_bbl  = prices_bbl.get("brent")
     output["derived"]["gasoil_crack"] = {
-        "value_bbl":  round(gasoil_bbl - brent_bbl, 2) if (gasoil_bbl and brent_bbl) else None,
-        "gasoil_bbl": gasoil_bbl,
-        "brent_bbl":  brent_bbl,
-        "signal":     (
+        "value_bbl": round(gasoil_bbl - brent_bbl, 2) if (gasoil_bbl and brent_bbl) else None,
+        "signal":    (
             "BULLISH" if gasoil_bbl and brent_bbl and (gasoil_bbl - brent_bbl) > 25
             else "BEARISH" if gasoil_bbl and brent_bbl and (gasoil_bbl - brent_bbl) < 10
-            else "NEUTRAL"
+            else "NEUTRAL" if (gasoil_bbl and brent_bbl)
+            else "INSUFFICIENT_DATA"
         ),
         "note": (
-            f"ICE Gasoil crack ${round(gasoil_bbl-brent_bbl,2):.1f}/bbl: "
-            + ("Wide > $25 → European diesel tight → bullish crude demand"
-               if gasoil_bbl and brent_bbl and (gasoil_bbl - brent_bbl) > 25
-               else "Compressed < $10 → diesel margins weak"
-               if gasoil_bbl and brent_bbl and (gasoil_bbl - brent_bbl) < 10
-               else "Normal range")
-        ) if (gasoil_bbl and brent_bbl) else "Insufficient data",
+            f"ICE Gasoil crack ${round(gasoil_bbl - brent_bbl, 2):.1f}/bbl"
+            if (gasoil_bbl and brent_bbl) else
+            "Insufficient data — Barchart LFY00 to be added when API key available"
+        ),
     }
 
-    # ── Step 3: composite futures signal ────────────────────────────────────
-    crack_sig  = output["derived"]["crack_321"].get("signal", "NEUTRAL")
-    bwti_sig   = output["derived"]["brent_wti_spread"].get("signal", "NORMAL")
-
-    # Brent 1-day change direction → crude price momentum
-    brent_chg  = output["contracts"].get("brent", {}).get("change_pct")
-    if brent_chg and brent_chg > 0.5:
-        price_mom = "BULLISH"
-    elif brent_chg and brent_chg < -0.5:
-        price_mom = "BEARISH"
-    else:
-        price_mom = "NEUTRAL"
-
+    # Composite signal
+    crack_sig = output["derived"]["crack_321"].get("signal", "NEUTRAL")
+    bwti_sig  = output["derived"]["brent_wti_spread"].get("signal", "NORMAL")
+    brent_chg = output["contracts"].get("brent", {}).get("change_pct")
+    price_mom = (
+        "BULLISH" if brent_chg and brent_chg > 0.5
+        else "BEARISH" if brent_chg and brent_chg < -0.5
+        else "NEUTRAL"
+    )
     output["derived"]["composite_signal"] = {
-        "crack_321_signal":    crack_sig,
-        "brent_wti_signal":    bwti_sig,
+        "crack_321_signal":     crack_sig,
+        "brent_wti_signal":     bwti_sig,
         "brent_price_momentum": price_mom,
         "interpretation": (
             f"Crack {crack_sig} | Brent-WTI {bwti_sig} | Brent momentum {price_mom}. "
-            "Wide crack + backwardation = strongest bullish setup. "
-            "Compressed crack + contango = bearish refinery/crude setup."
+            "Wide crack + backwardation = strongest bullish setup."
         ),
     }
 
-    # ── Save ─────────────────────────────────────────────────────────────────
+    # ── Save ──────────────────────────────────────────────────────────────────
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "w") as f:
         json.dump(output, f, indent=2)
 
-    log.info("Saved → %s", OUTPUT_PATH)
-
-    # ── Summary print ─────────────────────────────────────────────────────────
+    # ── Summary ───────────────────────────────────────────────────────────────
     log.info("─" * 60)
     log.info("FUTURES SUMMARY")
     log.info("─" * 60)
     for key, data in output["contracts"].items():
         if "error" in data:
-            log.info("  %-14s  ERROR", key.upper())
+            log.info("  %-14s  ERROR (%s)", key.upper(), data.get("note", "fetch failed")[:50])
         else:
-            log.info(
-                "  %-14s  raw=%-9s  $/bbl=%-8s  chg=%+.2f%%",
-                key.upper(),
-                f"{data.get('raw_price', 'N/A'):.4f}" if data.get("raw_price") else "N/A",
-                f"{data.get('price_bbl', 'N/A'):.2f}" if data.get("price_bbl") else "N/A",
-                data.get("change_pct") or 0,
-            )
+            log.info("  %-14s  raw=%-9s  $/bbl=%-8s  chg=%+.2f%%  [%s]",
+                     key.upper(),
+                     f"{data.get('raw_price', 0):.4f}" if data.get("raw_price") else "N/A",
+                     f"{data.get('price_bbl', 0):.2f}"  if data.get("price_bbl")  else "N/A",
+                     data.get("change_pct") or 0,
+                     data.get("source", "?"))
     log.info("")
     log.info("SPREADS")
-    crack = output["derived"]["crack_321"]
-    bwti  = output["derived"]["brent_wti_spread"]
-    horbob = output["derived"]["ho_rbob_spread"]
-    log.info(
-        "  3-2-1 Crack:   $%.2f/bbl  [%s]",
-        crack.get("value_bbl") or 0, crack.get("signal"),
-    )
-    log.info(
-        "  Brent-WTI:     $%.2f/bbl  [%s]",
-        bwti.get("value_bbl") or 0, bwti.get("signal"),
-    )
-    log.info(
-        "  HO-RBOB:       $%.2f/bbl  [%s]",
-        horbob.get("value_bbl") or 0, horbob.get("signal"),
-    )
+    for name, key in [
+        ("3-2-1 Crack",  "crack_321"),
+        ("Brent-WTI",    "brent_wti_spread"),
+        ("HO-RBOB",      "ho_rbob_spread"),
+    ]:
+        d = output["derived"][key]
+        log.info("  %-14s $%.2f/bbl  [%s]",
+                 name + ":",
+                 d.get("value_bbl") or 0,
+                 d.get("signal", "N/A"))
     log.info("─" * 60)
+    log.info("Saved → %s", OUTPUT_PATH)
 
     return output
 
