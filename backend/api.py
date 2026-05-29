@@ -40,7 +40,7 @@ def run_script(rel_path, label):
     try:
         log.info("Scheduler ▶ %s", label)
         r = subprocess.run([sys.executable, str(ROOT / rel_path)],
-                           capture_output=True, text=True, timeout=180)
+                           capture_output=True, text=True, timeout=120)
         if r.returncode != 0:
             log.warning("  %s error: %s", label, r.stderr[-150:])
         else:
@@ -58,18 +58,7 @@ def job_prices():
 
 def job_inventory():
     """Inventory signals (every 30 min — uses cached EIA)"""
-    try:
-        log.info("Scheduler ▶ inventory")
-        r = subprocess.run(
-            [sys.executable, str(ROOT / "inventory_signals.py"), "--no-fetch"],
-            capture_output=True, text=True, timeout=120
-        )
-        if r.returncode != 0:
-            log.warning("  inventory error: %s", r.stderr[-150:])
-        else:
-            log.info("  inventory ✓")
-    except Exception as e:
-        log.error("  inventory failed: %s", e)
+    run_script("inventory_signals.py --no-fetch", "inventory --no-fetch")
 
 def job_eia():
     """EIA fetcher (every 30 min)"""
@@ -84,6 +73,9 @@ def job_gie():
 def job_weather():
     run_script("fetchers/weather_fetcher.py", "weather")
 
+def job_news():
+    run_script("fetchers/news_fetcher.py", "news_sentiment")
+
 def job_cftc():
     run_script("fetchers/cftc_fetcher.py", "cftc")
 
@@ -94,6 +86,7 @@ scheduler.add_job(job_eia,       "interval", minutes=30, id="eia",       max_ins
 scheduler.add_job(job_fred,      "interval", hours=1,    id="fred",      max_instances=1)
 scheduler.add_job(job_gie,       "interval", hours=1,    id="gie",       max_instances=1)
 scheduler.add_job(job_weather,   "interval", hours=1,    id="weather",   max_instances=1)
+scheduler.add_job(job_news, "interval", minutes=15, id="news", max_instances=1)
 scheduler.add_job(job_cftc,      "cron",     day_of_week="fri", hour=16,
                   minute=5, id="cftc", max_instances=1, timezone="America/New_York")
 
@@ -132,6 +125,9 @@ def gie():        return load("gie_latest.json")
 @app.get("/api/weather")
 def weather():    return load("weather_latest.json")
 
+@app.get("/api/news")
+def news():       return load("news_signals.json")
+
 @app.get("/api/cftc")
 def cftc():       return load("cftc_latest.json")
 
@@ -146,6 +142,7 @@ def all_data():
         "gie":       load("gie_latest.json"),
         "weather":   load("weather_latest.json"),
         "cftc":      load("cftc_latest.json"),
+        "news":      load("news_signals.json"),
         "server_time": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
