@@ -40,7 +40,7 @@ def run_script(rel_path, label):
     try:
         log.info("Scheduler ▶ %s", label)
         r = subprocess.run([sys.executable, str(ROOT / rel_path)],
-                           capture_output=True, text=True, timeout=120)
+                           capture_output=True, text=True, timeout=180)
         if r.returncode != 0:
             log.warning("  %s error: %s", label, r.stderr[-150:])
         else:
@@ -58,7 +58,18 @@ def job_prices():
 
 def job_inventory():
     """Inventory signals (every 30 min — uses cached EIA)"""
-    run_script("inventory_signals.py --no-fetch", "inventory --no-fetch")
+    try:
+        log.info("Scheduler ▶ inventory")
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "inventory_signals.py"), "--no-fetch"],
+            capture_output=True, text=True, timeout=120
+        )
+        if r.returncode != 0:
+            log.warning("  inventory error: %s", r.stderr[-150:])
+        else:
+            log.info("  inventory ✓")
+    except Exception as e:
+        log.error("  inventory failed: %s", e)
 
 def job_eia():
     """EIA fetcher (every 30 min)"""
