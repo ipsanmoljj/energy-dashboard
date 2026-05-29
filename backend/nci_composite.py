@@ -57,12 +57,13 @@ log = logging.getLogger(__name__)
 # Macro, weather, positioning are secondary/confirming signals.
 
 LAYER_WEIGHTS = {
-    "inventory":   0.35,   # Days cover, Cushing, 5yr deviation — most direct
-    "crack":       0.25,   # Refinery margins — crude demand signal
-    "macro":       0.15,   # DXY, rates — financial backdrop
-    "demand":      0.10,   # Weather HDD/CDD + GIE gas storage
+    "inventory":   0.30,   # Days cover, Cushing, 5yr deviation — most direct
+    "crack":       0.22,   # Refinery margins — crude demand signal
+    "macro":       0.13,   # DXY, rates — financial backdrop
+    "demand":      0.10,   # Weather HDD/CDD demand signal
     "positioning": 0.10,   # CFTC — sentiment/crowding
-    "gie":         0.05,   # EU gas storage (subset of demand, separate signal)
+    "gie":         0.05,   # EU gas storage
+    "news":        0.10,   # News sentiment — breaking events, geo risk
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -285,6 +286,36 @@ def get_gie_signal() -> dict:
     }
 
 
+def get_news_signal() -> dict:
+    """Extract news score from news_signals.json."""
+    data  = load_json("news_signals.json")
+    ns    = data.get("news_score", {})
+    score = ns.get("score")
+    label = ns.get("label", "UNKNOWN")
+
+    if score is None:
+        return {"score": 0, "label": "NO_DATA", "available": False,
+                "details": {}, "contribution": 0}
+
+    details = {
+        "bullish_count":  data.get("summary", {}).get("bullish_count"),
+        "bearish_count":  data.get("summary", {}).get("bearish_count"),
+        "geo_alerts":     data.get("summary", {}).get("geo_alerts"),
+        "total_relevant": data.get("summary", {}).get("oil_relevant"),
+        "top_bullish":    data.get("top_bullish",  [{}])[0].get("headline", "") if data.get("top_bullish")  else "",
+        "top_bearish":    data.get("top_bearish",  [{}])[0].get("headline", "") if data.get("top_bearish")  else "",
+    }
+
+    return {
+        "score":        score,
+        "label":        label,
+        "available":    True,
+        "details":      details,
+        "weight":       LAYER_WEIGHTS["news"],
+        "contribution": round(score * LAYER_WEIGHTS["news"], 3),
+    }
+
+
 def get_positioning_signal() -> dict:
     """
     Extract CFTC positioning signal from cftc_latest.json.
@@ -348,7 +379,7 @@ def get_positioning_signal() -> dict:
 
 def compute_composite() -> dict:
     log.info("=" * 60)
-    log.info("NCI COMPOSITE SCORER — combining all signal layers")
+    log.info("COMPOSITE SIGNAL SCORER — combining all signal layers")
     log.info("=" * 60)
 
     # Extract all layers
@@ -359,6 +390,7 @@ def compute_composite() -> dict:
         "demand":      get_demand_signal(),
         "gie":         get_gie_signal(),
         "positioning": get_positioning_signal(),
+        "news":        get_news_signal(),
     }
 
     # Log each layer
@@ -430,7 +462,7 @@ def compute_composite() -> dict:
             "score":          composite_score,
             "label":          label,
             "direction":      direction,
-            "scale":          "-10 (strong sell) to +10 (strong buy)",
+            "scale":          "Composite Signal Score (-10 to +10)",
             "interpretation": (
                 f"Composite NCI {composite_score:+.1f} ({label}): "
                 + {
@@ -481,7 +513,7 @@ def compute_composite() -> dict:
 
     # Final summary
     log.info("─" * 60)
-    log.info("COMPOSITE NCI SCORE:  %+.1f / 10  [%s]", composite_score, label)
+    log.info("COMPOSITE SIGNAL SCORE:  %+.1f / 10  [%s]", composite_score, label)
     log.info("Direction:            %s", direction)
     log.info("Bullish layers (%d):  %s", len(bullish_layers), bullish_layers or "none")
     log.info("Bearish layers (%d):  %s", len(bearish_layers), bearish_layers or "none")
@@ -497,7 +529,8 @@ def compute_composite() -> dict:
 def run(full_refresh: bool = False) -> dict:
     if full_refresh:
         log.info("Running full refresh — executing all engines...")
-        for script in ["backend/inventory_signals.py", "backend/crack_spread_engine.py"]:
+        for script in ["backend/inventory_signals.py", "backend/crack_spread_engine.py",
+                   "backend/fetchers/news_fetcher.py"]:
             subprocess.run([sys.executable, str(ROOT.parent / script)], check=False)
 
     return compute_composite()
