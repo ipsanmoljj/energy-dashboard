@@ -45,7 +45,7 @@ log = logging.getLogger(__name__)
 RSS_SOURCES = [
     {
         "name":     "FinancialJuice",
-        "url":      "https://www.financialjuice.com/feed.axd",
+        "url": "https://www.financialjuice.com/feed.axd?category=oil",
         "priority": 4,   # highest — fastest breaking news
         "note":     "Real-time squawk headlines for day traders",
     },
