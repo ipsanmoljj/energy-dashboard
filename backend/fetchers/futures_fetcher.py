@@ -341,47 +341,26 @@ def to_bbl(price: float | None, multiplier: float) -> float | None:
 
 def estimate_missing_prices(contracts: dict) -> dict:
     """
-    When Yahoo rate-limits specific tickers, estimate missing prices
-    from available ones using known historical relationships.
-
-    WTI  = Brent - typical_spread  (Brent-WTI avg ~$3.5-4.5/bbl)
-    RBOB = HO * 0.875              (RBOB trades ~87% of HO historically)
-
-    These are fallback estimates only — clearly flagged in output.
-    Accuracy: within ~2-5% of actual prices for normal market conditions.
+    Only estimates RBOB from HO when unavailable.
+    Brent and WTI are NOT estimated — they are separate benchmarks.
+    Missing Brent/WTI shows as INSUFFICIENT_DATA on next run.
     """
-    brent   = contracts.get("brent",       {}).get("price_bbl")
-    wti     = contracts.get("wti",         {}).get("price_bbl")
-    rbob    = contracts.get("rbob",        {}).get("price_bbl")
-    ho      = contracts.get("heating_oil", {}).get("price_bbl")
+    rbob = contracts.get("rbob", {}).get("price_bbl")
+    ho   = contracts.get("heating_oil", {}).get("price_bbl")
 
-    estimated = {}
-
-    # Estimate WTI from Brent if missing
-    if wti is None and brent is not None:
-        est_wti = round(brent - 3.74, 2)   # current Brent-WTI spread
-        contracts["wti"]["price_bbl"] = est_wti
-        contracts["wti"]["estimated"] = True
-        contracts["wti"]["estimate_note"] = f"Estimated from Brent (${brent:.2f}) - $3.74 spread"
-        estimated["wti"] = est_wti
-        log.info("  [ESTIMATE] WTI $%.2f/bbl (from Brent $%.2f - $3.74 spread)", est_wti, brent)
-
-    # Estimate RBOB from HO if missing
     if rbob is None and ho is not None:
         est_rbob = round(ho * 0.875, 2)
-        contracts["rbob"]["price_bbl"] = est_rbob
-        contracts["rbob"]["estimated"] = True
-        contracts["rbob"]["estimate_note"] = f"Estimated from HO (${ho:.2f}) × 0.875 ratio"
-        estimated["rbob"] = est_rbob
-        log.info("  [ESTIMATE] RBOB $%.2f/bbl (from HO $%.2f × 0.875)", est_rbob, ho)
-
-    if estimated:
-        log.warning("  ⚠ Using estimated prices for: %s — Yahoo rate limited these tickers",
-                    list(estimated.keys()))
-        log.warning("  ⚠ Estimates are approximate — wait 5 min and re-run for actual prices")
+        contracts["rbob"]["price_bbl"]     = est_rbob
+        contracts["rbob"]["estimated"]     = True
+        contracts["rbob"]["estimate_note"] = (
+            f"Estimated from HO (${ho:.2f}/bbl) × 0.875 seasonal ratio — "
+            f"Yahoo rate limited RBOB. Re-fetch in 30 min for real price."
+        )
+        log.info("  [ESTIMATE] RBOB $%.2f/bbl (HO proxy — temporary)", est_rbob)
+    elif rbob is None:
+        log.warning("  RBOB unavailable — no HO to estimate from. Showing INSUFFICIENT_DATA.")
 
     return contracts
-
 
 # ── Derived spread calculations ──────────────────────────────────────────────
 
