@@ -493,8 +493,18 @@ def compute_direction(lm_pol: float, ov: float) -> tuple[str, float]:
 
 # ── Relevance & classification ────────────────────────────────────────────────
 
+BLOCKLIST_TERMS = {
+    "small cap", "stock pick", "buy and hold", "etf",
+    "stocks to buy", "top stocks", "best stocks",
+    "analyst rating", "price target", "upgrade", "downgrade",
+    "renewable energy stock", "solar stock", "wind stock",
+    "energy stock", "oil stock", "dividend", "earnings per share",
+}
+
 def is_relevant(headline: str) -> bool:
     h = headline.lower()
+    if any(b in h for b in BLOCKLIST_TERMS):
+        return False
     return any(t in h for t in OIL_TERMS)
 
 def classify(headline: str) -> list[dict]:
@@ -570,7 +580,7 @@ def fetch_rss(source: dict, lookback_hours: int = 4) -> list[dict]:
 
 # ── NCI News Score ────────────────────────────────────────────────────────────
 
-def compute_news_score_score(headlines: list[dict],
+def compute_news_score(headlines: list[dict],
                            decay_halflife_hours: float = 2.0) -> dict:
     """
     Aggregate scored headlines into one News score (-10 to +10).
@@ -715,7 +725,7 @@ def run(lookback_hours: int = 4,
         })
 
     # ── Step 5: News score ───────────────────────────────────────────────
-    news_score = compute_news_score_score(scored)
+    news_score = compute_news_score(scored)
 
     # ── Step 6: Summary stats ────────────────────────────────────────────────
     bullish = [h for h in scored if h["direction"] == "BULLISH"]
