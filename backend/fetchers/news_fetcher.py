@@ -63,7 +63,7 @@ RSS_SOURCES = [
     },
     {
         "name":     "Reuters Commodities",
-        "url":      "https://feeds.reuters.com/reuters/businessNews",
+        "url": "https://feeds.reuters.com/reuters/energy",
         "priority": 2,
         "note":     "Professional energy/commodities coverage",
     },
