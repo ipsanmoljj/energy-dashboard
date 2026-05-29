@@ -134,7 +134,22 @@ FUTURES = {
             "traded crack spread in European hours. Reference price for jet fuel and "
             "heating oil in Europe. Key for transatlantic diesel arb (HO vs GO spread). "
             "Wide gasoil crack > $25/bbl = European diesel tight = bullish crude demand. "
-            "Unit: $/MT — divide by 7.45 to convert to $/bbl for crack calculations."
+            "Note: Yahoo Finance BG=F may return stale prices. "
+            "If price < $500/MT, use HO=F as proxy (USD/gal x 42 x 6.29 for MT equiv)."
+        ),
+    },
+    "NG=F": {
+        "key":          "henry_hub",
+        "label":        "NYMEX Henry Hub Natural Gas (front-month)",
+        "exchange":     "CME/NYMEX",
+        "unit":         "usd_per_mmbtu",
+        "lot_size_bbl": None,
+        "multiplier":   1.0,
+        "benchmark":    False,
+        "signal_note":  (
+            "US gas benchmark. Kept as macro cross-commodity signal. "
+            "WTI/HH ratio > 20x = gas cheap vs oil → power switching to gas → oil demand softens. "
+            "Moved to macro layer — primary diesel signal now uses ICE Gasoil (BG=F)."
         ),
     },
 }
@@ -170,56 +185,63 @@ def fetch_quote_batch(tickers: list[str]) -> dict[str, dict]:
 
 def fetch_single_chart(ticker: str, days: int = 30) -> dict | None:
     """
-    Fetch OHLCV history for a single ticker via Yahoo Finance v8 chart endpoint.
-    Returns {price, prev_close, change, change_pct, high_52w, low_52w, history}
+    Fetch OHLCV history via Yahoo Finance v8. Retries 3x with delays on rate limits.
     """
-    for endpoint_tmpl in YF_ENDPOINTS:
-        url = endpoint_tmpl.format(ticker=ticker)
-        params = {
-            "interval": "1d",
-            "range":    f"{days}d",
-        }
-        try:
-            r = requests.get(url, headers=_yf_headers(), params=params, timeout=12)
-            r.raise_for_status()
-            data   = r.json()
-            result = data["chart"]["result"][0]
-            meta   = result["meta"]
+    max_retries = 3
 
-            price      = meta.get("regularMarketPrice") or meta.get("chartPreviousClose")
-            prev_close = meta.get("chartPreviousClose") or meta.get("previousClose")
-            change     = round(price - prev_close, 4) if price and prev_close else None
-            change_pct = round(change / prev_close * 100, 3) if change and prev_close else None
+    for attempt in range(max_retries):
+        for endpoint_tmpl in YF_ENDPOINTS:
+            url    = endpoint_tmpl.format(ticker=ticker)
+            params = {"interval": "1d", "range": f"{days}d"}
+            try:
+                r = requests.get(url, headers=_yf_headers(), params=params, timeout=15)
 
-            # Build history list
-            timestamps = result["timestamp"]
-            closes     = result["indicators"]["quote"][0].get("close", [])
-            history = [
-                {
-                    "date":  datetime.fromtimestamp(ts).strftime("%Y-%m-%d"),
-                    "close": round(c, 4) if c else None,
+                # Handle rate limiting explicitly before raise_for_status
+                if r.status_code in (429, 401):
+                    wait = (attempt + 1) * 5
+                    log.debug("  Rate limited (%d) %s — retry in %ds (attempt %d/%d)",
+                              r.status_code, ticker, wait, attempt + 1, max_retries)
+                    time.sleep(wait)
+                    break   # break inner loop, retry outer
+
+                r.raise_for_status()
+                data   = r.json()
+                result = data["chart"]["result"][0]
+                meta   = result["meta"]
+
+                price      = meta.get("regularMarketPrice") or meta.get("chartPreviousClose")
+                prev_close = meta.get("chartPreviousClose") or meta.get("previousClose")
+                change     = round(price - prev_close, 4) if price and prev_close else None
+                change_pct = round(change / prev_close * 100, 3) if change and prev_close else None
+
+                timestamps = result["timestamp"]
+                closes     = result["indicators"]["quote"][0].get("close", [])
+                history = [
+                    {"date": datetime.fromtimestamp(ts).strftime("%Y-%m-%d"),
+                     "close": round(c, 4) if c else None}
+                    for ts, c in zip(timestamps, closes) if c is not None
+                ]
+
+                return {
+                    "price":        round(price, 4) if price else None,
+                    "prev_close":   round(prev_close, 4) if prev_close else None,
+                    "change":       change,
+                    "change_pct":   change_pct,
+                    "high_52w":     meta.get("fiftyTwoWeekHigh"),
+                    "low_52w":      meta.get("fiftyTwoWeekLow"),
+                    "history":      list(reversed(history)),
+                    "market_state": meta.get("marketState", "unknown"),
                 }
-                for ts, c in zip(timestamps, closes) if c is not None
-            ]
 
-            return {
-                "price":      round(price, 4) if price else None,
-                "prev_close": round(prev_close, 4) if prev_close else None,
-                "change":     change,
-                "change_pct": change_pct,
-                "high_52w":   meta.get("fiftyTwoWeekHigh"),
-                "low_52w":    meta.get("fiftyTwoWeekLow"),
-                "history":    list(reversed(history)),  # ascending date
-                "market_state": meta.get("marketState", "unknown"),
-            }
+            except Exception as exc:
+                log.debug("Chart fetch failed %s for %s: %s", endpoint_tmpl, ticker, exc)
+                time.sleep(1.0)
+                continue
 
-        except Exception as exc:
-            log.debug("Chart fetch failed on %s for %s: %s", endpoint_tmpl, ticker, exc)
-            time.sleep(0.3)
-            continue
+        if attempt < max_retries - 1:
+            time.sleep(random.uniform(3, 6))  # pause between retries
 
     return None
-
 
 # ── Unit conversion helpers ──────────────────────────────────────────────────
 
@@ -378,7 +400,7 @@ def run() -> dict:
 
     output = {
         "fetcher":    "futures_fetcher",
-        "fetched_at": datetime.utcnow().isoformat() + "Z",
+        "fetched_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source":     "Yahoo Finance (delayed ~15 min)",
         "contracts":  {},
         "derived":    {},
@@ -459,7 +481,7 @@ def run() -> dict:
             change_pct or 0,
         )
 
-        time.sleep(random.uniform(0.3, 0.8))   # rate-limit courtesy
+        time.sleep(random.uniform(2.0, 4.0))   # longer pause to avoid Yahoo rate limits
 
     # ── Step 2: derived spreads ──────────────────────────────────────────────
     log.info("Computing derived spreads...")
