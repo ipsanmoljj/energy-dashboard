@@ -136,6 +136,10 @@ def eia(): return load("eia_latest.json")
 @app.get("/api/rig-count")  
 def rig_count(): return load("rig_count_latest.json")
 
+@app.get("/api/crack")
+def crack():
+    return load("crack_signals.json")
+
 @app.get("/api/all")
 def all_data():
     return {
