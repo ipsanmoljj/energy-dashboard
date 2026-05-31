@@ -14,9 +14,9 @@ FRED_API_KEY = os.getenv("FRED_API_KEY", "1d73bedd4f0c41fe197581d267892389")
 OUTPUT_PATH  = os.path.join(os.path.dirname(__file__), "../data/rig_count_latest.json")
 
 SERIES = {
-    "oil_rigs":   "OILRIGS",   # Baker Hughes oil-directed rig count
-    "gas_rigs":   "GASRIGS",   # Gas rigs (context)
-    "total_rigs": "RIGSTOTUS", # Total US rigs
+    "oil_rigs":   "WKSOILRIGS",  # Baker Hughes weekly oil-directed rig count
+    "gas_rigs":   "WKSGASRIGS",  # Gas rigs
+    "total_rigs": "WKSTOTRIG",   # Total US rigs
 }
 
 THRESHOLDS = {
