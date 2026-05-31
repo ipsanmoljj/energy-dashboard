@@ -166,3 +166,6 @@ def _save(data: dict):
 
 if __name__ == "__main__":
     fetch_bdi()
+
+def run():
+    fetch_bdi()
