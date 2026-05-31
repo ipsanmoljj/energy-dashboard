@@ -210,9 +210,11 @@ function TabPrices({ d }) {
         </div>
       </Card>
       <Card title="Key Spreads">
-        {der.brent_wti_spread && <Row label="Brent – WTI"  value={fmt(der.brent_wti_spread.value_bbl)} unit="$/bbl" signal={der.brent_wti_spread.signal} note={der.brent_wti_spread.note} />}
-        {der.crack_321        && <Row label="3-2-1 Crack"  value={fmt(der.crack_321.value_bbl)}        unit="$/bbl" signal={der.crack_321.signal} />}
-        {der.ho_rbob_spread   && <Row label="HO – RBOB"    value={fmt(der.ho_rbob_spread.value_bbl)}   unit="$/bbl" />}
+        <Row label="Brent – WTI"    value={fmt(der.brent_wti?.value_bbl)}      unit="$/bbl" signal={der.brent_wti?.signal}      note={der.brent_wti?.note} />
+        <Row label="3-2-1 Crack"    value={fmt(der.crack_321?.value_bbl)}      unit="$/bbl" signal={der.crack_321?.signal} />
+        <Row label="HO – RBOB"      value={fmt(der.ho_rbob_spread?.value_bbl)} unit="$/bbl" signal={der.ho_rbob_spread?.signal} />
+        <Row label="Gasoline Crack" value={fmt(der.gasoline_crack?.value_bbl)} unit="$/bbl" signal={der.gasoline_crack?.signal} />
+        <Row label="HO Crack"       value={fmt(der.ho_crack?.value_bbl)}       unit="$/bbl" signal={der.ho_crack?.signal} />
       </Card>
     </>
   )
@@ -224,11 +226,11 @@ function TabSpreads({ d }) {
   return (
     <>
       <Card title="Crack Spreads">
-        <Row label="3-2-1 Crack (US)"      value={fmt(cr.signals?.crack_321?.value_bbl)}        unit="$/bbl" signal={cr.signals?.crack_321?.signal} />
-        <Row label="Gasoline Crack"         value={fmt(cr.signals?.gasoline_crack?.value_bbl)}   unit="$/bbl" signal={cr.signals?.gasoline_crack?.signal} />
-        <Row label="Distillate Crack"       value={fmt(cr.signals?.distillate_crack?.value_bbl)} unit="$/bbl" signal={cr.signals?.distillate_crack?.signal} />
-        <Row label="Brent – WTI"           value={fmt(der.brent_wti_spread?.value_bbl)}         unit="$/bbl" signal={der.brent_wti_spread?.signal} />
-        <Row label="HO – RBOB"             value={fmt(der.ho_rbob_spread?.value_bbl)}           unit="$/bbl" />
+        <Row label="Brent – WTI"    value={fmt(der.brent_wti?.value_bbl)}      unit="$/bbl" signal={der.brent_wti?.signal}      note={der.brent_wti?.note} />
+        <Row label="3-2-1 Crack"    value={fmt(der.crack_321?.value_bbl)}      unit="$/bbl" signal={der.crack_321?.signal} />
+        <Row label="HO – RBOB"      value={fmt(der.ho_rbob_spread?.value_bbl)} unit="$/bbl" signal={der.ho_rbob_spread?.signal} />
+        <Row label="Gasoline Crack" value={fmt(der.gasoline_crack?.value_bbl)} unit="$/bbl" signal={der.gasoline_crack?.signal} />
+        <Row label="HO Crack"       value={fmt(der.ho_crack?.value_bbl)}       unit="$/bbl" signal={der.ho_crack?.signal} />
       </Card>
       <Card title="Signal Reference" style={{ marginTop: 12 }}>
         {[
