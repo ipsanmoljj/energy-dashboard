@@ -72,7 +72,6 @@ FETCHER_REGISTRY = [
         "label":    "Energy Futures Prices (Brent, WTI, RBOB, HO, NG)",
         "priority": 3,
     },
-    # Day 3+ — auto-included when file exists
     {
         "id":       "gie",
         "module":   "gie_fetcher",
@@ -100,6 +99,20 @@ FETCHER_REGISTRY = [
         "output":   "sentiment_latest.json",
         "label":    "News Sentiment + Geopolitical Risk Scorer",
         "priority": 7,
+    },
+    {
+        "id":       "rig_count",
+        "module":   "baker_hughes_fetcher",
+        "output":   "rig_count_latest.json",
+        "label":    "Baker Hughes Rig Count (US shale leading indicator)",
+        "priority": 8,
+    },
+    {
+        "id":       "bdi",
+        "module":   "bdi_fetcher",
+        "output":   "bdi_latest.json",
+        "label":    "Baltic Dry Index (global trade / bunker demand proxy)",
+        "priority": 9,
     },
 ]
 
@@ -196,8 +209,27 @@ def merge_signals(data_dir: Path) -> dict:
         merged["signals"]["derived"]["brent_wti_signal"] = derived.get("brent_wti_spread", {}).get("signal")
         merged["signals"]["derived"]["ho_rbob_bbl"]      = derived.get("ho_rbob_spread", {}).get("value_bbl")
 
+    # Rig count signals
+    rig_path = data_dir / "rig_count_latest.json"
+    if rig_path.exists():
+        rig = json.loads(rig_path.read_text())
+        merged["sources"]["rig_count"] = rig.get("fetched_at")
+        merged["signals"]["supply"]["oil_rigs"]          = rig.get("series", {}).get("oil_rigs", {}).get("value")
+        merged["signals"]["supply"]["oil_rigs_wow"]      = rig.get("series", {}).get("oil_rigs", {}).get("wow_change")
+        merged["signals"]["supply"]["oil_rigs_signal"]   = rig.get("signal", {}).get("label")
+        merged["signals"]["supply"]["oil_rigs_direction"]= rig.get("signal", {}).get("direction")
+
+    # BDI signals
+    bdi_path = data_dir / "bdi_latest.json"
+    if bdi_path.exists():
+        bdi = json.loads(bdi_path.read_text())
+        merged["sources"]["bdi"] = bdi.get("fetched_at")
+        merged["signals"]["demand"]["bdi_value"]     = bdi.get("latest", {}).get("value")
+        merged["signals"]["demand"]["bdi_wow"]       = bdi.get("latest", {}).get("wow")
+        merged["signals"]["demand"]["bdi_signal"]    = bdi.get("signal", {}).get("label")
+        merged["signals"]["demand"]["bdi_direction"] = bdi.get("signal", {}).get("direction")
+
     # ── Composite score ───────────────────────────────────────────────────────
-    # Simple weighted scorecard: +1 bullish / -1 bearish / 0 neutral per signal
     score = 0
     reasons = []
 
@@ -221,14 +253,26 @@ def merge_signals(data_dir: Path) -> dict:
         else:
             score += 0.5; reasons.append("Brent-WTI < $2: US exports flooding")
 
+    rig_sig = merged["signals"]["supply"].get("oil_rigs_direction")
+    if rig_sig == "bullish":
+        score += 0.5; reasons.append("Rig count falling → supply decline in 4-6 months")
+    elif rig_sig == "bearish":
+        score -= 0.5; reasons.append("Rig count rising → supply growth in 4-6 months")
+
+    bdi_sig = merged["signals"]["demand"].get("bdi_direction")
+    if bdi_sig == "bullish":
+        score += 0.5; reasons.append("BDI strong → elevated global trade / bunker demand")
+    elif bdi_sig == "bearish":
+        score -= 0.5; reasons.append("BDI weak → soft global trade / demand signal")
+
     merged["composite"] = {
         "score":   round(score, 1),
         "label":   "BULLISH" if score > 0.5 else "BEARISH" if score < -0.5 else "NEUTRAL",
         "reasons": reasons,
         "note":    (
-            "Composite score built from macro + crack + spread signals. "
+            "Composite score built from macro + crack + spread + rig count + BDI signals. "
             "Add inventory tightness (EIA Cushing draw/build) and "
-            "CFTC positioning (Day 6) for full 10-point NCI signal."
+            "CFTC positioning for full 10-point NCI signal."
         ),
     }
 
