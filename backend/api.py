@@ -130,6 +130,11 @@ def news():       return load("news_signals.json")
 
 @app.get("/api/cftc")
 def cftc():       return load("cftc_latest.json")
+@app.get("/api/eia")
+def eia(): return load("eia_latest.json")
+
+@app.get("/api/rig-count")  
+def rig_count(): return load("rig_count_latest.json")
 
 @app.get("/api/all")
 def all_data():
