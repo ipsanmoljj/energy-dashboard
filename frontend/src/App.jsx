@@ -373,12 +373,13 @@ export default function App() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [all, eia, rig] = await Promise.all([
+      const [all, eia, rig, crack] = await Promise.all([
         fetch(`${API}/api/all`).then(r => r.json()),
         fetch(`${API}/api/eia`).then(r => r.json()),
         fetch(`${API}/api/rig-count`).then(r => r.json()).catch(() => null),
+        fetch(`${API}/api/crack`).then(r => r.json()).catch(() => null),
       ])
-      setData({ ...all, eia, rig_count: rig })
+      setData({ ...all, eia, rig_count: rig, crack })
       setLastUpdate(new Date())
       setCountdown(30)
     } catch(e) { console.error(e) }
