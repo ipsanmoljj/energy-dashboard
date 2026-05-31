@@ -1,0 +1,6 @@
+backend/data/ 
+backend/__pycache__/ 
+backend/fetchers/__pycache__/ 
+backend/fetchers/data/ 
+frontend/node_modules/ 
+frontend/package-lock.json 
