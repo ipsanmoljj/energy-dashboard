@@ -171,18 +171,18 @@ def _signal(history: list[dict]) -> dict:
         trend = "level-only (no WoW data)"
 
     # 5-week momentum
-    four_week_trend = None
+    five_week_trend = None
     if len(history) >= 5:
         old = history[-5].get("oil_rigs")
         if old and oil_rigs:
             chg = oil_rigs - old
-            four_week_trend = f"{chg:+d} over 5 weeks"
+            five_week_trend = f"{chg:+d} over 5 weeks"
 
     return {
         "label":           level,
         "direction":       direction,
         "trend":           trend,
-        "four_week_trend": four_week_trend,
+        "five_week_trend": five_week_trend,
         "note": f"Oil rigs {level.lower()}, {trend}. Impact in 4-6 months.",
     }
 
@@ -228,7 +228,7 @@ def fetch_rig_count() -> dict:
     wow_str = f"{wow:+d}" if wow is not None else "N/A"
     print(f"[rig_count] Oil: {oil} | WoW: {wow_str} | "
           f"Signal: {signal['label']} / {signal['direction']} | "
-          f"4wk: {signal.get('four_week_trend', 'N/A')}")
+          f"5wk: {signal.get('five_week_trend', 'N/A')}")
     return output
 
 
