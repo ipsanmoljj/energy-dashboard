@@ -54,7 +54,7 @@ export default function App() {
         </div>
         <div style={s.topRight}>
           <span style={{ ...s.compositeChip, color: scoreCol, borderColor: scoreCol + "44" }}>
-            NCI {score != null ? (score > 0 ? "+" : "") + score.toFixed(1) : "—"} {scoreLabel}
+            CI {score != null ? (score > 0 ? "+" : "") + score.toFixed(1) : "—"} {scoreLabel}
           </span>
         </div>
       </div>
@@ -81,7 +81,7 @@ export default function App() {
               <span style={s.placeholderText}>Inventory Panel — coming next</span>
             </div>
             <div style={s.placeholder}>
-              <span style={s.placeholderText}>NCI Composite Panel — coming next</span>
+              <span style={s.placeholderText}>Composite Index Panel — coming next</span>
             </div>
           </>
         )}
