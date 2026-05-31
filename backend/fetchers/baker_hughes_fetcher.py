@@ -115,8 +115,10 @@ def fetch_rig_count() -> dict:
     with open(OUTPUT_PATH, "w") as f:
         json.dump(output, f, indent=2)
 
+    wow = oil_data.get('wow_change')
+    wow_str = f"{wow:+.0f}" if wow is not None else "N/A"
     print(f"[rig_count] Oil rigs: {oil_data.get('value')} | "
-          f"WoW: {oil_data.get('wow_change'):+.0f} | "
+          f"WoW: {wow_str} | "
           f"Signal: {signal.get('label')}")
     return output
 
