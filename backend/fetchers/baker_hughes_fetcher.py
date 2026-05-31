@@ -1,131 +1,249 @@
 """
-Baker Hughes US Rig Count Fetcher
-Source: FRED series OILRIGS (weekly, Friday release ~1PM EST)
-Signal: Leading indicator for US shale production with 4-6 month lag
-  > 600 rigs → shale growing 300-500 kbd/yr
-  400-600    → roughly flat (treadmill)
-  < 350      → production declining within 6 months
+Baker Hughes Rig Count Fetcher
+Source: AOGR.com (mirrors Baker Hughes weekly) — scrapes 10-week history
+  URL: https://www.aogr.com/web-exclusives/us-rig-count/2026
+
+Stores a rolling 10-week history in rig_count_latest.json.
+WoW change is computed from stored history, not guessed.
+
+Released every Friday at 1PM CT. Data is free and public.
+
+Signal logic:
+  Level  — where the count sits (GROWING >600, FLAT 350-600, DECLINING <350)
+  Direction — WoW trend (bullish if falling >=5, bearish if rising >=5, neutral otherwise)
 """
 
-import os, json, requests
+import os, json, re, requests
 from datetime import datetime, timezone
 
-FRED_API_KEY = os.getenv("FRED_API_KEY", "1d73bedd4f0c41fe197581d267892389")
-OUTPUT_PATH  = os.path.join(os.path.dirname(__file__), "../data/rig_count_latest.json")
+OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "../data/rig_count_latest.json")
 
-SERIES = {
-    "oil_rigs":   "WKSOILRIGS",  # Baker Hughes weekly oil-directed rig count
-    "gas_rigs":   "WKSGASRIGS",  # Gas rigs
-    "total_rigs": "WKSTOTRIG",   # Total US rigs
-}
+AOGR_URL_2026 = "https://www.aogr.com/web-exclusives/us-rig-count/2026"
+AOGR_URL_2025 = "https://www.aogr.com/web-exclusives/us-rig-count/2025"
 
-THRESHOLDS = {
-    "growing":  600,
-    "flat_hi":  600,
-    "flat_lo":  350,
-    "declining": 350,
-}
+HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+
+THRESHOLDS   = {"growing": 600, "flat_lo": 350}
+HISTORY_WEEKS = 10
+WOW_THRESHOLD = 5   # minimum rig change to call a direction
 
 
-def fetch_series(series_id: str, limit: int = 10) -> list[dict]:
-    """Fetch recent observations from FRED."""
-    url = "https://api.stlouisfed.org/fred/series/observations"
-    params = {
-        "series_id":       series_id,
-        "api_key":         FRED_API_KEY,
-        "file_type":       "json",
-        "sort_order":      "desc",
-        "limit":           limit,
-        "observation_start": "2020-01-01",
-    }
-    r = requests.get(url, params=params, timeout=15)
+# ── Scraper ───────────────────────────────────────────────────────────────────
+
+def _scrape_aogr(url: str) -> list[dict]:
+    """
+    Scrape weekly rig count rows from AOGR page.
+    Each row has: date, oil%, gas%, misc%, total, wow_change
+    Returns list of dicts sorted oldest-first.
+    """
+    r = requests.get(url, headers=HEADERS, timeout=20)
     r.raise_for_status()
-    obs = r.json().get("observations", [])
-    # Filter out missing values
-    return [o for o in obs if o["value"] not in (".", "")]
+    html = r.text
+
+    rows = []
+
+    # AOGR table rows look like:
+    # <tr><td>05/23/26</td><td>543</td><td>+2</td><td>...</td><td>75 / 23 / 2</td></tr>
+    # We extract: date, total count, WoW change, oil/gas/misc ratio
+
+    # Find all table rows containing rig data
+    # Pattern: date like MM/DD/YY followed by 3-digit total
+    row_pattern = re.compile(
+        r'(\d{2}/\d{2}/\d{2})'          # date  MM/DD/YY
+        r'[^<]*</td>\s*<td[^>]*>'        # close date cell, open next
+        r'\s*(\d{3})\s*'                 # total rig count (3 digits)
+        r'[^<]*</td>\s*<td[^>]*>'        # close total cell, open next
+        r'\s*([+-]?\d+)\s*'              # WoW change
+        r'[^<]*</td>.*?'                 # remaining cells
+        r'(\d{2})\s*/\s*(\d{2})\s*/\s*(\d{1,2})',  # oil% / gas% / misc%
+        re.DOTALL
+    )
+
+    for m in row_pattern.finditer(html):
+        date_str  = m.group(1)   # MM/DD/YY
+        total     = int(m.group(2))
+        wow       = int(m.group(3))
+        oil_pct   = int(m.group(4))
+        gas_pct   = int(m.group(5))
+
+        # Convert MM/DD/YY → YYYY-MM-DD
+        try:
+            dt = datetime.strptime(date_str, "%m/%d/%y")
+            iso_date = dt.strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+
+        oil_count = round(total * oil_pct / 100)
+        gas_count = round(total * gas_pct / 100)
+
+        rows.append({
+            "date":       iso_date,
+            "total_rigs": total,
+            "oil_rigs":   oil_count,
+            "gas_rigs":   gas_count,
+            "wow_change": wow,         # BH's own WoW figure from the table
+            "oil_pct":    oil_pct,
+            "gas_pct":    gas_pct,
+        })
+
+    # Sort oldest → newest
+    return sorted(rows, key=lambda x: x["date"])
 
 
-def signal_from_count(count: float) -> dict:
-    """Derive directional signal from rig count level."""
-    if count > THRESHOLDS["growing"]:
-        return {"label": "GROWING", "direction": "bullish",
-                "note": "Shale production likely growing 300-500 kbd in 4-6 months"}
-    elif count > THRESHOLDS["flat_lo"]:
-        return {"label": "FLAT",    "direction": "neutral",
-                "note": "Shale on treadmill — flat production expected"}
+def _scrape_with_fallback() -> list[dict]:
+    """Try current year first, fall back to prior year if empty."""
+    rows = []
+    for url in [AOGR_URL_2026, AOGR_URL_2025]:
+        try:
+            rows = _scrape_aogr(url)
+            if rows:
+                print(f"[rig_count] Scraped {len(rows)} rows from {url}")
+                break
+        except Exception as e:
+            print(f"[rig_count] Failed {url}: {e}")
+    return rows
+
+
+# ── History manager ───────────────────────────────────────────────────────────
+
+def _load_existing_history() -> list[dict]:
+    """Load previously stored history from JSON, or empty list."""
+    if not os.path.exists(OUTPUT_PATH):
+        return []
+    try:
+        with open(OUTPUT_PATH) as f:
+            data = json.load(f)
+        return data.get("history", [])
+    except Exception:
+        return []
+
+
+def _merge_history(existing: list[dict], fresh: list[dict]) -> list[dict]:
+    """
+    Merge existing stored rows with freshly scraped rows.
+    Deduplicate by date. Keep latest HISTORY_WEEKS weeks.
+    Fresh data wins on conflict.
+    """
+    combined = {row["date"]: row for row in existing}
+    for row in fresh:
+        combined[row["date"]] = row   # fresh overwrites existing
+
+    sorted_rows = sorted(combined.values(), key=lambda x: x["date"])
+    return sorted_rows[-HISTORY_WEEKS:]   # keep latest N weeks
+
+
+# ── Signal ────────────────────────────────────────────────────────────────────
+
+def _signal(history: list[dict]) -> dict:
+    if not history:
+        return {"label": "UNKNOWN", "direction": "neutral", "note": "No data"}
+
+    latest   = history[-1]
+    oil_rigs = latest.get("oil_rigs")
+    wow      = latest.get("wow_change")   # BH's own WoW from table
+
+    # Level label
+    if oil_rigs is None:
+        level = "UNKNOWN"
+    elif oil_rigs > THRESHOLDS["growing"]:
+        level = "GROWING"
+    elif oil_rigs > THRESHOLDS["flat_lo"]:
+        level = "FLAT"
     else:
-        return {"label": "DECLINING", "direction": "bearish",
-                "note": "Production decline likely within 6 months"}
+        level = "DECLINING"
 
+    # Direction from WoW change
+    if wow is not None:
+        if wow >= WOW_THRESHOLD:
+            direction = "bearish"    # rising rigs = more future supply
+            trend = f"rising +{wow} WoW"
+        elif wow <= -WOW_THRESHOLD:
+            direction = "bullish"    # falling rigs = less future supply
+            trend = f"falling {wow} WoW"
+        else:
+            direction = "neutral"
+            trend = f"flat ({wow:+d} WoW, within ±{WOW_THRESHOLD} noise band)"
+    else:
+        direction = "bearish" if level == "GROWING" else \
+                    "bullish" if level == "DECLINING" else "neutral"
+        trend = "level-only signal (no WoW data)"
+
+    # 4-week trend: is the count consistently rising or falling?
+    four_week_trend = None
+    if len(history) >= 4:
+        four_weeks_ago = history[-4].get("oil_rigs")
+        if four_weeks_ago and oil_rigs:
+            four_week_change = oil_rigs - four_weeks_ago
+            four_week_trend  = f"{four_week_change:+d} over 4 weeks"
+
+    return {
+        "label":            level,
+        "direction":        direction,
+        "trend":            trend,
+        "four_week_trend":  four_week_trend,
+        "note": (
+            f"Oil rigs {level.lower()}, {trend}. "
+            f"Production impact expected in 4-6 months."
+        ),
+    }
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 def fetch_rig_count() -> dict:
-    results = {}
-    for key, series_id in SERIES.items():
-        try:
-            obs = fetch_series(series_id, limit=52)  # ~1 year of weekly data
-            if not obs:
-                results[key] = {"error": "no data"}
-                continue
+    # 1. Scrape fresh data
+    fresh_rows = _scrape_with_fallback()
 
-            latest     = obs[0]
-            prev_week  = obs[1] if len(obs) > 1 else None
-            prev_year  = obs[51] if len(obs) > 51 else None
+    # 2. Load existing history
+    existing = _load_existing_history()
 
-            current_val = float(latest["value"])
-            wow = round(current_val - float(prev_week["value"]), 0) if prev_week else None
-            yoy = round(current_val - float(prev_year["value"]), 0) if prev_year else None
+    # 3. Merge + keep rolling 10-week window
+    if fresh_rows:
+        history = _merge_history(existing, fresh_rows)
+    elif existing:
+        print("[rig_count] No fresh data — using stored history")
+        history = existing[-HISTORY_WEEKS:]
+    else:
+        history = []
 
-            results[key] = {
-                "value":       current_val,
-                "date":        latest["date"],
-                "wow_change":  wow,
-                "yoy_change":  yoy,
-                "history_52w": [
-                    {"date": o["date"], "value": float(o["value"])}
-                    for o in reversed(obs)
-                ],
-            }
-        except Exception as e:
-            results[key] = {"error": str(e)}
-
-    # Derive signal from oil rig count (the key one)
-    oil_data = results.get("oil_rigs", {})
-    signal   = {}
-    if "value" in oil_data:
-        signal = signal_from_count(oil_data["value"])
-        signal["production_lag_months"] = "4-6"
-        signal["wow_change"] = oil_data.get("wow_change")
-        signal["yoy_change"] = oil_data.get("yoy_change")
+    # 4. Compute signal
+    signal  = _signal(history)
+    latest  = history[-1] if history else {}
 
     output = {
         "fetched_at":   datetime.now(timezone.utc).isoformat(),
-        "source":       "FRED / Baker Hughes via St. Louis Fed",
-        "series":       results,
+        "source":       "AOGR.com (Baker Hughes weekly mirror)",
+        "latest":       latest,
         "signal":       signal,
+        "history":      history,          # rolling 10-week window
         "thresholds":   THRESHOLDS,
+        "wow_threshold": WOW_THRESHOLD,
         "notes": {
-            "lag":       "4-6 month lag from rig count change to production change",
-            "efficiency":"Fewer rigs needed per barrel vs 2014 (efficiency gains)",
-            "peak":      "1,609 rigs Oct 2014 | low: 172 rigs Aug 2020",
-            "current_range": "~480-520 rigs (2024 baseline)",
-        }
+            "release":        "Every Friday 1PM CT",
+            "lag":            "4-6 month lag: rig change → production change",
+            "wow_band":       f"±{WOW_THRESHOLD} rigs WoW treated as noise",
+            "peak":           "1,609 rigs Oct 2014 | low: 172 rigs Aug 2020",
+            "current_range":  "~480-550 rigs (2025-2026 baseline)",
+        },
     }
 
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     with open(OUTPUT_PATH, "w") as f:
         json.dump(output, f, indent=2)
 
-    wow = oil_data.get('wow_change')
-    wow_str = f"{wow:+.0f}" if wow is not None else "N/A"
-    print(f"[rig_count] Oil rigs: {oil_data.get('value')} | "
-          f"WoW: {wow_str} | "
-          f"Signal: {signal.get('label')}")
+    oil  = latest.get("oil_rigs", "N/A")
+    wow  = latest.get("wow_change")
+    wow_str = f"{wow:+d}" if wow is not None else "N/A"
+    print(f"[rig_count] Oil: {oil} | WoW: {wow_str} | "
+          f"Signal: {signal['label']} / {signal['direction']} | "
+          f"4wk: {signal.get('four_week_trend', 'N/A')}")
+
     return output
 
 
-if __name__ == "__main__":
-    if not FRED_API_KEY:
-        raise EnvironmentError("FRED_API_KEY not set")
-    fetch_rig_count()
 def run():
+    fetch_rig_count()
+
+
+if __name__ == "__main__":
     fetch_rig_count()
