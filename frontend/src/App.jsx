@@ -196,7 +196,7 @@ function TabOverview({ d }) {
 
 function TabPrices({ d }) {
   const fut = d?.futures?.contracts || {}
-  const der = d?.futures?.derived   || {}
+  const der = d?.crack?.spreads || {}
   return (
     <>
       <Card title="Futures Prices">
@@ -220,7 +220,7 @@ function TabPrices({ d }) {
 
 function TabSpreads({ d }) {
   const cr  = d?.crack    || {}
-  const der = d?.futures?.derived || {}
+  const der = d?.crack?.spreads || {}
   return (
     <>
       <Card title="Crack Spreads">
