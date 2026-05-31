@@ -125,3 +125,5 @@ if __name__ == "__main__":
     if not FRED_API_KEY:
         raise EnvironmentError("FRED_API_KEY not set")
     fetch_rig_count()
+def run():
+    fetch_rig_count()
