@@ -324,7 +324,7 @@ function TabSentiment({ d }) {
       <Card title="Rig Count Signal">
         <Row label="Oil-Directed Rigs"  value={fmt(d?.rig_count?.latest?.oil_rigs,0)}  unit="rigs" signal={rig.label} />
         <Row label="WoW Change"         value={fmt(d?.rig_count?.latest?.wow_oil,0)}   unit="rigs" signal={rig.direction} />
-        <Row label="4-Week Trend"       value={rig.four_week_trend || "—"} />
+        <Row label="5-Week Trend"       value={rig.five_week_trend || "—"} />
         <Row label="Production Signal"  value="" signal={rig.label} note={rig.note?.slice(0,60)} />
       </Card>
 
