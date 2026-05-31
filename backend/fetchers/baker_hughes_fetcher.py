@@ -170,13 +170,13 @@ def _signal(history: list[dict]) -> dict:
                     "bullish" if level == "DECLINING" else "neutral"
         trend = "level-only (no WoW data)"
 
-    # 4-week momentum
+    # 5-week momentum
     four_week_trend = None
-    if len(history) >= 4:
-        old = history[-4].get("oil_rigs")
+    if len(history) >= 5:
+        old = history[-5].get("oil_rigs")
         if old and oil_rigs:
             chg = oil_rigs - old
-            four_week_trend = f"{chg:+d} over 4 weeks"
+            four_week_trend = f"{chg:+d} over 5 weeks"
 
     return {
         "label":           level,
