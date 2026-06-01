@@ -345,20 +345,37 @@ function TabMacro({ d }) {
       </Card>
 
       <Card title="European Gas Storage (GIE AGSI+)" style={{ marginTop: 12 }}>
-        {gie.countries ? Object.entries(gie.countries).slice(0,6).map(([k,v]) => (
-          <Row key={k} label={k}
-            value={fmt(v?.fill_pct,1)} unit="% full"
-            signal={v?.vs_5yr > 0 ? "ABOVE 5YR" : "BELOW 5YR"}
-            note={`vs 5yr: ${fmt(v?.vs_5yr,1)}pp`} />
-        )) : <div style={{ color:"#374151", fontSize:12, padding:"8px 0" }}>GIE data not loaded — run gie_fetcher.py</div>}
+        {gie.regions && Object.entries(gie.regions)
+          .filter(([k,v]) => !v.error)
+          .slice(0,6)
+          .map(([k,v]) => (
+            <Row key={k}
+              label={v.label || k}
+              value={fmt(v.fill_pct, 1)}
+              unit="% full"
+              signal={v.crude_signal}
+              note={v.wow_fill_pp != null ? `WoW: +${fmt(v.wow_fill_pp,2)}pp` : undefined}
+            />
+          ))
+        }
+        {(!gie.regions || Object.values(gie.regions).every(v => v.error)) &&
+          <div style={{ color:"#374151", fontSize:12, padding:"8px 0" }}>GIE data not loaded</div>
+        }
       </Card>
 
       <Card title="Weather Demand (HDD/CDD)" style={{ marginTop: 12 }}>
-        {wx.locations ? Object.entries(wx.locations).slice(0,5).map(([k,v]) => (
-          <Row key={k} label={k}
-            value={fmt(v?.hdd_7d,1)} unit="HDD"
-            note={`CDD: ${fmt(v?.cdd_7d,1)}`} />
-        )) : <div style={{ color:"#374151", fontSize:12, padding:"8px 0" }}>Weather data not loaded — run weather_fetcher.py</div>}
+        {wx.locations
+          ? Object.entries(wx.locations).slice(0,6).map(([k,v]) => (
+            <Row key={k}
+              label={v.label || k}
+              value={fmt(v.hdd_7d_forecast, 1)}
+              unit="HDD"
+              signal={v.demand_signal}
+              note={`CDD: ${fmt(v.cdd_7d_forecast, 1)}`}
+            />
+          ))
+          : <div style={{ color:"#374151", fontSize:12, padding:"8px 0" }}>Weather data not loaded</div>
+        }
       </Card>
     </>
   )
