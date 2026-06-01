@@ -1,193 +1,282 @@
 """
 history_store.py
 ----------------
-Appends latest prices and spreads to a rolling 6-week history file.
-Called after each futures + crack fetch cycle.
-
-- One snapshot per day (last fetch of day overwrites earlier ones)
-- Backfills from Stooq 25-day Brent history on first run
-- Keeps rolling 42 days (6 weeks) maximum
+First run:  fetches maximum available history from Yahoo Finance (~2 years)
+Daily runs: appends today's snapshot, keeps rolling 42-day (6-week) window
 
 Saves to: backend/data/price_history.json
 
 Usage:
-  python backend/history_store.py          # append today + backfill
-  python backend/history_store.py --reset  # wipe and restart
+  python backend/history_store.py           # normal daily run
+  python backend/history_store.py --reset   # wipe and re-fetch all history
+  python backend/history_store.py --backfill # force re-fetch all history without wiping
 """
 
 import json
 import sys
+import time
+import random
 from datetime import datetime, timezone
 from pathlib import Path
 
+import requests
+
 DATA_DIR     = Path(__file__).resolve().parent / "data"
 HISTORY_FILE = DATA_DIR / "price_history.json"
-MAX_DAYS     = 42  # 6 weeks
+MAX_DAYS     = 42   # 6-week rolling window kept in file
+FETCH_RANGE  = "2y" # fetch up to 2 years from Yahoo on backfill
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.4 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
+]
+
+# Yahoo ticker → (key in history, multiplier to $/bbl)
+TICKERS = {
+    "BZ=F":  ("brent",       1.0),   # ICE Brent $/bbl
+    "CL=F":  ("wti",         1.0),   # NYMEX WTI $/bbl
+    "RB=F":  ("rbob",        42.0),  # RBOB $/gal → $/bbl
+    "HO=F":  ("heating_oil", 42.0),  # HO $/gal → $/bbl
+    "MCL=F": ("dubai",       1.0),   # Dubai $/bbl
+}
+
+EMPTY_ROW = {
+    "brent": None, "wti": None, "rbob": None,
+    "heating_oil": None, "dubai": None,
+    "crack_321": None, "gasoline_crack": None,
+    "ho_rbob": None, "brent_wti": None, "ho_crack": None,
+}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def load_history() -> list:
+def load_history() -> dict:
+    """Load history as {date: row_dict}."""
     try:
-        return json.loads(HISTORY_FILE.read_text())
+        rows = json.loads(HISTORY_FILE.read_text())
+        return {r["date"]: r for r in rows}
     except Exception:
-        return []
+        return {}
 
 
-def save_history(history: list):
-    history = sorted(history, key=lambda x: x["date"])
-    history = history[-MAX_DAYS:]
-    HISTORY_FILE.write_text(json.dumps(history, indent=2))
+def save_history(by_date: dict):
+    """Sort, trim to MAX_DAYS, save."""
+    rows = sorted(by_date.values(), key=lambda x: x["date"])
+    rows = rows[-MAX_DAYS:]
+    HISTORY_FILE.write_text(json.dumps(rows, indent=2))
+    return rows
 
 
-def safe_price(contracts: dict, key: str):
-    c = contracts.get(key, {})
-    if "error" in c:
-        return None
-    return c.get("price_bbl")
+def yf_headers(ticker=""):
+    return {
+        "User-Agent":      random.choice(USER_AGENTS),
+        "Accept":          "application/json, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer":         f"https://finance.yahoo.com/quote/{ticker}/",
+    }
 
 
-def safe_spread(spreads: dict, key: str):
-    return spreads.get(key, {}).get("value_bbl")
-
-
-# ── Backfill from Stooq 25-day Brent history ─────────────────────────────────
-
-def backfill_from_stooq(history: list) -> list:
+def fetch_yahoo_history(ticker: str, range_str: str = "2y") -> list[dict]:
     """
-    Seed history using the 25-day Brent price history returned by Stooq.
-    Only adds dates not already present. Other series will be None for
-    these historical dates and fill in from today forward.
+    Fetch full daily OHLC history from Yahoo Finance.
+    range_str: "1mo", "3mo", "6mo", "1y", "2y", "5y", "max"
+    Returns [{date, close}] sorted oldest first.
     """
-    try:
-        futures    = json.loads((DATA_DIR / "futures_latest.json").read_text())
-        brent_hist = futures["contracts"].get("brent", {}).get("history", [])
+    for endpoint in [
+        f"https://query2.finance.yahoo.com/v8/finance/chart/{ticker}",
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",
+    ]:
+        try:
+            r = requests.get(
+                endpoint,
+                headers=yf_headers(ticker),
+                params={"interval": "1d", "range": range_str},
+                timeout=20,
+            )
+            if r.status_code == 429:
+                print(f"  [{ticker}] Rate limited — waiting 15s...")
+                time.sleep(15)
+                continue
+            r.raise_for_status()
 
-        if not brent_hist:
-            print("[history] No Stooq Brent history available for backfill")
-            return history
+            result     = r.json()["chart"]["result"][0]
+            timestamps = result["timestamp"]
+            closes     = result["indicators"]["quote"][0].get("close", [])
 
-        existing_dates = {h["date"] for h in history}
+            rows = []
+            for ts, c in zip(timestamps, closes):
+                if c is not None:
+                    rows.append({
+                        "date":  datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d"),
+                        "close": round(float(c), 6),
+                    })
+
+            print(f"  [{ticker}] fetched {len(rows)} days (range={range_str})")
+            return rows
+
+        except Exception as e:
+            print(f"  [{ticker}] failed on {endpoint.split('/')[2]}: {e}")
+            time.sleep(3)
+
+    return []
+
+
+def price_sanity(key: str, price: float) -> bool:
+    """Basic sanity check to reject obviously stale/wrong Yahoo data."""
+    if key in ("brent", "wti", "dubai"):
+        return 20 < price < 250
+    if key in ("rbob", "heating_oil"):
+        return 30 < price < 500
+    return True
+
+
+# ── Core operations ───────────────────────────────────────────────────────────
+
+def backfill_all(by_date: dict) -> dict:
+    """
+    Fetch maximum Yahoo history for all tickers.
+    Merges into existing history without overwriting existing values.
+    """
+    print(f"[history] Starting full backfill (range={FETCH_RANGE})...")
+
+    for ticker, (key, multiplier) in TICKERS.items():
+        rows = fetch_yahoo_history(ticker, range_str=FETCH_RANGE)
+
         added = 0
+        for row in rows:
+            date  = row["date"]
+            price = round(row["close"] * multiplier, 4)
 
-        for row in brent_hist:
-            date = row.get("date")
-            close = row.get("close")
-            if not date or close is None:
-                continue
-            if date in existing_dates:
+            if not price_sanity(key, price):
                 continue
 
-            history.append({
-                "date":           date,
-                "timestamp":      date + "T00:00:00Z",
-                "brent":          round(float(close), 2),
-                "wti":            None,
-                "rbob":           None,
-                "heating_oil":    None,
-                "dubai":          None,
-                "crack_321":      None,
-                "gasoline_crack": None,
-                "ho_rbob":        None,
-                "brent_wti":      None,
-                "ho_crack":       None,
-                "source":         "stooq_backfill",
-            })
-            existing_dates.add(date)
-            added += 1
+            if date not in by_date:
+                by_date[date] = {
+                    "date":      date,
+                    "timestamp": date + "T00:00:00Z",
+                    "source":    "yahoo_backfill",
+                    **EMPTY_ROW,
+                }
 
-        print(f"[history] Backfilled {added} days from Stooq Brent history")
+            if by_date[date].get(key) is None:
+                by_date[date][key] = price
+                added += 1
 
-    except Exception as e:
-        print(f"[history] Backfill failed: {e}")
+        print(f"  [{key}] {added} new days added")
+        time.sleep(random.uniform(6, 12))  # be gentle with Yahoo rate limits
 
-    return history
+    return by_date
 
 
-# ── Append today's snapshot ───────────────────────────────────────────────────
-
-def append_snapshot(history: list) -> list:
-    """Build today's snapshot from latest fetcher outputs and upsert into history."""
+def append_today(by_date: dict) -> dict:
+    """
+    Append or update today's snapshot from latest fetcher outputs.
+    Merges live values with any existing values for today.
+    """
     try:
         futures = json.loads((DATA_DIR / "futures_latest.json").read_text())
         crack   = json.loads((DATA_DIR / "crack_signals.json").read_text())
     except Exception as e:
-        print(f"[history] Could not load source files: {e}")
-        return history
+        print(f"[history] Could not load fetcher outputs: {e}")
+        return by_date
 
     contracts = futures.get("contracts", {})
     spreads   = crack.get("spreads", {})
-
     today     = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    snapshot = {
+    def safe_price(key):
+        c = contracts.get(key, {})
+        return c.get("price_bbl") if "error" not in c else None
+
+    def safe_spread(key):
+        return spreads.get(key, {}).get("value_bbl")
+
+    live = {
         "date":           today,
         "timestamp":      timestamp,
-        "brent":          safe_price(contracts, "brent"),
-        "wti":            safe_price(contracts, "wti"),
-        "rbob":           safe_price(contracts, "rbob"),
-        "heating_oil":    safe_price(contracts, "heating_oil"),
-        "dubai":          safe_price(contracts, "dubai"),
-        "crack_321":      safe_spread(spreads, "crack_321"),
-        "gasoline_crack": safe_spread(spreads, "gasoline_crack"),
-        "ho_rbob":        safe_spread(spreads, "ho_rbob_spread"),
-        "brent_wti":      safe_spread(spreads, "brent_wti"),
-        "ho_crack":       safe_spread(spreads, "ho_crack"),
         "source":         "live",
+        "brent":          safe_price("brent"),
+        "wti":            safe_price("wti"),
+        "rbob":           safe_price("rbob"),
+        "heating_oil":    safe_price("heating_oil"),
+        "dubai":          safe_price("dubai"),
+        "crack_321":      safe_spread("crack_321"),
+        "gasoline_crack": safe_spread("gasoline_crack"),
+        "ho_rbob":        safe_spread("ho_rbob_spread"),
+        "brent_wti":      safe_spread("brent_wti"),
+        "ho_crack":       safe_spread("ho_crack"),
     }
 
-    # Upsert — overwrite if same date already exists
-    existing_dates = [h["date"] for h in history]
-    if today in existing_dates:
-        idx = existing_dates.index(today)
-        # Merge: keep non-None values from previous snapshot if today's fetch missed some
-        prev = history[idx]
-        for k, v in snapshot.items():
+    if today in by_date:
+        prev = by_date[today]
+        # Merge: live values win, fall back to prev if live is None
+        for k, v in live.items():
             if v is None and prev.get(k) is not None:
-                snapshot[k] = prev[k]
-        history[idx] = snapshot
-        print(f"[history] Updated snapshot for {today}")
+                live[k] = prev[k]
+        by_date[today] = live
+        print(f"[history] Updated today ({today})")
     else:
-        history.append(snapshot)
-        print(f"[history] Added new snapshot for {today}")
+        by_date[today] = live
+        print(f"[history] Added today ({today})")
 
-    return history
+    return by_date
+
+
+def print_summary(by_date: dict):
+    rows = sorted(by_date.values(), key=lambda x: x["date"])
+    rows = rows[-MAX_DAYS:]  # only show what will be saved
+
+    print(f"\n[history] === SUMMARY ===")
+    print(f"  Days in file (after trim): {len(rows)}")
+    if rows:
+        print(f"  Date range: {rows[0]['date']} → {rows[-1]['date']}")
+
+    fields = ["brent", "wti", "rbob", "heating_oil", "dubai",
+              "crack_321", "gasoline_crack", "ho_rbob", "brent_wti", "ho_crack"]
+    print(f"\n  {'Field':<20} {'Days':>5}  {'Latest':>10}")
+    print(f"  {'-'*40}")
+    for f in fields:
+        count  = sum(1 for h in rows if h.get(f) is not None)
+        latest = next((h[f] for h in reversed(rows) if h.get(f) is not None), None)
+        latest_str = f"{latest:.2f}" if latest is not None else "—"
+        print(f"  {f:<20} {count:>5}  {latest_str:>10}")
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def run():
-    # Handle --reset flag
+    force_backfill = "--reset" in sys.argv or "--backfill" in sys.argv
+
     if "--reset" in sys.argv:
         HISTORY_FILE.write_text("[]")
         print("[history] Reset — history cleared")
+        by_date = {}
+    else:
+        by_date = load_history()
 
-    history = load_history()
-    days_before = len(history)
+    # Determine if backfill is needed
+    if force_backfill:
+        needs_backfill = True
+    else:
+        # Backfill if any price series has fewer than 20 days
+        needs_backfill = any(
+            sum(1 for h in by_date.values() if h.get(key) is not None) < 20
+            for key in ["brent", "wti", "rbob", "heating_oil", "dubai"]
+        )
 
-    # Backfill from Stooq on first run or if history is sparse
-    if len(history) < 5:
-        history = backfill_from_stooq(history)
+    if needs_backfill:
+        by_date = backfill_all(by_date)
 
-    # Append today's live snapshot
-    history = append_snapshot(history)
+    # Always append today's live data
+    by_date = append_today(by_date)
 
-    # Save with 6-week rolling window
-    save_history(history)
+    # Save (trims to MAX_DAYS)
+    rows = save_history(by_date)
 
-    days_after = min(len(history), MAX_DAYS)
-    print(f"[history] Stored {days_after} days of history (max {MAX_DAYS} / 6 weeks)")
-    print(f"[history] Saved → {HISTORY_FILE}")
-
-    # Print summary of what we have
-    if history:
-        dates     = [h["date"] for h in history[-MAX_DAYS:]]
-        has_brent = sum(1 for h in history if h.get("brent") is not None)
-        has_wti   = sum(1 for h in history if h.get("wti") is not None)
-        has_crack = sum(1 for h in history if h.get("crack_321") is not None)
-        print(f"[history] Date range: {dates[0]} → {dates[-1]}")
-        print(f"[history] Brent: {has_brent}d | WTI: {has_wti}d | 3-2-1 Crack: {has_crack}d")
+    print_summary(by_date)
+    print(f"\n[history] Saved {len(rows)} days → {HISTORY_FILE}")
 
 
 if __name__ == "__main__":
