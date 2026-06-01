@@ -57,6 +57,7 @@ STOOQ_TICKERS = {
     "RB=F": "rb.f",   # RBOB Gasoline
     "HO=F": "ho.f",   # Heating Oil / ULSD
     "BG=F": None,     # ICE Gasoil — not on Stooq
+    "MCL=F": None
 }
 STOOQ_BASE = "https://stooq.com/q/d/l/?s={ticker}&i=d"
 
@@ -141,6 +142,20 @@ FUTURES = {
             "Note: Yahoo BG=F returns stale data — Barchart LFY00 to be added when API key available."
         ),
     },
+  "MCL=F": {
+    "key":          "dubai",
+    "label":        "Dubai/Oman Crude (front-month)",
+    "exchange":     "DME",
+    "unit":         "usd_per_bbl",
+    "lot_size_bbl": 1000,
+    "multiplier":   1.0,
+    "benchmark":    True,
+    "signal_note":  (
+        "Middle East sour crude benchmark. Reference for all Persian Gulf "
+        "crude priced into Asia. Brent-Dubai spread = light-heavy quality "
+        "premium and Atlantic-Pacific arbitrage signal."
+    ),
+},
 }
 
 # ── Fetch functions ───────────────────────────────────────────────────────────
