@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Area, ComposedChart
@@ -14,6 +14,137 @@ const TABS = [
   { id: "macro",     label: "Macro" },
   { id: "sentiment", label: "Sentiment" },
 ]
+
+// ── Alert config ──────────────────────────────────────────────────────────
+const ALERT_KEYS = [
+  { key: "brent",       label: "Brent ICE",        color: "#3b82f6" },
+  { key: "wti",         label: "WTI NYMEX",         color: "#60a5fa" },
+  { key: "rbob",        label: "RBOB",              color: "#f59e0b" },
+  { key: "heating_oil", label: "Heating Oil/ULSD",  color: "#f97316" },
+  // ICE Gasoil placeholder — will activate once feed available
+  { key: "gasoil",      label: "ICE Gasoil",        color: "#a78bfa" },
+]
+const WARN_PCT  = 2   // yellow
+const CRIT_PCT  = 4   // red
+const TOAST_TTL = 8000 // ms before auto-dismiss
+
+// ── Alert engine ──────────────────────────────────────────────────────────
+function compute5dAvg(history, key) {
+  if (!history || history.length === 0) return null
+  const last5 = history
+    .filter(h => h[key] != null)
+    .slice(-5)
+  if (last5.length < 3) return null
+  return last5.reduce((s, h) => s + h[key], 0) / last5.length
+}
+
+function buildAlerts(history, currentPrices) {
+  const alerts = []
+  for (const { key, label, color } of ALERT_KEYS) {
+    const current = currentPrices[key]
+    if (current == null) continue
+    const avg = compute5dAvg(history, key)
+    if (avg == null) continue
+    const devPct = ((current - avg) / avg) * 100
+    const absDev = Math.abs(devPct)
+    if (absDev < WARN_PCT) continue
+
+    const isCrit  = absDiv => absDiv >= CRIT_PCT
+    const isUp    = devPct > 0
+    const severity = isCrit(absDev => absDev)(absDevVal => absDevVal >= CRIT_PCT)(absDevVal => absDevVal)
+
+    // re-do cleanly
+    let sev
+    if (absDev >= CRIT_PCT) sev = "critical"
+    else if (absDev >= WARN_PCT) sev = "warning"
+    else continue
+
+    alerts.push({
+      id:       `${key}-${Date.now()}-${Math.random()}`,
+      key,
+      label,
+      color,
+      current:  Math.round(current * 100) / 100,
+      avg5d:    Math.round(avg * 100) / 100,
+      devPct:   Math.round(devPct * 10) / 10,
+      severity,
+      isUp,
+    })
+  }
+  return alerts
+}
+
+// ── Toast component ───────────────────────────────────────────────────────
+function ToastStack({ toasts, onDismiss }) {
+  if (!toasts.length) return null
+  return (
+    <div style={{
+      position: "fixed", top: 56, right: 16, zIndex: 999,
+      display: "flex", flexDirection: "column", gap: 8,
+      maxWidth: 340, pointerEvents: "none",
+    }}>
+      {toasts.map(t => {
+        const isCrit = t.severity === "critical"
+        const bg     = isCrit ? "#1a0a0a" : "#1a1400"
+        const border = isCrit ? "#ef4444" : "#f59e0b"
+        const badge  = isCrit ? "#ef4444" : "#f59e0b"
+        const arrow  = t.isUp ? "▲" : "▼"
+        const dirCol = t.isUp ? "#ef4444" : "#22c55e"
+        return (
+          <div key={t.id} style={{
+            background: bg,
+            border: `1px solid ${border}`,
+            borderLeft: `4px solid ${border}`,
+            borderRadius: 8,
+            padding: "10px 14px",
+            pointerEvents: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            boxShadow: `0 4px 20px ${border}30`,
+            animation: "slideIn 0.2s ease",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{
+                  fontSize: 9, fontWeight: 800, letterSpacing: "0.1em",
+                  color: badge, background: badge + "22",
+                  borderRadius: 3, padding: "1px 5px",
+                }}>
+                  {isCrit ? "⚠ CRITICAL" : "◉ WARNING"}
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: t.color }}>
+                  {t.label}
+                </span>
+              </div>
+              <button onClick={() => onDismiss(t.id)} style={{
+                background: "transparent", border: "none",
+                color: "#4b5563", cursor: "pointer", fontSize: 14, lineHeight: 1,
+                padding: "0 2px",
+              }}>×</button>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#e5e7eb" }}>
+                ${t.current}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: dirCol }}>
+                {arrow} {t.devPct > 0 ? "+" : ""}{t.devPct}%
+              </span>
+              <span style={{ fontSize: 10, color: "#4b5563" }}>vs 5d avg</span>
+            </div>
+            <div style={{ fontSize: 10, color: "#4b5563" }}>
+              5-day avg: <span style={{ color: "#9ca3af" }}>${t.avg5d}</span>
+              &nbsp;·&nbsp;
+              Deviation: <span style={{ color: badge }}>
+                {Math.abs(t.devPct)}% {isCrit ? "(critical)" : "(warning)"}
+              </span>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function fmt(v, dp=2, fallback="—") {
@@ -375,10 +506,10 @@ function TabSpreads({ d, history }) {
   return (
     <>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-        <SeriesChart title="3-2-1 Crack Spread" data={prepChartData(history, "crack_321")}     color="#22c55e" currentPrice={der.crack_321?.value_bbl}     currentSignal={der.crack_321?.signal} />
+        <SeriesChart title="3-2-1 Crack Spread" data={prepChartData(history, "crack_321")}      color="#22c55e" currentPrice={der.crack_321?.value_bbl}     currentSignal={der.crack_321?.signal} />
         <SeriesChart title="Gasoline Crack"      data={prepChartData(history, "gasoline_crack")} color="#f59e0b" currentPrice={der.gasoline_crack?.value_bbl} currentSignal={der.gasoline_crack?.signal} />
-        <SeriesChart title="HO – RBOB Spread"   data={prepChartData(history, "ho_rbob")}       color="#f97316" currentPrice={der.ho_rbob_spread?.value_bbl} currentSignal={der.ho_rbob_spread?.signal} />
-        <SeriesChart title="Brent – WTI Spread" data={prepChartData(history, "brent_wti")}     color="#3b82f6" currentPrice={der.brent_wti?.value_bbl}      currentSignal={der.brent_wti?.signal} />
+        <SeriesChart title="HO – RBOB Spread"   data={prepChartData(history, "ho_rbob")}        color="#f97316" currentPrice={der.ho_rbob_spread?.value_bbl} currentSignal={der.ho_rbob_spread?.signal} />
+        <SeriesChart title="Brent – WTI Spread" data={prepChartData(history, "brent_wti")}      color="#3b82f6" currentPrice={der.brent_wti?.value_bbl}      currentSignal={der.brent_wti?.signal} />
       </div>
       <Card title="Signal Reference">
         {[
@@ -541,6 +672,77 @@ export default function App() {
   const [loading,    setLoading]    = useState(true)
   const [lastUpdate, setLastUpdate] = useState(null)
   const [countdown,  setCountdown]  = useState(30)
+  const [toasts,     setToasts]     = useState([])
+  const prevPricesRef               = useRef({})
+
+  // ── Dismiss a toast by id ───────────────────────────────────────────────
+  const dismissToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
+
+  // ── Fire alerts when history + prices are fresh ─────────────────────────
+  const fireAlerts = useCallback((hist, contracts) => {
+    if (!hist.length || !contracts) return
+
+    const currentPrices = {
+      brent:       contracts.brent?.price_bbl       ?? null,
+      wti:         contracts.wti?.price_bbl         ?? null,
+      rbob:        contracts.rbob?.price_bbl        ?? null,
+      heating_oil: contracts.heating_oil?.price_bbl ?? null,
+      gasoil:      contracts.gasoil?.price_bbl      ?? null,
+    }
+
+    // Skip if prices unchanged from last check
+    const prev = prevPricesRef.current
+    const changed = Object.entries(currentPrices).some(([k,v]) => v !== prev[k])
+    if (!changed) return
+    prevPricesRef.current = currentPrices
+
+    // Use last 6 rows (5 historical + today) so avg is prior 5 days only
+    const histForAvg = hist.slice(0, -1)  // exclude today from avg
+    const newAlerts  = []
+
+    for (const { key, label, color } of ALERT_KEYS) {
+      const current = currentPrices[key]
+      if (current == null) continue
+
+      const last5 = histForAvg.filter(h => h[key] != null).slice(-5)
+      if (last5.length < 3) continue
+
+      const avg5d  = last5.reduce((s, h) => s + h[key], 0) / last5.length
+      const devPct = ((current - avg5d) / avg5d) * 100
+      const absDev = Math.abs(devPct)
+
+      if (absDev < WARN_PCT) continue
+
+      const severity = absDev >= CRIT_PCT ? "critical" : "warning"
+
+      newAlerts.push({
+        id:       `${key}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        key,
+        label,
+        color,
+        current:  Math.round(current * 100) / 100,
+        avg5d:    Math.round(avg5d * 100) / 100,
+        devPct:   Math.round(devPct * 10) / 10,
+        severity,
+        isUp:     devPct > 0,
+      })
+    }
+
+    if (newAlerts.length === 0) return
+
+    setToasts(prev => {
+      // Deduplicate by key — replace existing same-commodity toast
+      const filtered = prev.filter(t => !newAlerts.find(a => a.key === t.key))
+      return [...filtered, ...newAlerts]
+    })
+
+    // Auto-dismiss each toast after TTL
+    newAlerts.forEach(alert => {
+      setTimeout(() => dismissToast(alert.id), TOAST_TTL)
+    })
+  }, [dismissToast])
 
   const fetchAll = useCallback(async () => {
     try {
@@ -551,13 +753,18 @@ export default function App() {
         fetch(`${API}/api/crack`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/history`).then(r => r.json()).catch(() => []),
       ])
-      setData({ ...all, eia, rig_count: rig, crack })
-      setHistory(Array.isArray(hist) ? hist : [])
+      const merged = { ...all, eia, rig_count: rig, crack }
+      setData(merged)
+      const histArr = Array.isArray(hist) ? hist : []
+      setHistory(histArr)
       setLastUpdate(new Date())
       setCountdown(30)
+
+      // Fire alert check after data lands
+      fireAlerts(histArr, merged?.futures?.contracts)
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
-  }, [])
+  }, [fireAlerts])
 
   useEffect(() => {
     fetchAll()
@@ -573,6 +780,17 @@ export default function App() {
   return (
     <div style={{ background:"#060d18", minHeight:"100vh", color:"#e5e7eb",
       fontFamily:"'Inter','Segoe UI',system-ui,sans-serif" }}>
+
+      {/* CSS for toast animation */}
+      <style>{`
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(40px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
+
+      {/* Toast stack */}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
       {/* Top bar */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
@@ -591,6 +809,18 @@ export default function App() {
           <span style={{ fontSize:11, color:"#1f2937" }}>· Refresh in {countdown}s</span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          {/* Alert count badge */}
+          {toasts.length > 0 && (
+            <span style={{
+              fontSize:10, fontWeight:800,
+              color: toasts.some(t => t.severity === "critical") ? "#ef4444" : "#f59e0b",
+              background: toasts.some(t => t.severity === "critical") ? "#ef444422" : "#f59e0b22",
+              borderRadius:10, padding:"2px 8px", marginRight:6,
+              cursor:"pointer",
+            }} onClick={() => setToasts([])}>
+              ⚠ {toasts.length} ALERT{toasts.length > 1 ? "S" : ""} · CLEAR ALL
+            </span>
+          )}
           <span style={{ fontSize:11, color:"#4b5563" }}>Composite Index</span>
           <span style={{ fontSize:16, fontWeight:800, color:scoreCol }}>
             {score != null ? (score > 0 ? "+" : "") + score.toFixed(1) : "—"}
