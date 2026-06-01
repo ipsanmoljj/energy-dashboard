@@ -7,7 +7,7 @@ Saves to backend/data/fred_latest.json
 Series fetched:
   DTWEXBGS  → DXY (Broad Dollar Index, trade-weighted)
   SOFR      → Secured Overnight Financing Rate
-  FEDFUNDS  → Effective Federal Funds Rate
+  DFF       → Daily Federal Funds Rate
   DGS10     → 10-Year Treasury Constant Maturity Rate
 
 Usage:
@@ -63,7 +63,7 @@ FRED_SERIES = {
         "bullish_if":  "falling",
         "bearish_if":  "rising",
     },
-    "FEDFUNDS": {
+    "DFF": {
         "key":         "fed_funds",
         "label":       "Effective Federal Funds Rate",
         "unit":        "percent",
