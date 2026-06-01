@@ -134,11 +134,11 @@ function CompositeGauge({ score, label, reasons=[] }) {
 
 // ── Tabs ───────────────────────────────────────────────────────────────────
 function TabOverview({ d }) {
-  const comp = d?.composite || {}
-  const eia  = d?.eia       || {}
-  const fut  = d?.futures?.contracts || {}
+  const comp       = d?.composite?.composite || {}
+  const eia        = d?.eia                  || {}
+  const fut        = d?.futures?.contracts   || {}
+  const layers_raw = d?.composite?.layers    || {}
 
-const layers_raw = d?.composite?.layers || {}
   const layers = [
     {
       label: "Inventory",
@@ -196,6 +196,7 @@ const layers_raw = d?.composite?.layers || {}
       label2: d?.rig_count?.signal?.label,
     },
   ]
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
       <Card title="Composite Index">
@@ -223,12 +224,12 @@ const layers_raw = d?.composite?.layers || {}
       </Card>
 
       <Card title="Live Prices" style={{ gridColumn: "1 / -1" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
-          <PriceCard label="Brent ICE"   price={fut.brent?.price_bbl}       unit="$/bbl"   change={fut.brent?.change_pct}       color="#3b82f6" />
-          <PriceCard label="WTI NYMEX"  price={fut.wti?.price_bbl}         unit="$/bbl"   change={fut.wti?.change_pct}         color="#60a5fa" error={!!fut.wti?.error} />
-          <PriceCard label="RBOB"       price={fut.rbob?.price_bbl}        unit="$/bbl"   change={fut.rbob?.change_pct}        color="#f59e0b" />
-          <PriceCard label="Heating Oil" price={fut.heating_oil?.price_bbl} unit="$/bbl"  change={fut.heating_oil?.change_pct} color="#f97316" error={!!fut.heating_oil?.error} />
-          <PriceCard label="Dubai/Oman" price={fut.dubai?.price_bbl}       unit="$/bbl" change={fut.dubai?.change_pct}       color="#a78bfa" error={!!fut.dubai?.error} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 10 }}>
+          <PriceCard label="Brent ICE"    price={fut.brent?.price_bbl}        unit="$/bbl" change={fut.brent?.change_pct}        color="#3b82f6" error={!!fut.brent?.error} />
+          <PriceCard label="WTI NYMEX"   price={fut.wti?.price_bbl}          unit="$/bbl" change={fut.wti?.change_pct}          color="#60a5fa" error={!!fut.wti?.error} />
+          <PriceCard label="RBOB"        price={fut.rbob?.price_bbl}         unit="$/bbl" change={fut.rbob?.change_pct}         color="#f59e0b" error={!!fut.rbob?.error} />
+          <PriceCard label="Heating Oil" price={fut.heating_oil?.price_bbl}  unit="$/bbl" change={fut.heating_oil?.change_pct}  color="#f97316" error={!!fut.heating_oil?.error} />
+          <PriceCard label="Dubai/Oman"  price={fut.dubai?.price_bbl}        unit="$/bbl" change={fut.dubai?.change_pct}        color="#a78bfa" error={!!fut.dubai?.error} />
         </div>
       </Card>
 
@@ -239,7 +240,7 @@ const layers_raw = d?.composite?.layers || {}
           <Row label="Distillate Stks"  value={fmt(eia.distillate_stocks?.value,1)}  unit="mmbbls" signal={eia.distillate_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR" : "ABOVE 5YR"} note={`5yr: ${fmt(eia.distillate_stocks?.vs_5yr_avg,1)}`} />
           <Row label="Crude Production" value={fmt(eia.crude_production?.value,2)}   unit="mbd"    note={`WoW: ${fmt(eia.crude_production?.wow,3)}`} />
           <Row label="Refinery Util"    value={fmt(eia.refinery_util?.value,1)}      unit="%"      signal={eia.refinery_util?.value > 90 ? "HIGH" : "NORMAL"} note={`WoW: ${fmt(eia.refinery_util?.wow,1)}`} />
-          <Row label="Days of Cover"    value={fmt(eia.days_cover,1)}               unit="days"   signal={eia.days_cover < 54 ? "TIGHT" : eia.days_cover > 62 ? "AMPLE" : "NORMAL"} />
+          <Row label="Days of Cover"    value={fmt(eia.days_cover,1)}                unit="days"   signal={eia.days_cover < 54 ? "TIGHT" : eia.days_cover > 62 ? "AMPLE" : "NORMAL"} />
         </div>
       </Card>
     </div>
@@ -248,17 +249,17 @@ const layers_raw = d?.composite?.layers || {}
 
 function TabPrices({ d }) {
   const fut = d?.futures?.contracts || {}
-  const der = d?.crack?.spreads || {}
+  const der = d?.crack?.spreads     || {}
   return (
     <>
       <Card title="Futures Prices">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 10 }}>
-          <PriceCard label="Brent ICE"    price={fut.brent?.price_bbl}        unit="$/bbl"   change={fut.brent?.change_pct}        color="#3b82f6" />
-          <PriceCard label="WTI NYMEX"   price={fut.wti?.price_bbl}          unit="$/bbl"   change={fut.wti?.change_pct}          color="#60a5fa" error={!!fut.wti?.error} />
-          <PriceCard label="RBOB"        price={fut.rbob?.price_bbl}         unit="$/bbl"   change={fut.rbob?.change_pct}         color="#f59e0b" />
-          <PriceCard label="Heating Oil" price={fut.heating_oil?.price_bbl}  unit="$/bbl"   change={fut.heating_oil?.change_pct}  color="#f97316" error={!!fut.heating_oil?.error} />
+          <PriceCard label="Brent ICE"    price={fut.brent?.price_bbl}        unit="$/bbl"     change={fut.brent?.change_pct}        color="#3b82f6" error={!!fut.brent?.error} />
+          <PriceCard label="WTI NYMEX"   price={fut.wti?.price_bbl}          unit="$/bbl"     change={fut.wti?.change_pct}          color="#60a5fa" error={!!fut.wti?.error} />
+          <PriceCard label="RBOB"        price={fut.rbob?.price_bbl}         unit="$/bbl"     change={fut.rbob?.change_pct}         color="#f59e0b" error={!!fut.rbob?.error} />
+          <PriceCard label="Heating Oil" price={fut.heating_oil?.price_bbl}  unit="$/bbl"     change={fut.heating_oil?.change_pct}  color="#f97316" error={!!fut.heating_oil?.error} />
           <PriceCard label="ICE Gasoil"  price={fut.ice_gasoil?.raw_price != null ? (fut.ice_gasoil.raw_price / 7.45).toFixed(2) : null} unit="$/bbl est" color="#34d399" error={!!fut.ice_gasoil?.error} />
-          <PriceCard label="Dubai"       price={fut.dubai?.price_bbl}        unit="$/bbl"   change={fut.dubai?.change_pct}        color="#a78bfa" error={!!fut.dubai?.error} />
+          <PriceCard label="Dubai/Oman"  price={fut.dubai?.price_bbl}        unit="$/bbl"     change={fut.dubai?.change_pct}        color="#a78bfa" error={!!fut.dubai?.error} />
         </div>
       </Card>
       <Card title="Key Spreads">
@@ -273,7 +274,6 @@ function TabPrices({ d }) {
 }
 
 function TabSpreads({ d }) {
-  const cr  = d?.crack    || {}
   const der = d?.crack?.spreads || {}
   return (
     <>
@@ -308,19 +308,19 @@ function TabInventory({ d }) {
   return (
     <>
       <Card title="EIA Weekly Inventory">
-        <Row label="Cushing Stocks"      value={fmt(eia.cushing_stocks?.value,1)}      unit="mmbbls" signal={eia.cushing_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"}   note={`WoW ${fmt(eia.cushing_stocks?.wow,1)}`} highlight={eia.cushing_stocks?.vs_5yr_avg < -10} />
-        <Row label="Total Crude Stocks"  value={fmt(eia.total_crude_stocks?.value,1)}  unit="mmbbls" signal={eia.total_crude_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"} note={`WoW ${fmt(eia.total_crude_stocks?.wow,1)}`} />
-        <Row label="Gasoline Stocks"     value={fmt(eia.gasoline_stocks?.value,1)}     unit="mmbbls" signal={eia.gasoline_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"}   note={`5yr dev ${fmt(eia.gasoline_stocks?.vs_5yr_avg,1)}`} />
-        <Row label="Distillate Stocks"   value={fmt(eia.distillate_stocks?.value,1)}   unit="mmbbls" signal={eia.distillate_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"} note={`5yr dev ${fmt(eia.distillate_stocks?.vs_5yr_avg,1)}`} />
-        <Row label="Crude Production"    value={fmt(eia.crude_production?.value,2)}    unit="mbd"    note={`WoW ${fmt(eia.crude_production?.wow,3)} mbd`} />
-        <Row label="Refinery Utilisation" value={fmt(eia.refinery_util?.value,1)}      unit="%"      signal={eia.refinery_util?.value > 90 ? "HIGH" : "NORMAL"} note={`WoW ${fmt(eia.refinery_util?.wow,1)}pp`} />
+        <Row label="Cushing Stocks"       value={fmt(eia.cushing_stocks?.value,1)}      unit="mmbbls" signal={eia.cushing_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"}   note={`WoW ${fmt(eia.cushing_stocks?.wow,1)}`}      highlight={eia.cushing_stocks?.vs_5yr_avg < -10} />
+        <Row label="Total Crude Stocks"   value={fmt(eia.total_crude_stocks?.value,1)}  unit="mmbbls" signal={eia.total_crude_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"} note={`WoW ${fmt(eia.total_crude_stocks?.wow,1)}`} />
+        <Row label="Gasoline Stocks"      value={fmt(eia.gasoline_stocks?.value,1)}     unit="mmbbls" signal={eia.gasoline_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"}   note={`5yr dev ${fmt(eia.gasoline_stocks?.vs_5yr_avg,1)}`} />
+        <Row label="Distillate Stocks"    value={fmt(eia.distillate_stocks?.value,1)}   unit="mmbbls" signal={eia.distillate_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"} note={`5yr dev ${fmt(eia.distillate_stocks?.vs_5yr_avg,1)}`} />
+        <Row label="Crude Production"     value={fmt(eia.crude_production?.value,2)}    unit="mbd"    note={`WoW ${fmt(eia.crude_production?.wow,3)} mbd`} />
+        <Row label="Refinery Utilisation" value={fmt(eia.refinery_util?.value,1)}       unit="%"      signal={eia.refinery_util?.value > 90 ? "HIGH" : "NORMAL"} note={`WoW ${fmt(eia.refinery_util?.wow,1)}pp`} />
       </Card>
       <Card title="Derived Signals" style={{ marginTop: 12 }}>
-        <Row label="Days of Forward Cover" value={fmt(eia.days_cover,1)}              unit="days"  signal={eia.days_cover < 54 ? "TIGHT <54" : eia.days_cover > 62 ? "AMPLE >62" : "NORMAL"} />
-        <Row label="Net Supply"            value={fmt(eia.net_supply_mbd,2)}          unit="mbd" />
-        <Row label="Crude Imports"         value={fmt(eia.crude_imports?.value,2)}    unit="mbd"   note={`WoW ${fmt(eia.crude_imports?.wow,2)}`} />
-        <Row label="Crude Exports"         value={fmt(eia.crude_exports?.value,2)}    unit="mbd"   note={`WoW ${fmt(eia.crude_exports?.wow,2)}`} />
-        <Row label="Gasoline Demand"       value={fmt(eia.gasoline_demand?.value,2)}  unit="mbd"   note={`WoW ${fmt(eia.gasoline_demand?.wow,2)}`} />
+        <Row label="Days of Forward Cover" value={fmt(eia.days_cover,1)}               unit="days" signal={eia.days_cover < 54 ? "TIGHT <54" : eia.days_cover > 62 ? "AMPLE >62" : "NORMAL"} />
+        <Row label="Net Supply"            value={fmt(eia.net_supply_mbd,2)}           unit="mbd" />
+        <Row label="Crude Imports"         value={fmt(eia.crude_imports?.value,2)}     unit="mbd"  note={`WoW ${fmt(eia.crude_imports?.wow,2)}`} />
+        <Row label="Crude Exports"         value={fmt(eia.crude_exports?.value,2)}     unit="mbd"  note={`WoW ${fmt(eia.crude_exports?.wow,2)}`} />
+        <Row label="Gasoline Demand"       value={fmt(eia.gasoline_demand?.value,2)}   unit="mbd"  note={`WoW ${fmt(eia.gasoline_demand?.wow,2)}`} />
         <Row label="Distillate Demand"     value={fmt(eia.distillate_demand?.value,2)} unit="mbd"  note={`WoW ${fmt(eia.distillate_demand?.wow,2)}`} />
       </Card>
     </>
@@ -328,20 +328,20 @@ function TabInventory({ d }) {
 }
 
 function TabMacro({ d }) {
-  const fred = d?.fred?.series   || {}
-  const gie  = d?.gie            || {}
-  const wx   = d?.weather        || {}
-  const der  = d?.fred?.derived  || {}
+  const fred = d?.fred?.series  || {}
+  const gie  = d?.gie           || {}
+  const wx   = d?.weather       || {}
+  const der  = d?.fred?.derived || {}
 
   return (
     <>
       <Card title="Macro Indicators (FRED)">
-        <Row label="DXY Broad Dollar"  value={fmt(fred.dxy_broad?.latest,2)}    signal={fred.dxy_broad?.signal}    note="USD strength → bearish oil" />
-        <Row label="SOFR"              value={fmt(fred.sofr?.latest,3)}         unit="%"  note="Storage carry cost driver" />
-        <Row label="Fed Funds Rate"    value={fmt(fred.fed_funds?.latest,2)}    unit="%"  />
-        <Row label="US 10Y Yield"      value={fmt(fred.us_10y_yield?.latest,3)} unit="%"  />
-        <Row label="Storage Carry/mo"  value={fmt(der.storage_carry?.total_carry_per_bbl_mo,2)} unit="$/bbl" note="Contango threshold for storage" />
-        <Row label="Macro Signal"      value=""  signal={der.macro_composite?.composite_signal} />
+        <Row label="DXY Broad Dollar" value={fmt(fred.dxy_broad?.latest,2)}                      signal={fred.dxy_broad?.signal} note="USD strength → bearish oil" />
+        <Row label="SOFR"             value={fmt(fred.sofr?.latest,3)}             unit="%"       note="Storage carry cost driver" />
+        <Row label="Fed Funds Rate"   value={fmt(fred.fed_funds?.latest,2)}        unit="%"  />
+        <Row label="US 10Y Yield"     value={fmt(fred.us_10y_yield?.latest,3)}     unit="%"  />
+        <Row label="Storage Carry/mo" value={fmt(der.storage_carry?.total_carry_per_bbl_mo,2)} unit="$/bbl" note="Contango threshold for storage" />
+        <Row label="Macro Signal"     value=""                                     signal={der.macro_composite?.composite_signal} />
       </Card>
 
       <Card title="European Gas Storage (GIE AGSI+)" style={{ marginTop: 12 }}>
@@ -382,21 +382,21 @@ function TabMacro({ d }) {
 }
 
 function TabSentiment({ d }) {
-  const news = d?.news  || {}
-  const cftc = d?.cftc  || {}
+  const news = d?.news           || {}
+  const cftc = d?.cftc           || {}
   const rig  = d?.rig_count?.signal || {}
 
-  const headlines  = news.headlines || news.articles || []
-  const score      = news.composite_score ?? news.score ?? null
-  const scoreCol   = score > 0 ? "#22c55e" : score < 0 ? "#ef4444" : "#f59e0b"
+  const headlines = news.headlines || news.articles || []
+  const score     = news.composite_score ?? news.score ?? null
+  const scoreCol  = score > 0 ? "#22c55e" : score < 0 ? "#ef4444" : "#f59e0b"
 
   return (
     <>
       <Card title="Rig Count Signal">
-        <Row label="Oil-Directed Rigs"  value={fmt(d?.rig_count?.latest?.oil_rigs,0)}  unit="rigs" signal={rig.label} />
-        <Row label="WoW Change"         value={fmt(d?.rig_count?.latest?.wow_oil,0)}   unit="rigs" signal={rig.direction} />
-        <Row label="5-Week Trend"       value={rig.five_week_trend || "—"} />
-        <Row label="Production Signal"  value="" signal={rig.label} note={rig.note?.slice(0,60)} />
+        <Row label="Oil-Directed Rigs" value={fmt(d?.rig_count?.latest?.oil_rigs,0)} unit="rigs" signal={rig.label} />
+        <Row label="WoW Change"        value={fmt(d?.rig_count?.latest?.wow_oil,0)}  unit="rigs" signal={rig.direction} />
+        <Row label="5-Week Trend"      value={rig.five_week_trend || "—"} />
+        <Row label="Production Signal" value="" signal={rig.label} note={rig.note?.slice(0,60)} />
       </Card>
 
       <Card title="News Sentiment" style={{ marginTop: 12 }}>
@@ -408,9 +408,9 @@ function TabSentiment({ d }) {
             <div style={{ fontSize:10, color:"#4b5563" }}>Composite</div>
           </div>
           <div style={{ flex:1 }}>
-            <Row label="Bullish signals"  value={news.bullish_count  ?? "—"} />
-            <Row label="Bearish signals"  value={news.bearish_count  ?? "—"} />
-            <Row label="Geo alerts"       value={news.geo_alerts     ?? "—"} />
+            <Row label="Bullish signals" value={news.bullish_count ?? "—"} />
+            <Row label="Bearish signals" value={news.bearish_count ?? "—"} />
+            <Row label="Geo alerts"      value={news.geo_alerts    ?? "—"} />
           </div>
         </div>
         {headlines.slice(0,8).map((h,i) => (
@@ -426,9 +426,12 @@ function TabSentiment({ d }) {
       </Card>
 
       <Card title="CFTC Positioning" style={{ marginTop: 12 }}>
-        {cftc.contracts ? Object.entries(cftc.contracts).slice(0,5).map(([k,v]) => (
-          <Row key={k} label={k} value={fmt(v?.net_long_pct,1)} unit="% net long" signal={v?.signal} />
-        )) : <div style={{ color:"#374151", fontSize:12, padding:"8px 0" }}>CFTC data not loaded</div>}
+        {cftc.contracts
+          ? Object.entries(cftc.contracts).slice(0,5).map(([k,v]) => (
+            <Row key={k} label={k} value={fmt(v?.net_long_pct,1)} unit="% net long" signal={v?.signal} />
+          ))
+          : <div style={{ color:"#374151", fontSize:12, padding:"8px 0" }}>CFTC data not loaded</div>
+        }
       </Card>
     </>
   )
@@ -464,7 +467,7 @@ export default function App() {
     return () => { clearInterval(d); clearInterval(c) }
   }, [fetchAll])
 
-  const comp     = data?.composite || {}
+  const comp     = data?.composite?.composite || {}
   const score    = comp.score ?? null
   const scoreCol = score > 0.5 ? "#22c55e" : score < -0.5 ? "#ef4444" : "#f59e0b"
 
