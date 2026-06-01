@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from "react"
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, ReferenceLine, Area, ComposedChart
+} from "recharts"
 
 const API = ""
 
@@ -100,6 +104,110 @@ function PriceCard({ label, price, unit, change, color, error }) {
   )
 }
 
+// ── Chart helpers ──────────────────────────────────────────────────────────
+function round2(v) { return Math.round(v * 100) / 100 }
+
+function computeBand(history, key) {
+  const vals = history.map(h => h[key]).filter(v => v != null)
+  if (vals.length < 3) return { mean: null, upper: null, lower: null }
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+  const std  = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length)
+  return { mean: round2(mean), upper: round2(mean + std), lower: round2(mean - std) }
+}
+
+function prepChartData(history, key) {
+  if (!history || history.length === 0) return []
+  const band = computeBand(history, key)
+  return history
+    .filter(h => h[key] != null)
+    .map(h => ({
+      date:  h.date?.slice(5),
+      value: h[key],
+      mean:  band.mean,
+      upper: band.upper,
+      lower: band.lower,
+      band:  band.upper != null ? [band.lower, band.upper] : null,
+    }))
+}
+
+function SeriesChart({ title, data, color, unit="$/bbl", currentPrice, currentSignal }) {
+  const hasData   = data && data.length > 0
+  const hasBand   = hasData && data[0]?.band != null
+  const latestVal = hasData ? data[data.length - 1]?.value : null
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null
+    const val = payload.find(p => p.name === "value")
+    return (
+      <div style={{
+        background: "#0d1117", border: "1px solid #1a2535",
+        borderRadius: 6, padding: "8px 12px", fontSize: 11,
+      }}>
+        <div style={{ color: "#6b7280", marginBottom: 4 }}>{label}</div>
+        {val && <div style={{ color, fontWeight: 600 }}>{fmt(val.value)} {unit}</div>}
+      </div>
+    )
+  }
+
+  return (
+    <Card style={{ marginBottom: 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#4b5563",
+            letterSpacing: "0.12em", textTransform: "uppercase" }}>{title}</div>
+          {currentSignal && <div style={{ marginTop: 3 }}><Badge label={currentSignal} /></div>}
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color, lineHeight: 1 }}>
+            {fmt(currentPrice ?? latestVal)}
+          </div>
+          <div style={{ fontSize: 10, color: "#374151" }}>{unit}</div>
+        </div>
+      </div>
+
+      {!hasData ? (
+        <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center",
+          color: "#1f2937", fontSize: 10, fontFamily: "monospace" }}>
+          NO HISTORY YET — BUILDING DATA...
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={140}>
+          <ComposedChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#0f1e30" />
+            <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#374151" }}
+              tickLine={false} interval="preserveStartEnd" />
+            <YAxis tick={{ fontSize: 9, fill: "#374151" }} tickLine={false}
+              domain={["auto", "auto"]} width={50}
+              tickFormatter={v => v.toFixed(0)} />
+            <Tooltip content={<CustomTooltip />} />
+            {hasBand && (
+              <Area dataKey="band" stroke="none" fill={color}
+                fillOpacity={0.07} name="band" legendType="none" />
+            )}
+            {hasBand && data[0]?.mean != null && (
+              <ReferenceLine y={data[0].mean} stroke={color}
+                strokeOpacity={0.35} strokeDasharray="4 4"
+                label={{ value: `avg ${fmt(data[0].mean, 1)}`,
+                  position: "insideTopRight", fontSize: 8, fill: color, opacity: 0.6 }} />
+            )}
+            <Line dataKey="value" stroke={color} strokeWidth={2}
+              dot={false} activeDot={{ r: 3, fill: color }} name="value" />
+          </ComposedChart>
+        </ResponsiveContainer>
+      )}
+
+      {hasBand && (
+        <div style={{ display: "flex", gap: 16, marginTop: 6, fontSize: 9, color: "#374151" }}>
+          <span>5wk avg: <span style={{ color }}>{fmt(data[0]?.mean, 2)}</span></span>
+          <span>+1σ: <span style={{ color: "#22c55e" }}>{fmt(data[0]?.upper, 2)}</span></span>
+          <span>-1σ: <span style={{ color: "#ef4444" }}>{fmt(data[0]?.lower, 2)}</span></span>
+          <span style={{ marginLeft: "auto" }}>{data.length}d</span>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 // ── Composite gauge ────────────────────────────────────────────────────────
 function CompositeGauge({ score, label, reasons=[] }) {
   const s      = Math.max(-10, Math.min(10, score ?? 0))
@@ -149,44 +257,32 @@ function TabOverview({ d }) {
     },
     {
       label: "Crack",
-      score: layers_raw.crack?.available
-        ? (layers_raw.crack.score / 10)
-        : 0,
+      score: layers_raw.crack?.available ? (layers_raw.crack.score / 10) : 0,
       label2: layers_raw.crack?.label,
     },
     {
       label: "Macro",
-      score: layers_raw.macro?.available
-        ? (layers_raw.macro.score / 10)
-        : 0,
+      score: layers_raw.macro?.available ? (layers_raw.macro.score / 10) : 0,
       label2: layers_raw.macro?.label,
     },
     {
       label: "Demand / Weather",
-      score: layers_raw.demand?.available
-        ? (layers_raw.demand.score / 10)
-        : 0,
+      score: layers_raw.demand?.available ? (layers_raw.demand.score / 10) : 0,
       label2: layers_raw.demand?.label,
     },
     {
       label: "EU Gas Storage",
-      score: layers_raw.gie?.available
-        ? (layers_raw.gie.score / 10)
-        : 0,
+      score: layers_raw.gie?.available ? (layers_raw.gie.score / 10) : 0,
       label2: layers_raw.gie?.label,
     },
     {
       label: "Positioning",
-      score: layers_raw.positioning?.available
-        ? (layers_raw.positioning.score / 10)
-        : 0,
+      score: layers_raw.positioning?.available ? (layers_raw.positioning.score / 10) : 0,
       label2: layers_raw.positioning?.label,
     },
     {
       label: "News / Sentiment",
-      score: layers_raw.news?.available
-        ? (layers_raw.news.score / 10)
-        : 0,
+      score: layers_raw.news?.available ? (layers_raw.news.score / 10) : 0,
       label2: layers_raw.news?.label,
     },
     {
@@ -225,11 +321,11 @@ function TabOverview({ d }) {
 
       <Card title="Live Prices" style={{ gridColumn: "1 / -1" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 10 }}>
-          <PriceCard label="Brent ICE"    price={fut.brent?.price_bbl}        unit="$/bbl" change={fut.brent?.change_pct}        color="#3b82f6" error={!!fut.brent?.error} />
-          <PriceCard label="WTI NYMEX"   price={fut.wti?.price_bbl}          unit="$/bbl" change={fut.wti?.change_pct}          color="#60a5fa" error={!!fut.wti?.error} />
-          <PriceCard label="RBOB"        price={fut.rbob?.price_bbl}         unit="$/bbl" change={fut.rbob?.change_pct}         color="#f59e0b" error={!!fut.rbob?.error} />
-          <PriceCard label="Heating Oil" price={fut.heating_oil?.price_bbl}  unit="$/bbl" change={fut.heating_oil?.change_pct}  color="#f97316" error={!!fut.heating_oil?.error} />
-          <PriceCard label="Dubai/Oman"  price={fut.dubai?.price_bbl}        unit="$/bbl" change={fut.dubai?.change_pct}        color="#a78bfa" error={!!fut.dubai?.error} />
+          <PriceCard label="Brent ICE"    price={fut.brent?.price_bbl}       unit="$/bbl" change={fut.brent?.change_pct}       color="#3b82f6" error={!!fut.brent?.error} />
+          <PriceCard label="WTI NYMEX"   price={fut.wti?.price_bbl}         unit="$/bbl" change={fut.wti?.change_pct}         color="#60a5fa" error={!!fut.wti?.error} />
+          <PriceCard label="RBOB"        price={fut.rbob?.price_bbl}        unit="$/bbl" change={fut.rbob?.change_pct}        color="#f59e0b" error={!!fut.rbob?.error} />
+          <PriceCard label="Heating Oil" price={fut.heating_oil?.price_bbl} unit="$/bbl" change={fut.heating_oil?.change_pct} color="#f97316" error={!!fut.heating_oil?.error} />
+          <PriceCard label="Dubai/Oman"  price={fut.dubai?.price_bbl}       unit="$/bbl" change={fut.dubai?.change_pct}       color="#a78bfa" error={!!fut.dubai?.error} />
         </div>
       </Card>
 
@@ -247,21 +343,20 @@ function TabOverview({ d }) {
   )
 }
 
-function TabPrices({ d }) {
+// ── Prices Tab ─────────────────────────────────────────────────────────────
+function TabPrices({ d, history }) {
   const fut = d?.futures?.contracts || {}
   const der = d?.crack?.spreads     || {}
+
   return (
     <>
-      <Card title="Futures Prices">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 10 }}>
-          <PriceCard label="Brent ICE"    price={fut.brent?.price_bbl}        unit="$/bbl"     change={fut.brent?.change_pct}        color="#3b82f6" error={!!fut.brent?.error} />
-          <PriceCard label="WTI NYMEX"   price={fut.wti?.price_bbl}          unit="$/bbl"     change={fut.wti?.change_pct}          color="#60a5fa" error={!!fut.wti?.error} />
-          <PriceCard label="RBOB"        price={fut.rbob?.price_bbl}         unit="$/bbl"     change={fut.rbob?.change_pct}         color="#f59e0b" error={!!fut.rbob?.error} />
-          <PriceCard label="Heating Oil" price={fut.heating_oil?.price_bbl}  unit="$/bbl"     change={fut.heating_oil?.change_pct}  color="#f97316" error={!!fut.heating_oil?.error} />
-          <PriceCard label="ICE Gasoil"  price={fut.ice_gasoil?.raw_price != null ? (fut.ice_gasoil.raw_price / 7.45).toFixed(2) : null} unit="$/bbl est" color="#34d399" error={!!fut.ice_gasoil?.error} />
-          <PriceCard label="Dubai/Oman"  price={fut.dubai?.price_bbl}        unit="$/bbl"     change={fut.dubai?.change_pct}        color="#a78bfa" error={!!fut.dubai?.error} />
-        </div>
-      </Card>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+        <SeriesChart title="Brent ICE"        data={prepChartData(history, "brent")}       color="#3b82f6" currentPrice={fut.brent?.price_bbl} />
+        <SeriesChart title="WTI NYMEX"        data={prepChartData(history, "wti")}         color="#60a5fa" currentPrice={fut.wti?.price_bbl} />
+        <SeriesChart title="RBOB Gasoline"    data={prepChartData(history, "rbob")}        color="#f59e0b" currentPrice={fut.rbob?.price_bbl} />
+        <SeriesChart title="Heating Oil/ULSD" data={prepChartData(history, "heating_oil")} color="#f97316" currentPrice={fut.heating_oil?.price_bbl} />
+        <SeriesChart title="Dubai / Oman"     data={prepChartData(history, "dubai")}       color="#a78bfa" currentPrice={fut.dubai?.price_bbl} />
+      </div>
       <Card title="Key Spreads">
         <Row label="Brent – WTI"    value={fmt(der.brent_wti?.value_bbl)}      unit="$/bbl" signal={der.brent_wti?.signal}      note={der.brent_wti?.note} />
         <Row label="3-2-1 Crack"    value={fmt(der.crack_321?.value_bbl)}      unit="$/bbl" signal={der.crack_321?.signal} />
@@ -273,18 +368,19 @@ function TabPrices({ d }) {
   )
 }
 
-function TabSpreads({ d }) {
+// ── Spreads Tab ────────────────────────────────────────────────────────────
+function TabSpreads({ d, history }) {
   const der = d?.crack?.spreads || {}
+
   return (
     <>
-      <Card title="Crack Spreads">
-        <Row label="Brent – WTI"    value={fmt(der.brent_wti?.value_bbl)}      unit="$/bbl" signal={der.brent_wti?.signal}      note={der.brent_wti?.note} />
-        <Row label="3-2-1 Crack"    value={fmt(der.crack_321?.value_bbl)}      unit="$/bbl" signal={der.crack_321?.signal} />
-        <Row label="HO – RBOB"      value={fmt(der.ho_rbob_spread?.value_bbl)} unit="$/bbl" signal={der.ho_rbob_spread?.signal} />
-        <Row label="Gasoline Crack" value={fmt(der.gasoline_crack?.value_bbl)} unit="$/bbl" signal={der.gasoline_crack?.signal} />
-        <Row label="HO Crack"       value={fmt(der.ho_crack?.value_bbl)}       unit="$/bbl" signal={der.ho_crack?.signal} />
-      </Card>
-      <Card title="Signal Reference" style={{ marginTop: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+        <SeriesChart title="3-2-1 Crack Spread" data={prepChartData(history, "crack_321")}     color="#22c55e" currentPrice={der.crack_321?.value_bbl}     currentSignal={der.crack_321?.signal} />
+        <SeriesChart title="Gasoline Crack"      data={prepChartData(history, "gasoline_crack")} color="#f59e0b" currentPrice={der.gasoline_crack?.value_bbl} currentSignal={der.gasoline_crack?.signal} />
+        <SeriesChart title="HO – RBOB Spread"   data={prepChartData(history, "ho_rbob")}       color="#f97316" currentPrice={der.ho_rbob_spread?.value_bbl} currentSignal={der.ho_rbob_spread?.signal} />
+        <SeriesChart title="Brent – WTI Spread" data={prepChartData(history, "brent_wti")}     color="#3b82f6" currentPrice={der.brent_wti?.value_bbl}      currentSignal={der.brent_wti?.signal} />
+      </div>
+      <Card title="Signal Reference">
         {[
           ["Brent-WTI > $8",    "US export bottleneck or North Sea disruption"],
           ["Brent-WTI < $2",    "US exports flooding Atlantic basin"],
@@ -441,19 +537,22 @@ function TabSentiment({ d }) {
 export default function App() {
   const [activeTab,  setActiveTab]  = useState("overview")
   const [data,       setData]       = useState(null)
+  const [history,    setHistory]    = useState([])
   const [loading,    setLoading]    = useState(true)
   const [lastUpdate, setLastUpdate] = useState(null)
   const [countdown,  setCountdown]  = useState(30)
 
   const fetchAll = useCallback(async () => {
     try {
-      const [all, eia, rig, crack] = await Promise.all([
+      const [all, eia, rig, crack, hist] = await Promise.all([
         fetch(`${API}/api/all`).then(r => r.json()),
         fetch(`${API}/api/eia`).then(r => r.json()),
         fetch(`${API}/api/rig-count`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/crack`).then(r => r.json()).catch(() => null),
+        fetch(`${API}/api/history`).then(r => r.json()).catch(() => []),
       ])
       setData({ ...all, eia, rig_count: rig, crack })
+      setHistory(Array.isArray(hist) ? hist : [])
       setLastUpdate(new Date())
       setCountdown(30)
     } catch(e) { console.error(e) }
@@ -528,8 +627,8 @@ export default function App() {
         ) : (
           <>
             {activeTab === "overview"  && <TabOverview  d={data} />}
-            {activeTab === "prices"    && <TabPrices    d={data} />}
-            {activeTab === "spreads"   && <TabSpreads   d={data} />}
+            {activeTab === "prices"    && <TabPrices    d={data} history={history} />}
+            {activeTab === "spreads"   && <TabSpreads   d={data} history={history} />}
             {activeTab === "inventory" && <TabInventory d={data} />}
             {activeTab === "macro"     && <TabMacro     d={data} />}
             {activeTab === "sentiment" && <TabSentiment d={data} />}
