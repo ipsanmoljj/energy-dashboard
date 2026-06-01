@@ -263,7 +263,7 @@ def fetch_single_chart(ticker: str, days: int = 30) -> dict | None:
             try:
                 r = requests.get(
                     url,
-                    headers=_yf_headers(),
+                    headers=_yf_headers(ticker),
                     params={"interval": "1d", "range": f"{days}d"},
                     timeout=15,
                 )
