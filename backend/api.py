@@ -55,6 +55,7 @@ def job_prices():
     run_script("fetchers/futures_fetcher.py", "futures")
     run_script("crack_spread_engine.py",      "crack")
     run_script("nci_composite.py",            "composite")
+    run_script("history_store.py",            "history")
 
 def job_inventory():
     """Inventory signals (every 30 min — uses cached EIA)"""
@@ -139,6 +140,10 @@ def rig_count(): return load("rig_count_latest.json")
 @app.get("/api/crack")
 def crack():
     return load("crack_signals.json")
+
+@app.get("/api/history")
+def history(): 
+  return load("price_history.json")
 
 @app.get("/api/all")
 def all_data():
