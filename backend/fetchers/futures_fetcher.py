@@ -48,7 +48,7 @@ YF_ENDPOINTS = [
     "https://query2.finance.yahoo.com/v8/finance/chart/{ticker}",
     "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",
 ]
-YF_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
+YF_QUOTE_URL = "https://query2.finance.yahoo.com/v7/finance/quote"
 
 # Stooq tickers — primary source, no rate limiting, no key needed
 STOOQ_TICKERS = {
@@ -500,7 +500,7 @@ def run() -> dict:
                  ticker, raw_price or 0, cfg["unit"],
                  price_bbl or 0, chart.get("change_pct") or 0)
 
-        time.sleep(random.uniform(1.5, 3.0))
+        time.sleep(random.uniform(4.0, 7.0))
 
     # ── Estimate missing prices ───────────────────────────────────────────────
     output["contracts"] = estimate_missing_prices(output["contracts"])
