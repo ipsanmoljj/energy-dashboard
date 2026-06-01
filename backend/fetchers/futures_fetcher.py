@@ -160,12 +160,12 @@ FUTURES = {
 
 # ── Fetch functions ───────────────────────────────────────────────────────────
 
-def _yf_headers() -> dict:
+def _yf_headers(ticker=None) -> dict:
     return {
         "User-Agent":      random.choice(USER_AGENTS),
         "Accept":          "application/json, */*",
         "Accept-Language": "en-US,en;q=0.9",
-        "Referer":         "https://finance.yahoo.com/",
+        "Referer":         f"https://finance.yahoo.com/quote/{ticker}/" if ticker else "https://finance.yahoo.com/",
     }
 
 
