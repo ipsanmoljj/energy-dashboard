@@ -138,15 +138,64 @@ function TabOverview({ d }) {
   const eia  = d?.eia       || {}
   const fut  = d?.futures?.contracts || {}
 
+const layers_raw = d?.composite?.layers || {}
   const layers = [
-    { label: "Macro",     score: d?.fred?.derived?.macro_composite?.composite_signal === "BULLISH" ? 1 : d?.fred?.derived?.macro_composite?.composite_signal === "BEARISH" ? -1 : 0 },
-    { label: "Crack",     score: comp.score > 0 ? 0.5 : comp.score < 0 ? -0.5 : 0 },
-    { label: "Inventory", score: eia?.cushing_stocks?.vs_5yr_avg < 0 ? 0.5 : -0.5 },
-    { label: "Brent-WTI", score: 0 },
-    { label: "Sentiment", score: 0 },
-    { label: "Rig Count", score: d?.rig_count?.signal?.direction === "bullish" ? 0.5 : d?.rig_count?.signal?.direction === "bearish" ? -0.5 : 0 },
+    {
+      label: "Inventory",
+      score: layers_raw.inventory?.available
+        ? (layers_raw.inventory.score / 10)
+        : (eia?.cushing_stocks?.vs_5yr_avg < 0 ? 0.5 : -0.5),
+      label2: layers_raw.inventory?.label,
+    },
+    {
+      label: "Crack",
+      score: layers_raw.crack?.available
+        ? (layers_raw.crack.score / 10)
+        : 0,
+      label2: layers_raw.crack?.label,
+    },
+    {
+      label: "Macro",
+      score: layers_raw.macro?.available
+        ? (layers_raw.macro.score / 10)
+        : 0,
+      label2: layers_raw.macro?.label,
+    },
+    {
+      label: "Demand / Weather",
+      score: layers_raw.demand?.available
+        ? (layers_raw.demand.score / 10)
+        : 0,
+      label2: layers_raw.demand?.label,
+    },
+    {
+      label: "EU Gas Storage",
+      score: layers_raw.gie?.available
+        ? (layers_raw.gie.score / 10)
+        : 0,
+      label2: layers_raw.gie?.label,
+    },
+    {
+      label: "Positioning",
+      score: layers_raw.positioning?.available
+        ? (layers_raw.positioning.score / 10)
+        : 0,
+      label2: layers_raw.positioning?.label,
+    },
+    {
+      label: "News / Sentiment",
+      score: layers_raw.news?.available
+        ? (layers_raw.news.score / 10)
+        : 0,
+      label2: layers_raw.news?.label,
+    },
+    {
+      label: "Rig Count",
+      score: d?.rig_count?.signal?.direction === "bullish" ? 0.5
+        : d?.rig_count?.signal?.direction === "bearish" ? -0.5 : 0,
+      label2: d?.rig_count?.signal?.label,
+    },
   ]
-
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
       <Card title="Composite Index">
@@ -159,7 +208,9 @@ function TabOverview({ d }) {
           return (
             <div key={i} style={{ marginBottom: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                <span style={{ color: "#9ca3af" }}>{l.label}</span>
+                <span style={{ color: "#9ca3af" }}>{l.label}
+                  {l.label2 && <span style={{ color: "#374151", fontSize: 10, marginLeft: 6 }}>{l.label2}</span>}
+                </span>
                 <span style={{ color: col, fontWeight: 700 }}>{l.score > 0 ? "+" : ""}{l.score.toFixed(1)}</span>
               </div>
               <div style={{ height: 3, background: "#1a2535", borderRadius: 2 }}>
