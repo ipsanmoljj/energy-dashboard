@@ -177,6 +177,7 @@ function TabOverview({ d }) {
           <PriceCard label="WTI NYMEX"  price={fut.wti?.price_bbl}         unit="$/bbl"   change={fut.wti?.change_pct}         color="#60a5fa" error={!!fut.wti?.error} />
           <PriceCard label="RBOB"       price={fut.rbob?.price_bbl}        unit="$/bbl"   change={fut.rbob?.change_pct}        color="#f59e0b" />
           <PriceCard label="Heating Oil" price={fut.heating_oil?.price_bbl} unit="$/bbl"  change={fut.heating_oil?.change_pct} color="#f97316" error={!!fut.heating_oil?.error} />
+          <PriceCard label="Dubai/Oman" price={fut.dubai?.price_bbl}       unit="$/bbl" change={fut.dubai?.change_pct}       color="#a78bfa" error={!!fut.dubai?.error} />
         </div>
       </Card>
 
