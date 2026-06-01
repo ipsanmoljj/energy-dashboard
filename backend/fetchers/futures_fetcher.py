@@ -45,8 +45,8 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 YF_ENDPOINTS = [
-    "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",
     "https://query2.finance.yahoo.com/v8/finance/chart/{ticker}",
+    "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",
 ]
 YF_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
 
