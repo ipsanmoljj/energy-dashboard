@@ -32,12 +32,12 @@ USER_AGENTS = [
     "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
 ]
 
-# Yahoo ticker → (key in history, multiplier to $/bbl)
+# Yahoo ticker -> (key in history, multiplier to $/bbl)
 TICKERS = {
     "BZ=F":  ("brent",       1.0),   # ICE Brent $/bbl
     "CL=F":  ("wti",         1.0),   # NYMEX WTI $/bbl
-    "RB=F":  ("rbob",        42.0),  # RBOB $/gal → $/bbl
-    "HO=F":  ("heating_oil", 42.0),  # HO $/gal → $/bbl
+    "RB=F":  ("rbob",        42.0),  # RBOB $/gal -> $/bbl
+    "HO=F":  ("heating_oil", 42.0),  # HO $/gal -> $/bbl
     "MCL=F": ("dubai",       1.0),   # Dubai $/bbl
 }
 
@@ -49,7 +49,7 @@ EMPTY_ROW = {
 }
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# -- Helpers ------------------------------------------------------------------
 
 def load_history() -> dict:
     """Load history as {date: row_dict}."""
@@ -95,7 +95,7 @@ def fetch_yahoo_history(ticker: str, range_str: str = "2y") -> list[dict]:
                 timeout=20,
             )
             if r.status_code == 429:
-                print(f"  [{ticker}] Rate limited — waiting 15s...")
+                print(f"  [{ticker}] Rate limited -- waiting 15s...")
                 time.sleep(15)
                 continue
             r.raise_for_status()
@@ -131,7 +131,7 @@ def price_sanity(key: str, price: float) -> bool:
     return True
 
 
-# ── Core operations ───────────────────────────────────────────────────────────
+# -- Core operations ----------------------------------------------------------
 
 def backfill_all(by_date: dict) -> dict:
     """
@@ -166,6 +166,40 @@ def backfill_all(by_date: dict) -> dict:
         print(f"  [{key}] {added} new days added")
         time.sleep(random.uniform(6, 12))  # be gentle with Yahoo rate limits
 
+    return by_date
+
+
+def backfill_spreads(by_date: dict) -> dict:
+    """
+    Recalculate all spreads for every historical row where underlying prices exist.
+    Call this after backfill_all and after append_today so all 42 days get spreads,
+    not just today's snapshot.
+    """
+    updated = 0
+    for date, row in by_date.items():
+        b  = row.get("brent")
+        w  = row.get("wti")
+        rb = row.get("rbob")
+        ho = row.get("heating_oil")
+
+        if b is not None and w is not None:
+            row["brent_wti"] = round(b - w, 4)
+
+        if rb is not None and w is not None:
+            row["gasoline_crack"] = round(rb - w, 4)
+
+        if ho is not None and w is not None:
+            row["ho_crack"] = round(ho - w, 4)
+
+        if rb is not None and ho is not None:
+            row["ho_rbob"] = round(ho - rb, 4)
+
+        if rb is not None and ho is not None and w is not None:
+            row["crack_321"] = round(((2 * rb) + ho - (3 * w)) / 3, 4)
+
+        updated += 1
+
+    print(f"[history] Spreads recalculated for {updated} rows")
     return by_date
 
 
@@ -231,7 +265,7 @@ def print_summary(by_date: dict):
     print(f"\n[history] === SUMMARY ===")
     print(f"  Days in file (after trim): {len(rows)}")
     if rows:
-        print(f"  Date range: {rows[0]['date']} → {rows[-1]['date']}")
+        print(f"  Date range: {rows[0]['date']} -> {rows[-1]['date']}")
 
     fields = ["brent", "wti", "rbob", "heating_oil", "dubai",
               "crack_321", "gasoline_crack", "ho_rbob", "brent_wti", "ho_crack"]
@@ -240,18 +274,18 @@ def print_summary(by_date: dict):
     for f in fields:
         count  = sum(1 for h in rows if h.get(f) is not None)
         latest = next((h[f] for h in reversed(rows) if h.get(f) is not None), None)
-        latest_str = f"{latest:.2f}" if latest is not None else "—"
+        latest_str = f"{latest:.2f}" if latest is not None else "--"
         print(f"  {f:<20} {count:>5}  {latest_str:>10}")
 
 
-# ── Main ─────────────────────────────────────────────────────────────────────
+# -- Main ---------------------------------------------------------------------
 
 def run():
     force_backfill = "--reset" in sys.argv or "--backfill" in sys.argv
 
     if "--reset" in sys.argv:
         HISTORY_FILE.write_text("[]")
-        print("[history] Reset — history cleared")
+        print("[history] Reset -- history cleared")
         by_date = {}
     else:
         by_date = load_history()
@@ -272,11 +306,14 @@ def run():
     # Always append today's live data
     by_date = append_today(by_date)
 
+    # Recalculate spreads across all historical rows (not just today)
+    by_date = backfill_spreads(by_date)
+
     # Save (trims to MAX_DAYS)
     rows = save_history(by_date)
 
     print_summary(by_date)
-    print(f"\n[history] Saved {len(rows)} days → {HISTORY_FILE}")
+    print(f"\n[history] Saved {len(rows)} days -> {HISTORY_FILE}")
 
 
 if __name__ == "__main__":
