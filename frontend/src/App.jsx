@@ -621,8 +621,14 @@ function TabSentiment({ d }) {
       <Card title="CFTC Positioning" style={{ marginTop: 12 }}>
         {cftc.contracts
           ? Object.entries(cftc.contracts).slice(0,5).map(([k,v]) => (
-            <Row key={k} label={k} value={fmt(v?.net_long_pct,1)} unit="% net long" signal={v?.signal} />
-          ))
+              <Row key={k}
+                label={v?.label || k}
+                value={fmt(v?.net_pct_of_oi, 1)}
+                unit="% net long"
+                signal={v?.signal}
+                note={v?.mm_net_lots != null ? `${v.mm_net_lots > 0 ? "+" : ""}${v.mm_net_lots.toLocaleString()} lots` : undefined}
+              />
+            ))
           : <div style={{ color:"#374151", fontSize:12, padding:"8px 0" }}>CFTC data not loaded</div>
         }
       </Card>
