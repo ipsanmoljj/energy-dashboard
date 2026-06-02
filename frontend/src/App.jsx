@@ -581,8 +581,8 @@ function TabSentiment({ d }) {
   const news      = d?.news              || {}
   const cftc      = d?.cftc             || {}
   const rig       = d?.rig_count?.signal || {}
-  const headlines = news.all_headlines || news.headlines || news.articles || []
-  const score     = news.news_score ?? news.composite_score ?? news.score ?? null
+  const headlines = news.all_headlines || []
+  const score     = news.news_score?.score ?? null
   const scoreCol  = score > 0 ? "#22c55e" : score < 0 ? "#ef4444" : "#f59e0b"
   const summary   = news.summary || {}
   return (
@@ -601,13 +601,14 @@ function TabSentiment({ d }) {
             <div style={{ fontSize:36, fontWeight:900, color:scoreCol, lineHeight:1 }}>
               {score != null ? (score > 0 ? "+" : "") + Number(score).toFixed(1) : "—"}
             </div>
-            <div style={{ fontSize:10, color:"#4b5563" }}>Composite</div>
+            <div style={{ fontSize:10, color:"#4b5563" }}>{news.news_score?.label || "Composite"}</div>
           </div>
           <div style={{ flex:1 }}>
-            <Row label="Bullish signals" value={summary.bullish ?? news.bullish_count ?? "—"} />
-            <Row label="Bearish signals" value={summary.bearish ?? news.bearish_count ?? "—"} />
-            <Row label="Neutral"         value={summary.neutral ?? "—"} />
-            <Row label="Geo alerts"      value={(news.geo_risk_alerts?.length ?? news.geo_alerts) ?? "—"} />
+            <Row label="Bullish signals" value={summary.bullish_count ?? "—"} />
+            <Row label="Bearish signals" value={summary.bearish_count ?? "—"} />
+            <Row label="Neutral"         value={summary.neutral_count ?? "—"} />
+            <Row label="Geo alerts"      value={summary.geo_alerts ?? "—"} />
+            <Row label="Sources"         value={summary.sources_used?.join(", ") ?? "—"} />
           </div>
         </div>
         {headlines.slice(0,8).map((h,i) => (
