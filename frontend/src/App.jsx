@@ -581,9 +581,10 @@ function TabSentiment({ d }) {
   const news      = d?.news              || {}
   const cftc      = d?.cftc             || {}
   const rig       = d?.rig_count?.signal || {}
-  const headlines = news.headlines || news.articles || []
-  const score     = news.composite_score ?? news.score ?? null
+  const headlines = news.all_headlines || news.headlines || news.articles || []
+  const score     = news.news_score ?? news.composite_score ?? news.score ?? null
   const scoreCol  = score > 0 ? "#22c55e" : score < 0 ? "#ef4444" : "#f59e0b"
+  const summary   = news.summary || {}
   return (
     <>
       <Card title="Rig Count Signal">
@@ -603,9 +604,10 @@ function TabSentiment({ d }) {
             <div style={{ fontSize:10, color:"#4b5563" }}>Composite</div>
           </div>
           <div style={{ flex:1 }}>
-            <Row label="Bullish signals" value={news.bullish_count ?? "—"} />
-            <Row label="Bearish signals" value={news.bearish_count ?? "—"} />
-            <Row label="Geo alerts"      value={news.geo_alerts    ?? "—"} />
+            <Row label="Bullish signals" value={summary.bullish ?? news.bullish_count ?? "—"} />
+            <Row label="Bearish signals" value={summary.bearish ?? news.bearish_count ?? "—"} />
+            <Row label="Neutral"         value={summary.neutral ?? "—"} />
+            <Row label="Geo alerts"      value={(news.geo_risk_alerts?.length ?? news.geo_alerts) ?? "—"} />
           </div>
         </div>
         {headlines.slice(0,8).map((h,i) => (
