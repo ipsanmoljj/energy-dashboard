@@ -232,32 +232,30 @@ def sig_gie(gie):
             "weight": 0.0, "note": "GIE data unavailable",
         }
 
-    # GIE structure: regions keyed by country code
-    # Pick Germany as proxy (most liquid EU gas market)
+    # Use composite signal directly — already computed by gie_fetcher
+    comp     = gie.get("composite", {})
+    comp_sig = comp.get("signal", "NEUTRAL")   # "BULLISH" | "BEARISH" | "NEUTRAL"
+    score_v  = _f(comp.get("score"))           # 0.0–1.0
+
+    # Get Germany fill % as reference value to display
     regions  = gie.get("regions", {})
-    de       = regions.get("DE") or regions.get("de") or {}
-    fill_pct = _f(de.get("fill_pct") or de.get("status"))
-    trend    = de.get("trend")   # "above" | "below" | "inline"
+    de       = regions.get("germany") or regions.get("DE") or regions.get("de") or {}
+    fill_pct = _f(de.get("fill_pct"))
 
-    # Also check composite
-    comp_sig = gie.get("composite_signal")
-
-    if comp_sig == "BULLISH" or trend == "below":
-        sig, sth = "BULLISH", 2
-    elif comp_sig == "BEARISH" or trend == "above":
-        sig, sth = "BEARISH", 2
-    else:
-        sig, sth = "NEUTRAL", 1
+    sig = comp_sig if comp_sig in ("BULLISH", "BEARISH", "NEUTRAL") else "NEUTRAL"
+    sth = 2 if (score_v or 0) > 0.6 else 1
 
     return {
         "id": "gie_storage", "label": "EU Gas Storage Fill",
         "value": fill_pct, "unit": "%",
-        "trend_vs_5yr": trend,
+        "composite_signal": comp_sig,
+        "composite_score": score_v,
         "signal": sig, "strength": sth, "weight": 0.0,
         "score": _pts(sig, sth),
-        "note": (f"EU gas storage (DE) {fill_pct:.1f}% full — {trend or 'trend unknown'} 5yr avg"
+        "note": (f"EU gas storage: Germany {fill_pct:.1f}% full — {comp_sig}"
+                 + (f" (score {score_v:.2f})" if score_v is not None else "")
                  if fill_pct is not None
-                 else f"EU gas composite: {comp_sig or 'unknown'}"),
+                 else f"EU gas composite: {comp_sig}"),
     }
 
 
