@@ -41,6 +41,7 @@ FETCHER_REGISTRY = [
     {"id": "sentiment", "module": "sentiment_fetcher",     "output": "sentiment_latest.json", "label": "News Sentiment + Geopolitical Risk Scorer",              "priority": 7},
     {"id": "rig_count", "module": "baker_hughes_fetcher",  "output": "rig_count_latest.json", "label": "Baker Hughes Rig Count (US shale leading indicator)",    "priority": 8},
     {"id": "bdi",       "module": "bdi_fetcher",           "output": "bdi_latest.json",       "label": "Baltic Dry Index (global trade / bunker demand proxy)",  "priority": 9},
+    {"id": "financialjuice", "module":   "financialjuice_fetcher", "output": "financialjuice_latest.json", "label": "FinancialJuice Headlines (Apify)",         "priority": 10},
 ]
 
 
