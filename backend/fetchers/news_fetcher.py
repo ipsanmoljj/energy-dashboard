@@ -516,7 +516,8 @@ BLOCKLIST_TERMS = {
     "energy stock", "oil stock", "dividend", "earnings per share", "nvidia", "apple", "microsoft", "amazon", "google", "meta",
     "tesla", "samsung", "arm ", "cpu", "gpu", "computex",
     "chip", "semiconductor", "ai model", "large language",
-    "stock pick", "etf", "dividend",
+    "stock pick", "etf", "dividend", "rba board", "reserve bank of australia", "australia q1", "australia gdp", "australia april", 
+    "computex", "hang seng", "tencent", "wechat", "wounded in russia", "kyiv wounded", "injured in kyiv",
     }
 
 def is_relevant(headline: str) -> bool:
