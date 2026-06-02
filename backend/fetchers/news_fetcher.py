@@ -667,6 +667,24 @@ def run(lookback_hours: int = 4,
         items = fetch_rss(source, lookback_hours)
         all_raw.extend(items)
         time.sleep(0.5)
+    # ── Also include FinancialJuice headlines (from Apify fetcher) ───────────
+    fj_path = Path(__file__).resolve().parents[1] / "data" / "financialjuice_latest.json"
+    if fj_path.exists():
+        try:
+            fj_data = json.loads(fj_path.read_text())
+            for h in fj_data.get("oil_headlines", []):
+                all_raw.append({
+                    "title":    h.get("title", ""),
+                    "summary":  "",
+                    "link":     h.get("link", ""),
+                    "published": h.get("pubDate"),
+                    "source":   "FinancialJuice",
+                    "priority": 4,
+                })
+            log.info("FinancialJuice: %d oil headlines added from cache",
+                     len(fj_data.get("oil_headlines", [])))
+        except Exception as e:
+            log.warning("FinancialJuice cache read failed: %s", e)
 
     log.info("Total raw items: %d", len(all_raw))
 
