@@ -25,7 +25,7 @@ Structure:
   }
 
 Add APIFY_TOKEN to your environment:
-  export APIFY_TOKEN=your_token_here
+  export APIFY_TOKEN=ABCg8rYK6nmM6BOrlz84ZvFvclI2S12PADP3
 Or hardcode it below (not recommended for git repos).
 """
 
@@ -42,7 +42,7 @@ OUT       = DATA_DIR / "financialjuice_latest.json"
 
 APIFY_TOKEN  = os.environ.get("APIFY_TOKEN", "apify_api_ABCg8rYK6nmM6BOrlz84ZvFvclI2S12PADP3")   # set via env var
 ACTOR_ID     = "akash9078~financialjuice-scraper"
-APIFY_URL    = f"https://api.apify.com/v2/acts/{ACTOR_ID}/run-sync-get-dataset-items?token={APIFY_TOKEN}"
+APIFY_URL    = f"https://api.apify.com/v2/acts/{ACTOR_ID}/run-sync-get-dataset-items?token={ABCg8rYK6nmM6BOrlz84ZvFvclI2S12PADP3}"
 
 # ── Oil/energy/macro keyword filter ──────────────────────────────────────────
 OIL_KEYWORDS = [
