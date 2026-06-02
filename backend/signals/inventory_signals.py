@@ -1,54 +1,42 @@
 """
 backend/signals/inventory_signals.py
--------------------------------------
-Reads:  backend/data/eia_latest.json
+--------------------------------------
+Reads:  backend/data/eia_latest.json   (flat structure — direct top-level keys)
         backend/data/gie_latest.json
 Writes: backend/data/inventory_signals.json
 
-Produces per-series BULLISH/BEARISH/NEUTRAL signals + weighted composite
-score (–10 to +10) from EIA inventory data.
+EIA JSON structure (actual):
+  d["cushing_stocks"]     → {"value": 23.0, "wow": -2.8, "vs_5yr_avg": -3.98, ...}
+  d["total_crude_stocks"] → {"value": 441.7, "wow": -3.3, "vs_5yr_avg": -8.31, ...}
+  d["gasoline_stocks"]    → {"value": 211.6, "wow": -2.6, "vs_5yr_avg": -23.4, ...}
+  d["distillate_stocks"]  → {"value": 100.8, "wow": -2.1, "vs_5yr_avg": -19.2, ...}
+  d["crude_production"]   → {"value": 13.71, "wow": 0.013, ...}
+  d["refinery_util"]      → {"value": 94.5,  "wow": 2.9,  "vs_5yr_avg": 4.5, ...}
+  d["days_cover"]         → 57.1  (plain float, not a dict)
 """
 
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent.parent   # backend/
+BASE = Path(__file__).resolve().parent.parent
 DATA = BASE / "data"
 OUT  = DATA / "inventory_signals.json"
 
-# ── 5-year seasonal averages (mmbbls) — EIA historical mid-year approx ────────
-FIVE_YR_AVG = {
-    "cushing_stocks":    40.0,
-    "total_crude_stocks": 460.0,
-    "gasoline_stocks":   230.0,
-    "distillate_stocks": 120.0,
-}
+# ── thresholds ────────────────────────────────────────────────────────────────
+DAYS_COVER_CRITICAL = 54.0
+DAYS_COVER_NORMAL   = 58.0
+PROD_HIGH           = 13.5
+UTIL_HIGH           = 92.0
+UTIL_LOW            = 85.0
 
-US_DAILY_DEMAND_MBD  = 20.0   # proxy for days-cover calc
-DAYS_COVER_CRITICAL  = 54.0   # below → historically $90+ Brent
-DAYS_COVER_NORMAL    = 58.0
-PROD_HIGH            = 13.5   # mbd
-UTIL_HIGH            = 92.0   # %
-UTIL_LOW             = 85.0   # %
-
-
-# ── helpers ───────────────────────────────────────────────────────────────────
 
 def _load(path):
-    if not Path(path).exists():
+    p = Path(path)
+    if not p.exists():
         return {}
-    with open(path) as f:
+    with open(p) as f:
         return json.load(f)
-
-def _get(d, *keys, default=None):
-    for k in keys:
-        if not isinstance(d, dict):
-            return default
-        d = d.get(k, default)
-        if d is None:
-            return default
-    return d
 
 def _f(v):
     try:    return float(v)
@@ -59,131 +47,120 @@ def _sig(bull, bear):
     if bear:  return "BEARISH"
     return "NEUTRAL"
 
-def _sth(dev_pct, lo=5, hi=10):
-    a = abs(dev_pct or 0)
-    return 3 if a >= hi else 2 if a >= lo else 1
-
 def _pts(signal, strength):
     return {"BULLISH": 1, "NEUTRAL": 0, "BEARISH": -1}.get(signal, 0) * strength
+
+def _sth(dev, lo=5, hi=15):
+    a = abs(dev or 0)
+    return 3 if a >= hi else 2 if a >= lo else 1
 
 
 # ── individual signals ────────────────────────────────────────────────────────
 
 def sig_cushing(eia):
-    s   = _get(eia, "signals", "cushing_stocks") or {}
-    val = _f(_get(s, "latest"))
-    wow = _f(_get(s, "wow"))
-    avg = FIVE_YR_AVG["cushing_stocks"]
-    dev = (val - avg) if val is not None else None
-    dev_pct = (dev / avg * 100) if dev is not None else None
+    s   = eia.get("cushing_stocks", {})
+    val = _f(s.get("value"))
+    wow = _f(s.get("wow"))
+    dev = _f(s.get("vs_5yr_avg"))   # already computed deviation in mmbbls
 
+    # Bullish: drawing (wow < 0) AND below 5yr avg (dev < 0)
     bull = (wow or 0) < -1.0 and (dev or 0) < 0
     bear = (wow or 0) >  1.0 and (dev or 0) > 0
     sig  = _sig(bull, bear)
-    sth  = _sth(dev_pct)
+    sth  = _sth(dev)
 
     return {
         "id": "cushing_stocks", "label": "Cushing Crude Stocks",
-        "value": val, "unit": "mmbbls", "wow": wow,
-        "dev_5yr": round(dev, 2) if dev is not None else None,
-        "dev_pct": round(dev_pct, 1) if dev_pct is not None else None,
+        "value": val, "unit": "mmbbls",
+        "wow": wow, "dev_5yr": dev,
         "signal": sig, "strength": sth, "weight": 0.20,
         "score": _pts(sig, sth),
-        "note": (f"Cushing {abs(wow):.1f} mmbbls {'draw' if wow<0 else 'build'} WoW; "
-                 f"{abs(dev):.1f} mmbbls {'below' if dev<0 else 'above'} 5yr avg"
-                 if wow is not None and dev is not None else "No data"),
+        "note": (f"Cushing {abs(wow):.1f} mmbbls {'draw' if (wow or 0)<0 else 'build'} WoW; "
+                 f"{abs(dev):.1f} mmbbls {'below' if (dev or 0)<0 else 'above'} 5yr avg"
+                 if val is not None else "No data"),
     }
 
 
 def sig_total_crude(eia):
-    s   = _get(eia, "signals", "total_crude_stocks") or {}
-    val = _f(_get(s, "latest"))
-    wow = _f(_get(s, "wow"))
-    avg = FIVE_YR_AVG["total_crude_stocks"]
-    dev = (val - avg) if val is not None else None
-    dev_pct = (dev / avg * 100) if dev is not None else None
+    s   = eia.get("total_crude_stocks", {})
+    val = _f(s.get("value"))
+    wow = _f(s.get("wow"))
+    dev = _f(s.get("vs_5yr_avg"))
 
     bull = (dev or 0) < -20
     bear = (dev or 0) >  20
     sig  = _sig(bull, bear)
-    sth  = _sth(dev_pct, lo=3, hi=6)
+    sth  = _sth(dev, lo=5, hi=20)
 
     return {
         "id": "total_crude_stocks", "label": "Total US Crude Stocks",
-        "value": val, "unit": "mmbbls", "wow": wow,
-        "dev_5yr": round(dev, 2) if dev is not None else None,
-        "dev_pct": round(dev_pct, 1) if dev_pct is not None else None,
+        "value": val, "unit": "mmbbls",
+        "wow": wow, "dev_5yr": dev,
         "signal": sig, "strength": sth, "weight": 0.15,
         "score": _pts(sig, sth),
-        "note": (f"Total crude {abs(dev):.0f} mmbbls {'below' if dev<0 else 'above'} 5yr avg"
-                 if dev is not None else "No data"),
+        "note": (f"Total crude {abs(dev):.1f} mmbbls {'below' if (dev or 0)<0 else 'above'} 5yr avg"
+                 if val is not None else "No data"),
     }
 
 
 def sig_gasoline(eia):
-    s   = _get(eia, "signals", "gasoline_stocks") or {}
-    val = _f(_get(s, "latest"))
-    wow = _f(_get(s, "wow"))
-    avg = FIVE_YR_AVG["gasoline_stocks"]
-    dev = (val - avg) if val is not None else None
-    dev_pct = (dev / avg * 100) if dev is not None else None
+    s   = eia.get("gasoline_stocks", {})
+    val = _f(s.get("value"))
+    wow = _f(s.get("wow"))
+    dev = _f(s.get("vs_5yr_avg"))
 
-    month = datetime.now(timezone.utc).month
+    month   = datetime.now(timezone.utc).month
     driving = 4 <= month <= 9
 
     bull = (dev or 0) < -15 or (driving and (dev or 0) < -8)
     bear = (dev or 0) >  15
     sig  = _sig(bull, bear)
-    sth  = _sth(dev_pct, lo=3, hi=7)
+    sth  = _sth(dev, lo=8, hi=20)
 
     return {
         "id": "gasoline_stocks", "label": "US Gasoline Stocks",
-        "value": val, "unit": "mmbbls", "wow": wow,
-        "dev_5yr": round(dev, 2) if dev is not None else None,
-        "dev_pct": round(dev_pct, 1) if dev_pct is not None else None,
+        "value": val, "unit": "mmbbls",
+        "wow": wow, "dev_5yr": dev,
         "driving_season": driving,
         "signal": sig, "strength": sth, "weight": 0.15,
         "score": _pts(sig, sth),
-        "note": (f"Gasoline {abs(dev):.0f} mmbbls {'below' if dev<0 else 'above'} 5yr avg"
-                 + (" — driving season" if driving else "")
-                 if dev is not None else "No data"),
+        "note": (f"Gasoline {abs(dev):.1f} mmbbls {'below' if (dev or 0)<0 else 'above'} 5yr avg"
+                 + (" — driving season active" if driving else "")
+                 if val is not None else "No data"),
     }
 
 
 def sig_distillate(eia):
-    s   = _get(eia, "signals", "distillate_stocks") or {}
-    val = _f(_get(s, "latest"))
-    wow = _f(_get(s, "wow"))
-    avg = FIVE_YR_AVG["distillate_stocks"]
-    dev = (val - avg) if val is not None else None
-    dev_pct = (dev / avg * 100) if dev is not None else None
+    s   = eia.get("distillate_stocks", {})
+    val = _f(s.get("value"))
+    wow = _f(s.get("wow"))
+    dev = _f(s.get("vs_5yr_avg"))
 
-    month = datetime.now(timezone.utc).month
+    month   = datetime.now(timezone.utc).month
     heating = month >= 10 or month <= 2
 
     bull = (dev or 0) < (-10 * (1.5 if heating else 1.0))
     bear = (dev or 0) >  10
     sig  = _sig(bull, bear)
-    sth  = min(3, _sth(dev_pct) + (1 if heating and sig == "BULLISH" else 0))
+    sth  = min(3, _sth(dev, lo=8, hi=20) + (1 if heating and sig == "BULLISH" else 0))
 
     return {
         "id": "distillate_stocks", "label": "US Distillate Stocks",
-        "value": val, "unit": "mmbbls", "wow": wow,
-        "dev_5yr": round(dev, 2) if dev is not None else None,
-        "dev_pct": round(dev_pct, 1) if dev_pct is not None else None,
+        "value": val, "unit": "mmbbls",
+        "wow": wow, "dev_5yr": dev,
         "heating_season": heating,
         "signal": sig, "strength": sth, "weight": 0.15,
         "score": _pts(sig, sth),
-        "note": (f"Distillates {abs(dev):.0f} mmbbls {'below' if dev<0 else 'above'} 5yr avg"
+        "note": (f"Distillates {abs(dev):.1f} mmbbls {'below' if (dev or 0)<0 else 'above'} 5yr avg"
                  + (" — HEATING SEASON" if heating else "")
-                 if dev is not None else "No data"),
+                 if val is not None else "No data"),
     }
 
 
 def sig_production(eia):
-    s   = _get(eia, "signals", "crude_production") or {}
-    val = _f(_get(s, "latest"))
-    wow = _f(_get(s, "wow"))
+    s   = eia.get("crude_production", {})
+    val = _f(s.get("value"))
+    wow = _f(s.get("wow"))
 
     bear = (val or 0) > PROD_HIGH and (wow or 0) > 0.05
     bull = (val or 0) < 12.0
@@ -192,7 +169,8 @@ def sig_production(eia):
 
     return {
         "id": "crude_production", "label": "US Crude Production",
-        "value": val, "unit": "mbd", "wow": wow,
+        "value": val, "unit": "mbd",
+        "wow": wow,
         "signal": sig, "strength": sth, "weight": 0.10,
         "score": _pts(sig, sth),
         "note": (f"US output {val:.2f} mbd, {'+' if (wow or 0)>=0 else ''}{wow:.3f} mbd WoW"
@@ -201,18 +179,19 @@ def sig_production(eia):
 
 
 def sig_refinery_util(eia):
-    s   = _get(eia, "signals", "refinery_util") or {}
-    val = _f(_get(s, "latest"))
-    wow = _f(_get(s, "wow"))
+    s   = eia.get("refinery_util", {})
+    val = _f(s.get("value"))
+    wow = _f(s.get("wow"))
 
     bull = (val or 0) > UTIL_HIGH
     bear = (val or 0) < UTIL_LOW
     sig  = _sig(bull, bear)
-    sth  = _sth(abs((val or 88) - 88) / 88 * 100, lo=3, hi=6)
+    sth  = 2 if (val or 0) > 94 else 1
 
     return {
         "id": "refinery_util", "label": "US Refinery Utilisation",
-        "value": val, "unit": "%", "wow": wow,
+        "value": val, "unit": "%",
+        "wow": wow,
         "signal": sig, "strength": sth, "weight": 0.10,
         "score": _pts(sig, sth),
         "note": (f"Refinery runs at {val:.1f}%"
@@ -223,12 +202,8 @@ def sig_refinery_util(eia):
 
 
 def sig_days_cover(eia):
-    crude = _f(_get(eia, "signals", "total_crude_stocks", "latest"))
-    gas   = _f(_get(eia, "signals", "gasoline_stocks",   "latest"))
-    dist  = _f(_get(eia, "signals", "distillate_stocks", "latest"))
-
-    total  = sum(x for x in [crude, gas, dist] if x is not None)
-    days   = total / US_DAILY_DEMAND_MBD if total > 0 else None
+    # days_cover is a plain float in the EIA JSON, already computed
+    days = _f(eia.get("days_cover"))
 
     bull = (days or 99) < DAYS_COVER_CRITICAL
     bear = (days or 0)  > DAYS_COVER_NORMAL + 5
@@ -237,8 +212,7 @@ def sig_days_cover(eia):
 
     return {
         "id": "days_cover", "label": "Days of Forward Demand Cover",
-        "value": round(days, 1) if days is not None else None,
-        "unit": "days",
+        "value": days, "unit": "days",
         "critical_threshold": DAYS_COVER_CRITICAL,
         "normal_range": [DAYS_COVER_CRITICAL, DAYS_COVER_NORMAL],
         "signal": sig, "strength": sth, "weight": 0.15,
@@ -252,24 +226,38 @@ def sig_days_cover(eia):
 
 def sig_gie(gie):
     if not gie:
-        return {"id": "gie_storage", "label": "EU Gas Storage (GIE)",
-                "signal": "NEUTRAL", "strength": 1, "score": 0,
-                "weight": 0.0, "note": "GIE data unavailable"}
+        return {
+            "id": "gie_storage", "label": "EU Gas Storage (GIE)",
+            "signal": "NEUTRAL", "strength": 1, "score": 0,
+            "weight": 0.0, "note": "GIE data unavailable",
+        }
 
-    eu       = _get(gie, "regions", "EU") or {}
-    fill_pct = _f(_get(eu, "status"))
-    trend    = _get(eu, "trend")  # "above" | "below" | "inline"
+    # GIE structure: regions keyed by country code
+    # Pick Germany as proxy (most liquid EU gas market)
+    regions  = gie.get("regions", {})
+    de       = regions.get("DE") or regions.get("de") or {}
+    fill_pct = _f(de.get("fill_pct") or de.get("status"))
+    trend    = de.get("trend")   # "above" | "below" | "inline"
 
-    sig = "BULLISH" if trend == "below" else ("BEARISH" if trend == "above" else "NEUTRAL")
-    sth = 2 if (fill_pct is not None and abs(fill_pct - 70) > 15) else 1
+    # Also check composite
+    comp_sig = gie.get("composite_signal")
+
+    if comp_sig == "BULLISH" or trend == "below":
+        sig, sth = "BULLISH", 2
+    elif comp_sig == "BEARISH" or trend == "above":
+        sig, sth = "BEARISH", 2
+    else:
+        sig, sth = "NEUTRAL", 1
 
     return {
         "id": "gie_storage", "label": "EU Gas Storage Fill",
-        "value": fill_pct, "unit": "%", "trend_vs_5yr": trend,
+        "value": fill_pct, "unit": "%",
+        "trend_vs_5yr": trend,
         "signal": sig, "strength": sth, "weight": 0.0,
         "score": _pts(sig, sth),
-        "note": (f"EU gas storage {fill_pct:.1f}% full, {trend} 5yr seasonal avg"
-                 if fill_pct is not None else "EU gas storage data unavailable"),
+        "note": (f"EU gas storage (DE) {fill_pct:.1f}% full — {trend or 'trend unknown'} 5yr avg"
+                 if fill_pct is not None
+                 else f"EU gas composite: {comp_sig or 'unknown'}"),
     }
 
 
@@ -284,13 +272,15 @@ def composite(signals):
         sc = s.get("score", 0.0)
         w_sum   += sc * w
         w_total += w
-        components.append({"id": s["id"], "label": s.get("label", s["id"]),
-                           "signal": s.get("signal", "NEUTRAL"),
-                           "score": sc, "weight": w})
+        components.append({
+            "id": s["id"], "label": s.get("label", s["id"]),
+            "signal": s.get("signal", "NEUTRAL"),
+            "score": sc, "weight": w,
+        })
 
-    max_pos  = 3 * w_total if w_total > 0 else 1
-    norm     = max(-10.0, min(10.0, round((w_sum / max_pos) * 10, 2)))
-    overall  = "BULLISH" if norm >= 3 else ("BEARISH" if norm <= -3 else "NEUTRAL")
+    max_pos = 3 * w_total if w_total > 0 else 1
+    norm    = max(-10.0, min(10.0, round((w_sum / max_pos) * 10, 2)))
+    overall = "BULLISH" if norm >= 3 else ("BEARISH" if norm <= -3 else "NEUTRAL")
 
     interp = (
         "Very strong bullish signal — physical market acutely tight" if norm >= 7 else
@@ -302,8 +292,10 @@ def composite(signals):
         "Neutral — inventories near seasonal norms"
     )
 
-    return {"score": norm, "overall_signal": overall,
-            "interpretation": interp, "components": components}
+    return {
+        "score": norm, "overall_signal": overall,
+        "interpretation": interp, "components": components,
+    }
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
@@ -329,9 +321,8 @@ def run():
         "signals":      {s["id"]: s for s in signals},
         "composite":    comp,
         "meta": {
-            "five_yr_avgs":        FIVE_YR_AVG,
-            "us_daily_demand_mbd": US_DAILY_DEMAND_MBD,
             "days_cover_critical": DAYS_COVER_CRITICAL,
+            "days_cover_normal":   DAYS_COVER_NORMAL,
         },
     }
 
