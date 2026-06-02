@@ -42,7 +42,13 @@ FETCHER_REGISTRY = [
     {"id": "rig_count", "module": "baker_hughes_fetcher",  "output": "rig_count_latest.json", "label": "Baker Hughes Rig Count (US shale leading indicator)",    "priority": 8},
     {"id": "bdi",       "module": "bdi_fetcher",           "output": "bdi_latest.json",       "label": "Baltic Dry Index (global trade / bunker demand proxy)",  "priority": 9},
     {"id": "financialjuice", "module":   "financialjuice_fetcher", "output": "financialjuice_latest.json", "label": "FinancialJuice Headlines (Apify)",         "priority": 10},
-]
+    {
+    "id":       "quality_spreads",
+    "module":   "quality_spreads_fetcher",
+    "output":   "quality_spreads_latest.json",
+    "label":    "Quality Spreads (Brent-Maya, LLS-Mars, WTI-WCS, Brent-Urals, Naphtha-Gasoil)",
+    "priority": 11,},
+    ]
 
 
 def load_fetcher_module(module_name):
