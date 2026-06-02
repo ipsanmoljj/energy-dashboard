@@ -1,11 +1,11 @@
 """
 backend/signals/crack_signals.py
 ----------------------------------
-Reads:  backend/data/crack_signals.json   (existing crack_spread_engine output)
+Reads:  backend/data/crack_signals.json   (crack_spread_engine output)
         backend/data/futures_latest.json
 Writes: backend/data/crack_signal_layer.json
 
-Day 5: crack spread signal layer + forward curve shape + Brent-WTI spread signal.
+Adapted to actual crack_signals.json structure from crack_spread_engine.
 """
 
 import json
@@ -16,33 +16,18 @@ BASE = Path(__file__).resolve().parent.parent
 DATA = BASE / "data"
 OUT  = DATA / "crack_signal_layer.json"
 
-
-# ── thresholds ($/bbl) ────────────────────────────────────────────────────────
-CRACK_321_BULL   = 20.0   # wide = product demand outpacing crude
+# ── thresholds ────────────────────────────────────────────────────────────────
+CRACK_321_BULL   = 20.0
 CRACK_321_BEAR   = 10.0
-GASOIL_BULL      = 25.0   # ICE gasoil crack (European diesel tightness)
-GASOIL_BEAR      = 12.0
 GASOLINE_BULL    = 18.0
 GASOLINE_BEAR    =  8.0
-HO_BULL          = 22.0   # heating oil / ULSD crack
-HO_BEAR          = 10.0
+HO_RBOB_BULL     = 20.0
+HO_RBOB_BEAR     =  8.0
+BRENT_WTI_BOTTLENECK = 8.0
+BRENT_WTI_SURPLUS    = 2.0
+GASOLINE_SEASON  = [2, 3, 4, 5]    # Feb–May
+GASOIL_SEASON    = [10, 11, 12, 1, 2]
 
-# Brent-WTI spread signals ($/bbl)
-BRENT_WTI_BOTTLENECK = 8.0    # above → US export bottleneck or North Sea disruption
-BRENT_WTI_SURPLUS    = 2.0    # below → US exports flooding Atlantic
-
-# Forward curve shape (M1-M2 spread, $/bbl)
-BACKWARDATION_STRONG =  1.0   # strong physical tightness
-BACKWARDATION_MILD   =  0.20
-CONTANGO_MILD        = -0.30
-CONTANGO_STRONG      = -1.50
-
-# Seasonal crack context (months)
-GASOLINE_SEASON = list(range(2, 6))   # Feb–May: long gasoline crack season
-GASOIL_SEASON   = [10, 11, 12, 1, 2]  # Oct–Feb: heating/gasoil season
-
-
-# ── helpers ───────────────────────────────────────────────────────────────────
 
 def _load(path):
     p = Path(path)
@@ -63,231 +48,167 @@ def _sig(bull, bear):
 def _pts(signal, strength):
     return {"BULLISH": 1, "NEUTRAL": 0, "BEARISH": -1}.get(signal, 0) * strength
 
-def _sth(val, bull_thresh, bear_thresh):
-    """Strength based on how far above/below threshold."""
+
+def sig_crack_321(crack):
+    # crack_signals.json → component_scores.crack_321_score (0–10 scale)
+    # and prices.brent_bbl, prices.wti_bbl, prices.rbob_bbl, prices.ho_bbl
+    prices = crack.get("prices", {})
+    brent  = _f(prices.get("brent_bbl"))
+    wti    = _f(prices.get("wti_bbl"))
+    rbob   = _f(prices.get("rbob_bbl"))
+    ho     = _f(prices.get("ho_bbl"))
+
+    # Compute 3-2-1 from prices if available
+    val = None
+    if wti and rbob and ho:
+        val = round((2 * rbob + ho - 3 * wti) / 3, 2)
+
+    # Fallback: use nci_crack score scaled to $/bbl proxy
     if val is None:
-        return 1
-    if val > bull_thresh:
-        overshoot = (val - bull_thresh) / bull_thresh
-        return 3 if overshoot > 0.3 else 2
-    if val < bear_thresh:
-        return 2 if (bear_thresh - val) > 3 else 1
-    return 1
-
-
-# ── crack spread signals ──────────────────────────────────────────────────────
-
-def sig_crack_321(crack_data):
-    val = _f(crack_data.get("crack_321", {}).get("value_bbl") or
-             crack_data.get("crack_321"))
-    month = datetime.now(timezone.utc).month
+        nci_score = _f(crack.get("nci_crack", {}).get("score"))
+        if nci_score is not None:
+            val = round(nci_score * 2.5, 2)  # rough proxy: score 10 ≈ $25/bbl
 
     bull = (val or 0) > CRACK_321_BULL
     bear = (val or 0) < CRACK_321_BEAR
     sig  = _sig(bull, bear)
-    sth  = _sth(val, CRACK_321_BULL, CRACK_321_BEAR)
+    sth  = 3 if (val or 0) > 25 else 2 if bull else 1
 
     return {
         "id": "crack_321", "label": "3-2-1 Crack Spread (US)",
-        "value": round(val, 2) if val is not None else None,
-        "unit": "$/bbl",
-        "bull_threshold": CRACK_321_BULL,
-        "bear_threshold": CRACK_321_BEAR,
+        "value": val, "unit": "$/bbl",
         "signal": sig, "strength": sth, "weight": 0.25,
         "score": _pts(sig, sth),
-        "note": (f"3-2-1 crack at ${val:.2f}/bbl"
+        "note": (f"3-2-1 crack ${val:.2f}/bbl"
                  + (" — product demand tight, crude demand rising" if bull else
-                    " — margins compressed, runs may slow" if bear else " — normal range")
-                 if val is not None else "No data"),
+                    " — margins compressed" if bear else " — normal range")
+                 if val is not None else "Insufficient price data for 3-2-1"),
     }
 
 
-def sig_gasoil_crack(crack_data):
-    # Try multiple key paths from crack_signals.json
-    val = (_f(crack_data.get("gasoil_crack", {}).get("value_bbl")) or
-           _f(crack_data.get("gasoil_crack")) or
-           _f(crack_data.get("ice_gasoil_crack")))
+def sig_gasoline_crack(crack):
+    prices = crack.get("prices", {})
+    rbob   = _f(prices.get("rbob_bbl"))
+    brent  = _f(prices.get("brent_bbl"))
+    wti    = _f(prices.get("wti_bbl"))
+
+    val = None
+    if rbob and wti:
+        val = round(rbob - wti, 2)
+    elif rbob and brent:
+        val = round(rbob - brent, 2)
 
     month  = datetime.now(timezone.utc).month
-    season = month in GASOIL_SEASON
-
-    # Gasoil season → lower threshold needed to trigger bullish
-    bull_t = GASOIL_BULL * (0.85 if season else 1.0)
-    bull   = (val or 0) > bull_t
-    bear   = (val or 0) < GASOIL_BEAR
-    sig    = _sig(bull, bear)
-    sth    = _sth(val, bull_t, GASOIL_BEAR)
-    if season and sig == "BULLISH":
-        sth = min(3, sth + 1)
-
-    return {
-        "id": "gasoil_crack", "label": "ICE Gasoil Crack (European Diesel)",
-        "value": round(val, 2) if val is not None else None,
-        "unit": "$/bbl",
-        "gasoil_season": season,
-        "signal": sig, "strength": sth, "weight": 0.20,
-        "score": _pts(sig, sth),
-        "note": (f"Gasoil crack ${val:.2f}/bbl"
-                 + (" — European diesel/heating oil tight" if bull else "")
-                 + (" [heating season]" if season else "")
-                 if val is not None else "No data"),
-    }
-
-
-def sig_gasoline_crack(crack_data):
-    val = (_f(crack_data.get("gasoline_crack", {}).get("value_bbl")) or
-           _f(crack_data.get("gasoline_crack")))
-
-    month  = datetime.now(timezone.utc).month
-    season = month in GASOLINE_SEASON   # Feb–May driving season build
+    season = month in GASOLINE_SEASON
 
     bull_t = GASOLINE_BULL * (0.85 if season else 1.0)
     bull   = (val or 0) > bull_t
     bear   = (val or 0) < GASOLINE_BEAR
     sig    = _sig(bull, bear)
-    sth    = _sth(val, bull_t, GASOLINE_BEAR)
-    if season and sig == "BULLISH":
-        sth = min(3, sth + 1)
+    sth    = min(3, (2 if bull else 1) + (1 if season and bull else 0))
 
     return {
         "id": "gasoline_crack", "label": "Gasoline Crack (RBOB vs WTI)",
-        "value": round(val, 2) if val is not None else None,
-        "unit": "$/bbl",
+        "value": val, "unit": "$/bbl",
         "driving_season_build": season,
         "signal": sig, "strength": sth, "weight": 0.15,
         "score": _pts(sig, sth),
         "note": (f"Gasoline crack ${val:.2f}/bbl"
                  + (" — seasonal long gasoline crack window" if season else "")
-                 if val is not None else "No data"),
+                 if val is not None else "RBOB or WTI price unavailable"),
     }
 
 
-def sig_ho_crack(crack_data):
-    val = (_f(crack_data.get("ho_crack", {}).get("value_bbl")) or
-           _f(crack_data.get("ho_crack")))
+def sig_ho_rbob(crack):
+    prices = crack.get("prices", {})
+    ho     = _f(prices.get("ho_bbl"))
+    rbob   = _f(prices.get("rbob_bbl"))
 
-    bull = (val or 0) > HO_BULL
-    bear = (val or 0) < HO_BEAR
+    val  = round(ho - rbob, 2) if (ho and rbob) else None
+    bull = (val or 0) > HO_RBOB_BULL
+    bear = (val or 0) < HO_RBOB_BEAR
     sig  = _sig(bull, bear)
-    sth  = _sth(val, HO_BULL, HO_BEAR)
+    sth  = 2 if bull else 1
+
+    month  = datetime.now(timezone.utc).month
+    season = month in GASOIL_SEASON
 
     return {
-        "id": "ho_crack", "label": "Heating Oil / ULSD Crack",
-        "value": round(val, 2) if val is not None else None,
-        "unit": "$/bbl",
-        "signal": sig, "strength": sth, "weight": 0.10,
-        "score": _pts(sig, sth),
-        "note": (f"HO/ULSD crack ${val:.2f}/bbl"
-                 if val is not None else "No data"),
-    }
-
-
-# ── forward curve shape ───────────────────────────────────────────────────────
-
-def sig_curve_shape(futures):
-    """
-    M1-M2 Brent spread from futures_latest.json.
-    Positive = backwardation (bullish), negative = contango (bearish).
-    """
-    # Try to get M1 and M2 from futures data
-    brent = futures.get("contracts", {}).get("brent", {})
-
-    m1 = _f(brent.get("price") or brent.get("latest"))
-    # M2 proxy: if history has 2+ entries, use yesterday's close as rough M2
-    # In production this would come from calendar spread data
-    # For now use the m1_m2_spread if pre-calculated, else flag as unavailable
-    spread = _f(futures.get("derived", {}).get("brent_m1_m2") or
-                futures.get("brent_m1_m2_spread"))
-
-    if spread is None:
-        return {
-            "id": "curve_shape", "label": "Brent M1–M2 Spread (Curve Shape)",
-            "value": None, "unit": "$/bbl",
-            "signal": "NEUTRAL", "strength": 1, "weight": 0.15,
-            "score": 0,
-            "note": "M1-M2 spread not yet calculated — add to futures_fetcher",
-            "structure": "UNKNOWN",
-        }
-
-    if spread >= BACKWARDATION_STRONG:
-        structure = "STRONG BACKWARDATION"
-        sig, sth  = "BULLISH", 3
-    elif spread >= BACKWARDATION_MILD:
-        structure = "MILD BACKWARDATION"
-        sig, sth  = "BULLISH", 1
-    elif spread <= CONTANGO_STRONG:
-        structure = "DEEP CONTANGO"
-        sig, sth  = "BEARISH", 3
-    elif spread <= CONTANGO_MILD:
-        structure = "MILD CONTANGO"
-        sig, sth  = "BEARISH", 1
-    else:
-        structure = "FLAT"
-        sig, sth  = "NEUTRAL", 1
-
-    return {
-        "id": "curve_shape", "label": "Brent M1–M2 Spread (Curve Shape)",
-        "value": round(spread, 3), "unit": "$/bbl",
-        "structure": structure,
+        "id": "ho_rbob_spread", "label": "HO–RBOB Spread (Diesel Premium)",
+        "value": val, "unit": "$/bbl",
+        "heating_season": season,
         "signal": sig, "strength": sth, "weight": 0.15,
         "score": _pts(sig, sth),
-        "thresholds": {
-            "strong_backwardation": BACKWARDATION_STRONG,
-            "mild_backwardation":   BACKWARDATION_MILD,
-            "mild_contango":        CONTANGO_MILD,
-            "strong_contango":      CONTANGO_STRONG,
-        },
-        "note": (f"Brent M1-M2 = {spread:+.3f} $/bbl → {structure}"
-                 + (" — physical urgency, tight prompt market" if "BACKWARDATION" in structure else
-                    " — paper concern, storage incentivised" if "CONTANGO" in structure else "")),
+        "note": (f"HO-RBOB spread ${val:.2f}/bbl"
+                 + (" — diesel commanding large premium over gasoline" if bull else "")
+                 + (" [heating season]" if season else "")
+                 if val is not None else "HO or RBOB price unavailable"),
     }
 
 
-# ── Brent-WTI spread signal ───────────────────────────────────────────────────
+def sig_curve_shape(crack):
+    # Use crack_signals.json forward_curve section
+    fwd     = crack.get("forward_curve", {})
+    shape   = fwd.get("estimated_shape", "UNKNOWN")
+    storage = fwd.get("storage_economic", False)
+    score_v = _f(fwd.get("score"))
 
-def sig_brent_wti(crack_data, futures):
-    val = (_f(crack_data.get("brent_wti", {}).get("value_bbl")) or
-           _f(crack_data.get("brent_wti")) or
-           _f(futures.get("derived", {}).get("brent_wti")))
+    if shape == "BACKWARDATION":
+        sig, sth = "BULLISH", (3 if (score_v or 0) >= 4 else 2)
+        note = "Curve in backwardation — physical urgency, prompt market tight"
+    elif shape == "CONTANGO":
+        sig, sth = "BEARISH", (3 if storage else 2)
+        note = "Curve in contango — storage incentivised, paper market concern"
+    elif shape == "FLAT":
+        sig, sth = "NEUTRAL", 1
+        note = "Curve flat — balanced market, no strong directional signal"
+    else:
+        sig, sth = "NEUTRAL", 1
+        note = "Curve shape unknown — M1-M2 strip data needed"
 
-    if val is None:
-        # Try computing from individual prices
-        brent = _f(futures.get("contracts", {}).get("brent", {}).get("price"))
-        wti   = _f(futures.get("contracts", {}).get("wti",   {}).get("price"))
-        if brent and wti:
-            val = brent - wti
+    return {
+        "id": "curve_shape", "label": "Forward Curve Shape",
+        "value": shape, "unit": "structure",
+        "storage_economic": storage,
+        "signal": sig, "strength": sth, "weight": 0.20,
+        "score": _pts(sig, sth),
+        "note": note,
+    }
+
+
+def sig_brent_wti(crack):
+    prices = crack.get("prices", {})
+    brent  = _f(prices.get("brent_bbl"))
+    wti    = _f(prices.get("wti_bbl"))
+    val    = round(brent - wti, 2) if (brent and wti) else None
 
     bottleneck = (val or 0) > BRENT_WTI_BOTTLENECK
     surplus    = (val or 0) < BRENT_WTI_SURPLUS
 
     if bottleneck:
-        sig, sth = "BEARISH", 2   # bearish for WTI specifically; US landlocked
-        note = (f"Brent-WTI = ${val:.2f} — US export bottleneck or North Sea supply disruption")
+        sig, sth = "BEARISH", 2
+        note = f"Brent-WTI ${val:.2f} — US export bottleneck or North Sea disruption"
+        interp = "BOTTLENECK: US cannot export freely OR North Sea disruption"
     elif surplus:
         sig, sth = "BEARISH", 1
-        note = (f"Brent-WTI = ${val:.2f} — US exports flooding Atlantic basin")
+        note = f"Brent-WTI ${val:.2f} — US exports flooding Atlantic"
+        interp = "SURPLUS: US crude flooding Atlantic market"
     else:
         sig, sth = "NEUTRAL", 1
-        note = (f"Brent-WTI = ${val:.2f} — normal range $2–8")
+        note = f"Brent-WTI ${val:.2f} — normal range $2–8"
+        interp = "NORMAL: $2–8 range, no structural dislocation"
 
     return {
         "id": "brent_wti_spread", "label": "Brent–WTI Spread",
-        "value": round(val, 2) if val is not None else None,
-        "unit": "$/bbl",
+        "value": val, "unit": "$/bbl",
         "bottleneck_flag": bottleneck,
         "surplus_flag": surplus,
-        "signal": sig, "strength": sth, "weight": 0.15,
+        "interpretation": interp if val is not None else "No price data",
+        "signal": sig, "strength": sth, "weight": 0.25,
         "score": _pts(sig, sth),
-        "interpretation": (
-            "BOTTLENECK: US cannot export freely OR North Sea supply disruption" if bottleneck else
-            "SURPLUS: US crude flooding Atlantic market" if surplus else
-            "NORMAL: $2–8 range, no structural dislocation"
-        ),
-        "note": note if val is not None else "No Brent or WTI price available",
+        "note": note if val is not None else "Brent or WTI price unavailable",
     }
 
-
-# ── composite ─────────────────────────────────────────────────────────────────
 
 def composite(signals):
     w_sum, w_total, components = 0.0, 0.0, []
@@ -298,41 +219,42 @@ def composite(signals):
         sc = s.get("score", 0.0)
         w_sum   += sc * w
         w_total += w
-        components.append({"id": s["id"], "label": s.get("label", ""),
-                           "signal": s.get("signal", "NEUTRAL"),
-                           "score": sc, "weight": w})
+        components.append({
+            "id": s["id"], "label": s.get("label", ""),
+            "signal": s.get("signal", "NEUTRAL"),
+            "score": sc, "weight": w,
+        })
 
     max_pos = 3 * w_total if w_total > 0 else 1
     norm    = max(-10.0, min(10.0, round((w_sum / max_pos) * 10, 2)))
     overall = "BULLISH" if norm >= 3 else ("BEARISH" if norm <= -3 else "NEUTRAL")
 
     interp = (
-        "Very wide cracks + backwardation — product market acutely tight, crude demand surging" if norm >= 7 else
-        "Bullish refining backdrop — cracks wide, curve supporting physical tightness" if norm >= 3 else
-        "Mildly bullish — cracks above average, mild curve support" if norm >= 1 else
-        "Very compressed cracks + deep contango — oversupply, runs may be cut" if norm <= -7 else
+        "Very wide cracks + backwardation — product market acutely tight" if norm >= 7 else
+        "Bullish refining backdrop — cracks wide, curve supporting tightness" if norm >= 3 else
+        "Mildly bullish — cracks above average" if norm >= 1 else
+        "Very compressed cracks + deep contango — oversupply" if norm <= -7 else
         "Bearish refining backdrop — cracks compressed, curve in contango" if norm <= -3 else
         "Mildly bearish — margins under pressure" if norm <= -1 else
-        "Neutral — crack spreads in normal range, curve flat"
+        "Neutral — crack spreads in normal range"
     )
 
-    return {"score": norm, "overall_signal": overall,
-            "interpretation": interp, "components": components}
+    return {
+        "score": norm, "overall_signal": overall,
+        "interpretation": interp, "components": components,
+    }
 
-
-# ── main ──────────────────────────────────────────────────────────────────────
 
 def run():
-    crack_data = _load(DATA / "crack_signals.json")
-    futures    = _load(DATA / "futures_latest.json")
+    crack   = _load(DATA / "crack_signals.json")
+    futures = _load(DATA / "futures_latest.json")
 
     signals = [
-        sig_crack_321(crack_data),
-        sig_gasoil_crack(crack_data),
-        sig_gasoline_crack(crack_data),
-        sig_ho_crack(crack_data),
-        sig_curve_shape(futures),
-        sig_brent_wti(crack_data, futures),
+        sig_crack_321(crack),
+        sig_gasoline_crack(crack),
+        sig_ho_rbob(crack),
+        sig_curve_shape(crack),
+        sig_brent_wti(crack),
     ]
 
     comp   = composite(signals)
