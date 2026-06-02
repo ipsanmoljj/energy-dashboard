@@ -15,39 +15,31 @@ const TABS = [
   { id: "sentiment", label: "Sentiment" },
 ]
 
-// ── Alert config ───────────────────────────────────────────────────────────
 const ALERT_KEYS = [
-  { key: "brent",       label: "Brent ICE",       color: "#3b82f6" },
-  { key: "wti",         label: "WTI NYMEX",        color: "#60a5fa" },
-  { key: "rbob",        label: "RBOB",             color: "#f59e0b" },
-  { key: "heating_oil", label: "Heating Oil",      color: "#f97316" },
-  { key: "gasoil",      label: "ICE Gasoil",       color: "#a78bfa" }, // activates when feed available
+  { key: "brent",       label: "Brent ICE",  color: "#3b82f6" },
+  { key: "wti",         label: "WTI NYMEX",  color: "#60a5fa" },
+  { key: "rbob",        label: "RBOB",       color: "#f59e0b" },
+  { key: "heating_oil", label: "Heating Oil",color: "#f97316" },
+  { key: "gasoil",      label: "ICE Gasoil", color: "#a78bfa" },
 ]
 const WARN_PCT = 2
 const CRIT_PCT = 4
 
-// ── Alert computation (runs on every fetch) ────────────────────────────────
 function computeAlerts(hist, contracts) {
   if (!hist || hist.length < 4 || !contracts) return []
-  const histForAvg = hist.slice(0, -1) // exclude today so avg is prior 5 days
+  const histForAvg = hist.slice(0, -1)
   const alerts = []
-
   for (const { key, label, color } of ALERT_KEYS) {
     const current = contracts[key]?.price_bbl ?? null
     if (current == null) continue
-
     const last5 = histForAvg.filter(h => h[key] != null).slice(-5)
     if (last5.length < 3) continue
-
     const avg5d  = last5.reduce((s, h) => s + h[key], 0) / last5.length
     const devPct = ((current - avg5d) / avg5d) * 100
     const absDev = Math.abs(devPct)
     if (absDev < WARN_PCT) continue
-
     alerts.push({
-      key,
-      label,
-      color,
+      key, label, color,
       current:  Math.round(current * 100) / 100,
       avg5d:    Math.round(avg5d * 100) / 100,
       devPct:   Math.round(devPct * 10) / 10,
@@ -55,31 +47,22 @@ function computeAlerts(hist, contracts) {
       isUp:     devPct > 0,
     })
   }
-
-  // Sort: critical first, then by abs deviation descending
   return alerts.sort((a, b) => {
     if (a.severity !== b.severity) return a.severity === "critical" ? -1 : 1
     return Math.abs(b.devPct) - Math.abs(a.devPct)
   })
 }
 
-// ── Alert banner (sticky, always visible when alerts exist) ───────────────
 function AlertBanner({ alerts }) {
   if (!alerts || alerts.length === 0) return null
   const hasCrit = alerts.some(a => a.severity === "critical")
-
   return (
     <div style={{
       background: "#0d1117",
       borderBottom: `1px solid ${hasCrit ? "#ef444440" : "#f59e0b30"}`,
-      padding: "5px 20px",
-      display: "flex",
-      alignItems: "center",
-      gap: 6,
-      overflowX: "auto",
-      flexShrink: 0,
+      padding: "5px 20px", display: "flex", alignItems: "center",
+      gap: 6, overflowX: "auto", flexShrink: 0,
     }}>
-      {/* Label */}
       <span style={{
         fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
         color: hasCrit ? "#ef4444" : "#f59e0b",
@@ -87,59 +70,36 @@ function AlertBanner({ alerts }) {
       }}>
         {hasCrit ? "⚠" : "◉"} ALERTS
       </span>
-
       <span style={{ width: 1, height: 14, background: "#1a2535", flexShrink: 0 }} />
-
-      {/* Chips */}
       {alerts.map(a => {
-        const isCrit  = a.severity === "critical"
-        const border  = isCrit ? "#ef444455" : "#f59e0b44"
-        const bg      = isCrit ? "#ef444410" : "#f59e0b0d"
-        const sevCol  = isCrit ? "#ef4444"   : "#f59e0b"
-        const dirCol  = a.isUp ? "#ef4444"   : "#22c55e"
-        const arrow   = a.isUp ? "▲" : "▼"
-
+        const isCrit = a.severity === "critical"
+        const border = isCrit ? "#ef444455" : "#f59e0b44"
+        const bg     = isCrit ? "#ef444410" : "#f59e0b0d"
+        const sevCol = isCrit ? "#ef4444"   : "#f59e0b"
+        const dirCol = a.isUp ? "#ef4444"   : "#22c55e"
+        const arrow  = a.isUp ? "▲" : "▼"
         return (
           <div key={a.key} style={{
             display: "flex", alignItems: "center", gap: 5,
-            background: bg,
-            border: `0.5px solid ${border}`,
-            borderRadius: 5,
-            padding: "3px 9px",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
+            background: bg, border: `0.5px solid ${border}`,
+            borderRadius: 5, padding: "3px 9px",
+            whiteSpace: "nowrap", flexShrink: 0,
           }}>
-            <span style={{ fontSize: 9, fontWeight: 800, color: sevCol }}>
-              {isCrit ? "⚠" : "◉"}
-            </span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: a.color }}>
-              {a.label}
-            </span>
-            <span style={{ fontSize: 12, fontWeight: 800, color: "#e5e7eb" }}>
-              ${a.current}
-            </span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: dirCol }}>
-              {arrow}{a.devPct > 0 ? "+" : ""}{a.devPct}%
-            </span>
-            <span style={{ fontSize: 9, color: "#374151" }}>
-              vs 5d ${a.avg5d}
-            </span>
+            <span style={{ fontSize: 9, fontWeight: 800, color: sevCol }}>{isCrit ? "⚠" : "◉"}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: a.color }}>{a.label}</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: "#e5e7eb" }}>${a.current}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: dirCol }}>{arrow}{a.devPct > 0 ? "+" : ""}{a.devPct}%</span>
+            <span style={{ fontSize: 9, color: "#374151" }}>vs 5d ${a.avg5d}</span>
           </div>
         )
       })}
-
-      {/* Timestamp hint */}
-      <span style={{
-        fontSize: 9, color: "#1f2937",
-        marginLeft: "auto", flexShrink: 0, whiteSpace: "nowrap",
-      }}>
+      <span style={{ fontSize: 9, color: "#1f2937", marginLeft: "auto", flexShrink: 0, whiteSpace: "nowrap" }}>
         updates every 30s
       </span>
     </div>
   )
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 function fmt(v, dp=2, fallback="—") {
   if (v == null || v === "" || isNaN(Number(v))) return fallback
   return Number(v).toFixed(dp)
@@ -228,7 +188,6 @@ function PriceCard({ label, price, unit, change, color, error }) {
   )
 }
 
-// ── Chart helpers ──────────────────────────────────────────────────────────
 function round2(v) { return Math.round(v * 100) / 100 }
 
 function computeBand(history, key) {
@@ -288,7 +247,6 @@ function SeriesChart({ title, data, color, unit="$/bbl", currentPrice, currentSi
           <div style={{ fontSize: 10, color: "#374151" }}>{unit}</div>
         </div>
       </div>
-
       {!hasData ? (
         <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center",
           color: "#1f2937", fontSize: 10, fontFamily: "monospace" }}>
@@ -301,8 +259,7 @@ function SeriesChart({ title, data, color, unit="$/bbl", currentPrice, currentSi
             <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#374151" }}
               tickLine={false} interval="preserveStartEnd" />
             <YAxis tick={{ fontSize: 9, fill: "#374151" }} tickLine={false}
-              domain={["auto", "auto"]} width={50}
-              tickFormatter={v => v.toFixed(0)} />
+              domain={["auto", "auto"]} width={50} tickFormatter={v => v.toFixed(0)} />
             <Tooltip content={<CustomTooltip />} />
             {hasBand && (
               <Area dataKey="band" stroke="none" fill={color}
@@ -319,7 +276,6 @@ function SeriesChart({ title, data, color, unit="$/bbl", currentPrice, currentSi
           </ComposedChart>
         </ResponsiveContainer>
       )}
-
       {hasBand && (
         <div style={{ display: "flex", gap: 16, marginTop: 6, fontSize: 9, color: "#374151" }}>
           <span>5wk avg: <span style={{ color }}>{fmt(data[0]?.mean, 2)}</span></span>
@@ -332,11 +288,10 @@ function SeriesChart({ title, data, color, unit="$/bbl", currentPrice, currentSi
   )
 }
 
-// ── Composite gauge ────────────────────────────────────────────────────────
 function CompositeGauge({ score, label, reasons=[] }) {
-  const s      = Math.max(-10, Math.min(10, score ?? 0))
-  const pct    = ((s + 10) / 20) * 100
-  const color  = s > 0.5 ? "#22c55e" : s < -0.5 ? "#ef4444" : "#f59e0b"
+  const s     = Math.max(-10, Math.min(10, score ?? 0))
+  const pct   = ((s + 10) / 20) * 100
+  const color = s > 0.5 ? "#22c55e" : s < -0.5 ? "#ef4444" : "#f59e0b"
   return (
     <div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12 }}>
@@ -365,21 +320,61 @@ function CompositeGauge({ score, label, reasons=[] }) {
 }
 
 // ── Tabs ───────────────────────────────────────────────────────────────────
+
+// FIX 2: TabOverview now reads from inv_signals + crack_signals
 function TabOverview({ d }) {
-  const comp       = d?.composite?.composite || {}
-  const eia        = d?.eia                  || {}
-  const fut        = d?.futures?.contracts   || {}
-  const layers_raw = d?.composite?.layers    || {}
+  const comp      = d?.composite?.composite      || {}
+  const eia       = d?.eia                       || {}
+  const fut       = d?.futures?.contracts        || {}
+  const layers_raw = d?.composite?.layers        || {}
+  const invComp   = d?.inv_signals?.composite    || {}
+  const crackComp = d?.crack_signals?.composite  || {}
+  const invSigs   = d?.inv_signals?.signals      || {}
+  const crackSigs = d?.crack_signals?.signals    || {}
 
   const layers = [
-    { label: "Inventory",      score: layers_raw.inventory?.available  ? (layers_raw.inventory.score / 10)  : (eia?.cushing_stocks?.vs_5yr_avg < 0 ? 0.5 : -0.5), label2: layers_raw.inventory?.label },
-    { label: "Crack",          score: layers_raw.crack?.available      ? (layers_raw.crack.score / 10)      : 0, label2: layers_raw.crack?.label },
-    { label: "Macro",          score: layers_raw.macro?.available      ? (layers_raw.macro.score / 10)      : 0, label2: layers_raw.macro?.label },
-    { label: "Demand/Weather", score: layers_raw.demand?.available     ? (layers_raw.demand.score / 10)     : 0, label2: layers_raw.demand?.label },
-    { label: "EU Gas Storage", score: layers_raw.gie?.available        ? (layers_raw.gie.score / 10)        : 0, label2: layers_raw.gie?.label },
-    { label: "Positioning",    score: layers_raw.positioning?.available ? (layers_raw.positioning.score / 10): 0, label2: layers_raw.positioning?.label },
-    { label: "News/Sentiment", score: layers_raw.news?.available       ? (layers_raw.news.score / 10)       : 0, label2: layers_raw.news?.label },
-    { label: "Rig Count",      score: d?.rig_count?.signal?.direction === "bullish" ? 0.5 : d?.rig_count?.signal?.direction === "bearish" ? -0.5 : 0, label2: d?.rig_count?.signal?.label },
+    {
+      label:  "Inventory",
+      score:  invComp.score != null ? invComp.score / 10 : (eia?.cushing_stocks?.vs_5yr_avg < 0 ? 0.5 : -0.5),
+      label2: invComp.overall_signal || "NO_DATA",
+    },
+    {
+      label:  "Crack",
+      score:  crackComp.score != null ? crackComp.score / 10 : 0,
+      label2: crackSigs.curve_shape?.structure || crackComp.overall_signal || "NO_DATA",
+    },
+    {
+      label:  "Macro",
+      score:  layers_raw.macro?.available ? (layers_raw.macro.score / 10) : 0,
+      label2: layers_raw.macro?.label,
+    },
+    {
+      label:  "Demand/Weather",
+      score:  layers_raw.demand?.available ? (layers_raw.demand.score / 10) : 0,
+      label2: layers_raw.demand?.label,
+    },
+    {
+      label:  "EU Gas Storage",
+      score:  invSigs.gie_storage?.signal === "BULLISH" ? 0.8
+            : invSigs.gie_storage?.signal === "BEARISH" ? -0.8 : 0,
+      label2: invSigs.gie_storage?.signal || "NO_DATA",
+    },
+    {
+      label:  "Positioning",
+      score:  layers_raw.positioning?.available ? (layers_raw.positioning.score / 10) : 0,
+      label2: layers_raw.positioning?.label,
+    },
+    {
+      label:  "News/Sentiment",
+      score:  layers_raw.news?.available ? (layers_raw.news.score / 10) : 0,
+      label2: layers_raw.news?.label,
+    },
+    {
+      label:  "Rig Count",
+      score:  d?.rig_count?.signal?.direction === "bullish" ? 0.5
+            : d?.rig_count?.signal?.direction === "bearish" ? -0.5 : 0,
+      label2: d?.rig_count?.signal?.label,
+    },
   ]
 
   return (
@@ -482,10 +477,51 @@ function TabSpreads({ d, history }) {
   )
 }
 
+// FIX 3: TabInventory now shows signal layer composite at top
 function TabInventory({ d }) {
-  const eia = d?.eia || {}
+  const eia     = d?.eia                       || {}
+  const invSigs = d?.inv_signals?.signals      || {}
+  const invComp = d?.inv_signals?.composite    || {}
+
   return (
     <>
+      {/* Inventory signal composite */}
+      {invComp.score != null && (
+        <Card title="Inventory Signal Layer" style={{ marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
+            <span style={{
+              fontSize: 32, fontWeight: 900, lineHeight: 1,
+              color: invComp.score > 0 ? "#22c55e" : invComp.score < 0 ? "#ef4444" : "#f59e0b",
+            }}>
+              {invComp.score > 0 ? "+" : ""}{invComp.score.toFixed(2)}
+            </span>
+            <div>
+              <Badge label={invComp.overall_signal} />
+              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+                {invComp.interpretation}
+              </div>
+            </div>
+          </div>
+          {invComp.components?.map((c, i) => (
+            <div key={i} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              fontSize: 11, padding: "4px 0", borderBottom: "1px solid #0f1e30",
+            }}>
+              <span style={{ color: "#9ca3af" }}>{c.label}</span>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <Badge label={c.signal} />
+                <span style={{
+                  color: c.score > 0 ? "#22c55e" : c.score < 0 ? "#ef4444" : "#374151",
+                  fontWeight: 700, fontFamily: "monospace", minWidth: 24, textAlign: "right",
+                }}>
+                  {c.score > 0 ? "+" : ""}{c.score}
+                </span>
+              </div>
+            </div>
+          ))}
+        </Card>
+      )}
+
       <Card title="EIA Weekly Inventory">
         <Row label="Cushing Stocks"       value={fmt(eia.cushing_stocks?.value,1)}      unit="mmbbls" signal={eia.cushing_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"}   note={`WoW ${fmt(eia.cushing_stocks?.wow,1)}`}      highlight={eia.cushing_stocks?.vs_5yr_avg < -10} />
         <Row label="Total Crude Stocks"   value={fmt(eia.total_crude_stocks?.value,1)}  unit="mmbbls" signal={eia.total_crude_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"} note={`WoW ${fmt(eia.total_crude_stocks?.wow,1)}`} />
@@ -494,6 +530,7 @@ function TabInventory({ d }) {
         <Row label="Crude Production"     value={fmt(eia.crude_production?.value,2)}    unit="mbd"    note={`WoW ${fmt(eia.crude_production?.wow,3)} mbd`} />
         <Row label="Refinery Utilisation" value={fmt(eia.refinery_util?.value,1)}       unit="%"      signal={eia.refinery_util?.value > 90 ? "HIGH" : "NORMAL"} note={`WoW ${fmt(eia.refinery_util?.wow,1)}pp`} />
       </Card>
+
       <Card title="Derived Signals" style={{ marginTop: 12 }}>
         <Row label="Days of Forward Cover" value={fmt(eia.days_cover,1)}               unit="days" signal={eia.days_cover < 54 ? "TIGHT <54" : eia.days_cover > 62 ? "AMPLE >62" : "NORMAL"} />
         <Row label="Net Supply"            value={fmt(eia.net_supply_mbd,2)}           unit="mbd" />
@@ -514,8 +551,8 @@ function TabMacro({ d }) {
   return (
     <>
       <Card title="Macro Indicators (FRED)">
-        <Row label="DXY Broad Dollar" value={fmt(fred.dxy_broad?.latest,2)}                         signal={fred.dxy_broad?.signal} note="USD strength → bearish oil" />
-        <Row label="SOFR"             value={fmt(fred.sofr?.latest,3)}             unit="%"          note="Storage carry cost driver" />
+        <Row label="DXY Broad Dollar" value={fmt(fred.dxy_broad?.latest,2)}                              signal={fred.dxy_broad?.signal} note="USD strength → bearish oil" />
+        <Row label="SOFR"             value={fmt(fred.sofr?.latest,3)}             unit="%"               note="Storage carry cost driver" />
         <Row label="Fed Funds Rate"   value={fmt(fred.fed_funds?.latest,2)}        unit="%" />
         <Row label="US 10Y Yield"     value={fmt(fred.us_10y_yield?.latest,3)}     unit="%" />
         <Row label="Storage Carry/mo" value={fmt(der.storage_carry?.total_carry_per_bbl_mo,2)} unit="$/bbl" note="Contango threshold for storage" />
@@ -596,27 +633,29 @@ export default function App() {
   const [activeTab,  setActiveTab]  = useState("overview")
   const [data,       setData]       = useState(null)
   const [history,    setHistory]    = useState([])
-  const [alerts,     setAlerts]     = useState([])   // live-computed, never dismissed
+  const [alerts,     setAlerts]     = useState([])
   const [loading,    setLoading]    = useState(true)
   const [lastUpdate, setLastUpdate] = useState(null)
   const [countdown,  setCountdown]  = useState(30)
 
+  // FIX 1: fetchAll now includes inventory-signals and crack-signals
   const fetchAll = useCallback(async () => {
     try {
-      const [all, eia, rig, crack, hist] = await Promise.all([
+      const [all, eia, rig, crack, hist, invSig, crackSig] = await Promise.all([
         fetch(`${API}/api/all`).then(r => r.json()),
         fetch(`${API}/api/eia`).then(r => r.json()),
         fetch(`${API}/api/rig-count`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/crack`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/history`).then(r => r.json()).catch(() => []),
+        fetch(`${API}/api/inventory-signals`).then(r => r.json()).catch(() => null),
+        fetch(`${API}/api/crack-signals`).then(r => r.json()).catch(() => null),
       ])
-      const merged  = { ...all, eia, rig_count: rig, crack }
+      const merged  = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig }
       const histArr = Array.isArray(hist) ? hist : []
       setData(merged)
       setHistory(histArr)
       setLastUpdate(new Date())
       setCountdown(30)
-      // Recompute alerts fresh on every fetch — no dismiss, always current
       setAlerts(computeAlerts(histArr, merged?.futures?.contracts))
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
@@ -639,7 +678,6 @@ export default function App() {
       fontFamily:"'Inter','Segoe UI',system-ui,sans-serif",
       display:"flex", flexDirection:"column" }}>
 
-      {/* ── Top bar ── */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
         padding:"8px 20px", background:"#0a0f1a",
         borderBottom:"1px solid #0f1e30", position:"sticky", top:0, zIndex:100 }}>
@@ -678,10 +716,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── Alert banner — always visible, self-updating ── */}
       <AlertBanner alerts={alerts} />
 
-      {/* ── Tab bar ── */}
       <div style={{ display:"flex", gap:0, padding:"0 20px",
         background:"#0a0f1a", borderBottom:"1px solid #0f1e30", overflowX:"auto" }}>
         {TABS.map(t => (
@@ -695,7 +731,6 @@ export default function App() {
         ))}
       </div>
 
-      {/* ── Content ── */}
       <div style={{ padding:"16px 20px", maxWidth:1400, margin:"0 auto", width:"100%" }}>
         {loading ? (
           <div style={{ display:"flex", alignItems:"center", justifyContent:"center",
