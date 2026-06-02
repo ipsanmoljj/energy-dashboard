@@ -149,6 +149,9 @@ def rig_count():        return load("rig_count_latest.json")
 @app.get("/api/history")
 def history():          return load("price_history.json")
 
+@app.get("/api/financialjuice")
+def financialjuice(): return load("financialjuice_latest.json")
+
 # ── Signal layer endpoints (Day 4 + 5) ───────────────────────────────────────
 
 @app.get("/api/inventory-signals")
