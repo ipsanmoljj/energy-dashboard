@@ -40,7 +40,7 @@ BASE      = Path(__file__).resolve().parent.parent
 DATA_DIR  = BASE / "data"
 OUT       = DATA_DIR / "financialjuice_latest.json"
 
-APIFY_TOKEN  = os.environ.get("APIFY_TOKEN", "")   # set via env var
+APIFY_TOKEN  = os.environ.get("APIFY_TOKEN", "https://api.apify.com/v2/acts/akash9078~financialjuice-scraper/run-sync-get-dataset-items?token=apify_api_ABCg8rYK6nmM6BOrlz84ZvFvclI2S12PADP3")   # set via env var
 ACTOR_ID     = "akash9078~financialjuice-scraper"
 APIFY_URL    = f"https://api.apify.com/v2/acts/{ACTOR_ID}/run-sync-get-dataset-items?token={APIFY_TOKEN}"
 
