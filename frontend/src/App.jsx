@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react"
+import React, { useState, useEffect, useCallback, useRef } from "react"
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Area, ComposedChart
@@ -577,62 +577,180 @@ function TabMacro({ d }) {
   )
 }
 
+// Replace the entire TabSentiment function in App.jsx with this.
+// Also make sure the top import line is:
+// import React, { useState, useEffect, useCallback, useRef } from "react"
+
 function TabSentiment({ d }) {
   const news      = d?.news              || {}
   const cftc      = d?.cftc             || {}
   const rig       = d?.rig_count?.signal || {}
-  const headlines = news.all_headlines || []
+  const fj        = d?.fj               || {}
+  const headlines = news.all_headlines   || []
   const score     = news.news_score?.score ?? null
   const scoreCol  = score > 0 ? "#22c55e" : score < 0 ? "#ef4444" : "#f59e0b"
-  const summary   = news.summary || {}
+  const summary   = news.summary         || {}
+
+  const fjHeadlines = fj.headlines     || []
+  const fjOilOnly   = fj.oil_headlines || []
+  const [fjFilter, setFjFilter] = React.useState("oil")
+  const fjShown = fjFilter === "oil" ? fjOilOnly : fjHeadlines
+
+  const sentCol = s =>
+    s === "BULLISH" ? "#22c55e" : s === "BEARISH" ? "#ef4444" : "#374151"
+
   return (
     <>
-      <Card title="Rig Count Signal">
-        <Row label="Oil-Directed Rigs" value={fmt(d?.rig_count?.latest?.oil_rigs,0)} unit="rigs" signal={rig.label} />
-        <Row label="WoW Change"    value={fmt(d?.rig_count?.latest?.wow_oil,0)}  unit="rigs" />
-        <Row label="5-Week Trend"  value={rig.five_week_trend || "—"} />
-        <Row label="Current Rigs"  value={fmt(d?.rig_count?.latest?.oil_rigs,0)} unit="rigs"
-             signal={rig.label} note={`Threshold: <350 declining, >600 growing`} />
-        <Row label="Production Signal" value="" signal={rig.label} note={rig.note?.slice(0,60)} />
+      {/* ── FinancialJuice Live Headlines ── */}
+      <Card title="FinancialJuice — Live Headlines" style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: "#4b5563" }}>
+            {fj.total
+              ? `${fj.total} headlines · ${fj.oil_count} oil-relevant`
+              : "Loading..."}
+            {fj.fetched_at && (
+              <span style={{ marginLeft: 8, color: "#1f2937" }}>
+                · {new Date(fj.fetched_at).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {["oil", "all"].map(f => (
+              <button key={f} onClick={() => setFjFilter(f)} style={{
+                background: fjFilter === f ? "#00d98b22" : "transparent",
+                border: `1px solid ${fjFilter === f ? "#00d98b55" : "#1a2535"}`,
+                borderRadius: 6, padding: "3px 10px",
+                color: fjFilter === f ? "#00d98b" : "#374151",
+                fontSize: 10, fontWeight: 700, cursor: "pointer",
+                textTransform: "uppercase", letterSpacing: "0.08em",
+              }}>
+                {f === "oil" ? "⚡ Oil/Energy" : "All News"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ maxHeight: 420, overflowY: "auto" }}>
+          {fjShown.length === 0 ? (
+            <div style={{ color: "#374151", fontSize: 12, padding: "12px 0", textAlign: "center" }}>
+              {fj.error
+                ? fj.error
+                : fjFilter === "oil"
+                  ? "No oil-relevant headlines yet"
+                  : "No headlines loaded — check APIFY_TOKEN"}
+            </div>
+          ) : (
+            fjShown.map((h, i) => (
+              <a
+                key={h.guid || i}
+                href={h.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex", alignItems: "flex-start",
+                  justifyContent: "space-between", gap: 10,
+                  padding: "7px 4px", borderBottom: "1px solid #0f1e30",
+                  textDecoration: "none", cursor: "pointer",
+                  borderRadius: 4,
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "#0a1628"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                {/* Sentiment dot */}
+                <span style={{
+                  width: 6, height: 6, borderRadius: "50%",
+                  flexShrink: 0, marginTop: 5,
+                  background: sentCol(h.sentiment),
+                }} />
+
+                {/* Title */}
+                <span style={{
+                  flex: 1, fontSize: 11, color: "#9ca3af", lineHeight: 1.4,
+                }}>
+                  {h.title}
+                </span>
+
+                {/* Time ago */}
+                <span style={{
+                  fontSize: 9, color: "#1f2937", whiteSpace: "nowrap",
+                  flexShrink: 0, fontFamily: "monospace", marginTop: 2,
+                }}>
+                  {h.time_ago}
+                </span>
+              </a>
+            ))
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 9, color: "#374151" }}>
+          <span><span style={{ color: "#22c55e" }}>●</span> Bullish</span>
+          <span><span style={{ color: "#ef4444" }}>●</span> Bearish</span>
+          <span><span style={{ color: "#374151" }}>●</span> Neutral</span>
+          <span style={{ marginLeft: "auto" }}>Click any headline to open article →</span>
+        </div>
       </Card>
-      <Card title="News Sentiment" style={{ marginTop: 12 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:20, marginBottom:12 }}>
+
+      {/* ── Rig Count ── */}
+      <Card title="Rig Count Signal" style={{ marginBottom: 12 }}>
+        <Row label="Oil-Directed Rigs" value={fmt(d?.rig_count?.latest?.oil_rigs, 0)} unit="rigs" signal={rig.label} />
+        <Row label="WoW Change"        value={fmt(d?.rig_count?.latest?.wow_oil, 0)}  unit="rigs" />
+        <Row label="5-Week Trend"      value={rig.five_week_trend || "—"} />
+        <Row label="Production Signal" value="" signal={rig.label} note={rig.note?.slice(0, 60)} />
+      </Card>
+
+      {/* ── RSS News Sentiment ── */}
+      <Card title="RSS News Sentiment" style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize:36, fontWeight:900, color:scoreCol, lineHeight:1 }}>
+            <div style={{ fontSize: 36, fontWeight: 900, color: scoreCol, lineHeight: 1 }}>
               {score != null ? (score > 0 ? "+" : "") + Number(score).toFixed(1) : "—"}
             </div>
-            <div style={{ fontSize:10, color:"#4b5563" }}>{news.news_score?.label || "Composite"}</div>
+            <div style={{ fontSize: 10, color: "#4b5563" }}>
+              {news.news_score?.label || "Composite"}
+            </div>
           </div>
-          <div style={{ flex:1 }}>
+          <div style={{ flex: 1 }}>
             <Row label="Bullish signals" value={summary.bullish_count ?? "—"} />
             <Row label="Bearish signals" value={summary.bearish_count ?? "—"} />
             <Row label="Neutral"         value={summary.neutral_count ?? "—"} />
-            <Row label="Geo alerts"      value={summary.geo_alerts ?? "—"} />
+            <Row label="Geo alerts"      value={summary.geo_alerts    ?? "—"} />
             <Row label="Sources"         value={summary.sources_used?.join(", ") ?? "—"} />
           </div>
         </div>
-        {headlines.slice(0,8).map((h,i) => (
-          <div key={i} style={{ display:"flex", justifyContent:"space-between", gap:8,
-            fontSize:11, color:"#9ca3af", padding:"5px 0", borderBottom:"1px solid #0f1e30" }}>
-            <span style={{ flex:1 }}>{h.title || h.headline}</span>
-            <span style={{ color: h.score > 0 ? "#22c55e" : h.score < 0 ? "#ef4444" : "#6b7280", fontWeight:700, whiteSpace:"nowrap" }}>
+        {headlines.slice(0, 5).map((h, i) => (
+          <div key={i} style={{
+            display: "flex", justifyContent: "space-between", gap: 8,
+            fontSize: 11, color: "#9ca3af",
+            padding: "5px 0", borderBottom: "1px solid #0f1e30",
+          }}>
+            <span style={{ flex: 1 }}>{h.title || h.headline}</span>
+            <span style={{
+              color: h.score > 0 ? "#22c55e" : h.score < 0 ? "#ef4444" : "#6b7280",
+              fontWeight: 700, whiteSpace: "nowrap",
+            }}>
               {h.score != null ? (h.score > 0 ? "+" : "") + Number(h.score).toFixed(1) : "—"}
             </span>
           </div>
         ))}
       </Card>
-      <Card title="CFTC Positioning" style={{ marginTop: 12 }}>
+
+      {/* ── CFTC Positioning ── */}
+      <Card title="CFTC Positioning">
         {cftc.contracts
-          ? Object.entries(cftc.contracts).slice(0,5).map(([k,v]) => (
-              <Row key={k}
-                label={v?.label || k}
-                value={fmt(v?.net_pct_of_oi, 1)}
-                unit="% net long"
-                signal={v?.signal}
-                note={v?.mm_net_lots != null ? `${v.mm_net_lots > 0 ? "+" : ""}${v.mm_net_lots.toLocaleString()} lots` : undefined}
-              />
-            ))
-          : <div style={{ color:"#374151", fontSize:12, padding:"8px 0" }}>CFTC data not loaded</div>
+          ? Object.entries(cftc.contracts).slice(0, 5).map(([k, v]) => (
+            <Row key={k}
+              label={v?.label || k}
+              value={fmt(v?.net_pct_of_oi, 1)}
+              unit="% net long"
+              signal={v?.signal}
+              note={v?.mm_net_lots != null
+                ? `${v.mm_net_lots > 0 ? "+" : ""}${v.mm_net_lots.toLocaleString()} lots`
+                : undefined}
+            />
+          ))
+          : <div style={{ color: "#374151", fontSize: 12, padding: "8px 0" }}>
+              CFTC data not loaded
+            </div>
         }
       </Card>
     </>
@@ -652,7 +770,7 @@ export default function App() {
   // FIX 1: fetchAll now includes inventory-signals and crack-signals
   const fetchAll = useCallback(async () => {
     try {
-      const [all, eia, rig, crack, hist, invSig, crackSig] = await Promise.all([
+      const [all, eia, rig, crack, hist, invSig, crackSig, fj] = await Promise.all([
         fetch(`${API}/api/all`).then(r => r.json()),
         fetch(`${API}/api/eia`).then(r => r.json()),
         fetch(`${API}/api/rig-count`).then(r => r.json()).catch(() => null),
@@ -660,8 +778,9 @@ export default function App() {
         fetch(`${API}/api/history`).then(r => r.json()).catch(() => []),
         fetch(`${API}/api/inventory-signals`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/crack-signals`).then(r => r.json()).catch(() => null),
+        fetch(`${API}/api/financialjuice`).then(r => r.json()).catch(() => null),
       ])
-      const merged  = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig }
+      const merged  = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig, fj }
       const histArr = Array.isArray(hist) ? hist : []
       setData(merged)
       setHistory(histArr)
