@@ -373,7 +373,7 @@ function TabOverview({ d }) {
       label:  "Rig Count",
       score:  d?.rig_count?.signal?.direction === "bullish" ? 0.5
             : d?.rig_count?.signal?.direction === "bearish" ? -0.5 : 0,
-      label2: d?.rig_count?.signal?.label,
+      label2: `${d?.rig_count?.signal?.label || "—"} ${d?.rig_count?.latest?.oil_rigs ? `(${d.rig_count.latest.oil_rigs})` : ""}`,
     },
   ]
 
@@ -588,8 +588,10 @@ function TabSentiment({ d }) {
     <>
       <Card title="Rig Count Signal">
         <Row label="Oil-Directed Rigs" value={fmt(d?.rig_count?.latest?.oil_rigs,0)} unit="rigs" signal={rig.label} />
-        <Row label="WoW Change"        value={fmt(d?.rig_count?.latest?.wow_oil,0)}  unit="rigs" signal={rig.direction} />
-        <Row label="5-Week Trend"      value={rig.five_week_trend || "—"} />
+        <Row label="WoW Change"    value={fmt(d?.rig_count?.latest?.wow_oil,0)}  unit="rigs" />
+        <Row label="5-Week Trend"  value={rig.five_week_trend || "—"} />
+        <Row label="Current Rigs"  value={fmt(d?.rig_count?.latest?.oil_rigs,0)} unit="rigs"
+             signal={rig.label} note={`Threshold: <350 declining, >600 growing`} />
         <Row label="Production Signal" value="" signal={rig.label} note={rig.note?.slice(0,60)} />
       </Card>
       <Card title="News Sentiment" style={{ marginTop: 12 }}>
