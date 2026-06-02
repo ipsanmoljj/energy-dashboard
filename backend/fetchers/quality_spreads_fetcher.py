@@ -212,13 +212,13 @@ def compute_spread(cfg: dict, benchmarks: dict, eia_gasoil: float | None) -> dic
     short_id = cfg["short_grade"]
 
     # Special handling for naphtha-gasoil using EIA live data if available
-    if cfg["id"] == "naphtha_gasoil" and eia_gasoil is not None:
+    if cfg["id"] == "naphtha_gasoil":
         brent = benchmarks.get("brent", 95.0)
         naphtha_price = brent + GRADE_DIFFS["naphtha_bbl"]["diff"]
-        gasoil_price  = eia_gasoil
+        gasoil_price  = brent + GRADE_DIFFS["gasoil_bbl"]["diff"]
         long_val  = round(naphtha_price, 2)
         short_val = round(gasoil_price, 2)
-        data_source = "EIA live ULSD + Platts naphtha differential"
+        data_source = "Platts naphtha + ICE Gasoil differentials vs live Brent"
     else:
         long_val  = compute_grade_price(long_id,  benchmarks)
         short_val = compute_grade_price(short_id, benchmarks)
