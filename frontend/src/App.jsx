@@ -403,7 +403,6 @@ function TabSpreads({ d, history }) {
         <SeriesChart title="3-2-1 Crack Spread" data={prepChartData(history, "crack_321")}      color="#22c55e" currentPrice={der.crack_321?.value_bbl}     currentSignal={der.crack_321?.signal} />
         <SeriesChart title="Gasoline Crack"      data={prepChartData(history, "gasoline_crack")} color="#f59e0b" currentPrice={der.gasoline_crack?.value_bbl} currentSignal={der.gasoline_crack?.signal} />
         <SeriesChart title="HO – RBOB Spread"   data={prepChartData(history, "ho_rbob")}        color="#f97316" currentPrice={der.ho_rbob_spread?.value_bbl} currentSignal={der.ho_rbob_spread?.signal} />
-        <SeriesChart title="Brent – WTI (Futures)" data={prepChartData(history, "brent_wti")}   color="#3b82f6" currentPrice={der.brent_wti?.value_bbl}      currentSignal={der.brent_wti?.signal} />
       </div>
 
       {/* ── Section 2: Quality spread line charts (accumulating daily history) ── */}
@@ -416,7 +415,26 @@ function TabSpreads({ d, history }) {
         </span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        {chartable.map((s, i) => (
+        {/* Brent-WTI uses price_history (42 days) for better chart */}
+        <SeriesChart
+          title="Brent – WTI Spread"
+          data={prepChartData(history, "brent_wti")}
+          color="#3b82f6"
+          unit="$/bbl"
+          currentPrice={der.brent_wti?.value_bbl}
+          currentSignal={der.brent_wti?.signal}
+        />
+        {/* WTI-WCS uses wcs history (36 months) */}
+        <SeriesChart
+          title="WTI – WCS (Canadian Heavy)"
+          data={prepChartData(qsHist, "wti_wcs")}
+          color="#a78bfa"
+          unit="$/bbl"
+          currentPrice={d?.quality_spreads?.spreads?.wti_wcs?.value}
+          currentSignal={d?.quality_spreads?.spreads?.wti_wcs?.signal}
+        />
+        {/* Remaining chartable spreads from qs history */}
+        {chartable.filter(s => s.id !== "wti_wcs").map((s, i) => (
           <SeriesChart
             key={s.id}
             title={s.label}
