@@ -148,7 +148,13 @@ def rig_count():        return load("rig_count_latest.json")
 
 @app.get("/api/history")
 def history():          return load("price_history.json")
+  
+@app.get("/api/quality-spreads")
+def quality_spreads(): return load("quality_spreads_latest.json")
 
+@app.get("/api/financialjuice")
+def financialjuice(): return load("financialjuice_latest.json")
+  
 @app.get("/api/quality-spreads-history")
 def quality_spreads_history(): return load("quality_spreads_history.json")
 
