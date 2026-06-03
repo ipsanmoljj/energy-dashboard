@@ -4,7 +4,8 @@ news_fetcher.py
 Day 7 — Oil Market News Sentiment Pipeline
 
 Architecture:
-  Layer 1 → RSS fetch from 4 sources (FinancialJuice, OilPrice, EIA, Reuters)
+  Layer 1 → RSS fetch from 8 sources (FinancialJuice, OilPrice, EIA Today,
+             EIA WPSR, EIA STEO, OPEC, IEA, Reuters)
   Layer 2 → Relevance filter (350+ oil-specific terms)
   Layer 3 → Causal classification (which NCI layer does this affect?)
   Layer 4 → Sentiment scoring (LM financial dictionary + oil-specific overrides)
@@ -41,33 +42,139 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # ── RSS Sources ───────────────────────────────────────────────────────────────
+#
+# priority  = signal weight used in NCI aggregation (1–4)
+# tier      = source credibility tier (used in CREDIBILITY_WEIGHTS below)
+# is_primary = True → treat as data-release trigger, not just sentiment
+# decay_halflife_hours → event-type specific decay override (None = use default)
 
 RSS_SOURCES = [
     {
-        "name":     "FinancialJuice",
-        "url": "https://www.financialjuice.com/feed.axd?category=oil",
-        "priority": 4,   # highest — fastest breaking news
-        "note":     "Real-time squawk headlines for day traders",
+        "name":                  "FinancialJuice",
+        "url":                   "https://www.financialjuice.com/feed.axd?category=oil",
+        "priority":              4,
+        "tier":                  "tier1_wire",
+        "is_primary":            False,
+        "decay_halflife_hours":  2.0,
+        "note":                  "Real-time squawk headlines for day traders",
     },
     {
-        "name":     "OilPrice.com",
-        "url":      "https://oilprice.com/rss/main",
-        "priority": 3,
-        "note":     "Pure oil/energy news and analysis",
+        "name":                  "OilPrice.com",
+        "url":                   "https://oilprice.com/rss/main",
+        "priority":              3,
+        "tier":                  "specialist",
+        "is_primary":            False,
+        "decay_halflife_hours":  6.0,
+        "note":                  "Pure oil/energy news and analysis",
     },
     {
-        "name":     "EIA Today in Energy",
-        "url":      "https://www.eia.gov/rss/todayinenergy.xml",
-        "priority": 3,
-        "note":     "Official EIA data releases and analysis",
+        "name":                  "EIA Today in Energy",
+        "url":                   "https://www.eia.gov/rss/todayinenergy.xml",
+        "priority":              3,
+        "tier":                  "official_primary",
+        "is_primary":            True,
+        "decay_halflife_hours":  48.0,
+        "note":                  "Official EIA analysis — primary source, slow decay",
     },
     {
-        "name":     "Reuters Commodities",
-        "url": "https://feeds.reuters.com/reuters/energy",
-        "priority": 2,
-        "note":     "Professional energy/commodities coverage",
+        "name":                  "EIA Weekly Petroleum Status Report",
+        "url":                   "https://www.eia.gov/rss/wpsr.xml",
+        "priority":              4,
+        "tier":                  "official_primary",
+        "is_primary":            True,
+        "decay_halflife_hours":  168.0,   # 7 days — weekly data stays valid until next release
+        "note":                  "Wed 10:30 EST market-moving release — also triggers inventory rescore",
+    },
+    {
+        "name":                  "EIA Short-Term Energy Outlook",
+        "url":                   "https://www.eia.gov/rss/steo.xml",
+        "priority":              4,
+        "tier":                  "official_primary",
+        "is_primary":            True,
+        "decay_halflife_hours":  336.0,   # 14 days — monthly anchor, valid until next STEO
+        "note":                  "Monthly global balance revision — compare vs IEA OMR and OPEC MOMR",
+    },
+    {
+        "name":                  "OPEC Press Releases",
+        "url":                   "https://www.opec.org/opec_web/en/press_room/rss.htm",
+        "priority":              4,
+        "tier":                  "official_primary",
+        "is_primary":            True,
+        "decay_halflife_hours":  720.0,   # 30 days — OPEC decisions valid until next meeting
+        "note":                  "Cut announcements, compliance data, OSP signals — highest weight",
+    },
+    {
+        "name":                  "IEA News",
+        "url":                   "https://www.iea.org/rss/news.xml",
+        "priority":              4,
+        "tier":                  "official_secondary",
+        "is_primary":            True,
+        "decay_halflife_hours":  336.0,   # 14 days — monthly OMR anchor
+        "note":                  "OMR releases, demand revisions, strategic reserve announcements",
+    },
+    {
+        "name":                  "Reuters Commodities",
+        "url":                   "https://feeds.reuters.com/reuters/energy",
+        "priority":              2,
+        "tier":                  "tier1_wire",
+        "is_primary":            False,
+        "decay_halflife_hours":  4.0,
+        "note":                  "Professional energy/commodities coverage",
     },
 ]
+
+# ── Source Credibility Weights ────────────────────────────────────────────────
+#
+# Applied as a multiplier to the raw sentiment score before aggregation.
+# Official primary sources get 1.0 — no discount needed; they ARE the signal.
+# Specialist commodity media gets 0.75 — high domain accuracy, slight lag.
+# Wire services (Reuters, Bloomberg squawk) get 0.85 — fast but interpretive.
+# Aggregated/GDELT sources get 0.4 — high volume, low signal-to-noise.
+
+CREDIBILITY_WEIGHTS = {
+    "official_primary":    1.00,   # EIA, OPEC, IEA — primary source, no discount
+    "official_secondary":  0.90,   # IEA OMR — credible but slight analytical lag
+    "tier1_wire":          0.85,   # Reuters, Bloomberg, AP market wires
+    "specialist":          0.75,   # OilPrice, Platts, Argus, Energy Intelligence
+    "mainstream_financial": 0.60,  # FT, WSJ, NYT
+    "aggregated":          0.40,   # GDELT, news aggregators
+    "social":              0.10,   # Twitter/X, unverified — early detection only
+}
+
+# ── Primary Source Special Handling ──────────────────────────────────────────
+#
+# is_primary=True sources need extra handling beyond a sentiment score:
+#
+#   EIA WPSR  → also triggers inventory signal rescore (Cushing vs consensus)
+#   EIA STEO  → compare revision direction vs prior month (bullish if demand
+#                revised up or supply revised down)
+#   OPEC      → fork into ANNOUNCED vs COMPLIANCE_CONFIRMED states;
+#                if compliance < 80% confirmed later, apply 0.5x downgrade
+#   IEA OMR   → compare "call on OPEC" implied in the release vs actual
+#                OPEC production → surplus/deficit signal
+
+PRIMARY_SOURCE_NOTES = {
+    "EIA Weekly Petroleum Status Report": (
+        "Triggers inventory rescore pipeline. "
+        "Score the surprise direction (draw vs consensus = bullish, build = bearish). "
+        "Decay is 7 days — valid until next Wednesday release."
+    ),
+    "EIA Short-Term Energy Outlook": (
+        "Track revision direction month-over-month: demand revised up or supply "
+        "revised down = bullish. Compare vs IEA OMR and OPEC MOMR published same month. "
+        "Disagreement between agencies = the trade signal."
+    ),
+    "OPEC Press Releases": (
+        "Fork into ANNOUNCED (immediate score) and COMPLIANCE_CONFIRMED (sustained). "
+        "If Baker Hughes / Kpler data shows < 80% compliance in following weeks, "
+        "apply 0.5x downgrade multiplier. Saudi voluntary cut = highest weight event."
+    ),
+    "IEA News": (
+        "Extract 'call on OPEC' implied demand. Compare vs actual OPEC production "
+        "from secondary sources. Call > actual production = oversupplied = bearish. "
+        "Call < actual = tight = bullish."
+    ),
+}
 
 # ── Relevance Filter (350+ terms) ─────────────────────────────────────────────
 
@@ -220,8 +327,6 @@ OIL_TERMS = {
 }
 
 # ── Oil-specific sentiment overrides ──────────────────────────────────────────
-# LM dictionary misses many oil-specific directional terms
-# These override or supplement LM scores with domain knowledge
 
 OIL_OVERRIDES = {
     # Strongly BULLISH supply signals
@@ -266,7 +371,7 @@ OIL_OVERRIDES = {
     "crude risk premium":  +1.0,
     "backwardation":       +1.5,
     "oil backwardation":   +2.0,
- 
+
     # Strongly BEARISH supply signals
     "inventory build":     -2.5,
     "crude build":         -2.5,
@@ -296,8 +401,8 @@ OIL_OVERRIDES = {
     "floating storage":    -2.0,
     "crude floating storage": -2.5,
 }
+
 # ── Causal signal taxonomy ────────────────────────────────────────────────────
-# Map headlines to which NCI layer they affect
 
 SIGNAL_TAXONOMY = {
     "opec": {
@@ -395,7 +500,7 @@ SIGNAL_TAXONOMY = {
     },
 }
 
-# ── Geopolitical risk scorer (from OilMacroTrading book) ─────────────────────
+# ── Geopolitical risk scorer ───────────────────────────────────────────────────
 
 GEO_TRIGGER_TERMS = {
     "hormuz","seized","seizure","attack","blockade","irgc",
@@ -408,34 +513,29 @@ def geo_risk_score(headline: str, spare_capacity_mbd: float = 3.5) -> dict | Non
     """
     Geopolitical Risk Score from OilMacroTrading book:
     Score = (supply_at_risk × 0.4) + (spare_cap_factor × 0.4) + (duration × 0.2)
-
-    Outputs implied price risk premium $2-50/bbl
     """
     h = headline.lower()
     if not any(t in h for t in GEO_TRIGGER_TERMS):
         return None
 
-    # Supply at risk — inferred from headline keywords
     if any(t in h for t in ["hormuz","red sea closure","major pipeline"]):
-        supply_pts = 8   # 2-4 mbd at risk
+        supply_pts = 8
     elif any(t in h for t in ["attack","seized","blockade","embargo"]):
-        supply_pts = 6   # 1-2 mbd at risk
+        supply_pts = 6
     elif any(t in h for t in ["sanctions","conflict","war"]):
-        supply_pts = 5   # 0.5-1 mbd at risk
+        supply_pts = 5
     else:
         supply_pts = 4
 
-    # Spare capacity cushion — from live data
     if spare_capacity_mbd > 4:
-        spare_pts = 2    # well cushioned
+        spare_pts = 2
     elif spare_capacity_mbd > 2:
-        spare_pts = 5    # moderate risk
+        spare_pts = 5
     elif spare_capacity_mbd > 1:
-        spare_pts = 8    # vulnerable
+        spare_pts = 8
     else:
-        spare_pts = 10   # critical
+        spare_pts = 10
 
-    # Duration uncertainty — inferred from language
     if any(t in h for t in ["ongoing","indefinite","permanent","structural"]):
         duration_pts = 8
     elif any(t in h for t in ["escalating","worsening","expanding"]):
@@ -443,11 +543,10 @@ def geo_risk_score(headline: str, spare_capacity_mbd: float = 3.5) -> dict | Non
     elif any(t in h for t in ["temporary","brief","limited"]):
         duration_pts = 3
     else:
-        duration_pts = 5  # unknown = moderate
+        duration_pts = 5
 
     composite = (supply_pts * 0.4) + (spare_pts * 0.4) + (duration_pts * 0.2)
 
-    # Map score to price premium
     if composite < 4:   premium = 3
     elif composite < 5: premium = 5
     elif composite < 6: premium = 10
@@ -457,12 +556,12 @@ def geo_risk_score(headline: str, spare_capacity_mbd: float = 3.5) -> dict | Non
     else:               premium = 50
 
     return {
-        "composite_score":    round(composite, 1),
-        "supply_pts":         supply_pts,
-        "spare_cap_pts":      spare_pts,
-        "duration_pts":       duration_pts,
+        "composite_score":     round(composite, 1),
+        "supply_pts":          supply_pts,
+        "spare_cap_pts":       spare_pts,
+        "duration_pts":        duration_pts,
         "implied_premium_bbl": premium,
-        "spare_capacity_mbd": spare_capacity_mbd,
+        "spare_capacity_mbd":  spare_capacity_mbd,
     }
 
 # ── Sentiment scoring ──────────────────────────────────────────────────────────
@@ -476,7 +575,6 @@ def get_lm():
     return _lm
 
 def lm_polarity(headline: str) -> float:
-    """Loughran-McDonald financial sentiment polarity (-1 to +1)"""
     try:
         lm = get_lm()
         tokens = lm.tokenize(headline)
@@ -486,7 +584,6 @@ def lm_polarity(headline: str) -> float:
         return 0.0
 
 def override_score(headline: str) -> tuple[float, list[str]]:
-    """Oil-specific override dictionary score and matched phrases"""
     h = headline.lower()
     total = 0.0
     matched = []
@@ -497,14 +594,10 @@ def override_score(headline: str) -> tuple[float, list[str]]:
     return total, matched
 
 def compute_direction(lm_pol: float, ov: float) -> tuple[str, float]:
-    """
-    Combine LM polarity and oil overrides into final direction + strength.
-    LM polarity is in -1/+1 range so scale up by 3 to weight comparably.
-    """
     combined = (lm_pol * 3.0) + ov
-    if combined >= 2:   return "BULLISH", min(10.0, combined)
+    if combined >= 2:    return "BULLISH", min(10.0, combined)
     elif combined <= -2: return "BEARISH", max(-10.0, combined)
-    else:               return "NEUTRAL", combined
+    else:                return "NEUTRAL", combined
 
 # ── Relevance & classification ────────────────────────────────────────────────
 
@@ -513,12 +606,15 @@ BLOCKLIST_TERMS = {
     "stocks to buy", "top stocks", "best stocks",
     "analyst rating", "price target", "upgrade", "downgrade",
     "renewable energy stock", "solar stock", "wind stock",
-    "energy stock", "oil stock", "dividend", "earnings per share", "nvidia", "apple", "microsoft", "amazon", "google", "meta",
+    "energy stock", "oil stock", "dividend", "earnings per share",
+    "nvidia", "apple", "microsoft", "amazon", "google", "meta",
     "tesla", "samsung", "arm ", "cpu", "gpu", "computex",
     "chip", "semiconductor", "ai model", "large language",
-    "stock pick", "etf", "dividend", "rba board", "reserve bank of australia", "australia q1", "australia gdp", "australia april", 
-    "computex", "hang seng", "tencent", "wechat", "wounded in russia", "kyiv wounded", "injured in kyiv",
-    }
+    "stock pick", "etf", "dividend", "rba board",
+    "reserve bank of australia", "australia q1", "australia gdp",
+    "australia april", "computex", "hang seng", "tencent",
+    "wechat", "wounded in russia", "kyiv wounded", "injured in kyiv",
+}
 
 def is_relevant(headline: str) -> bool:
     h = headline.lower()
@@ -539,12 +635,54 @@ def classify(headline: str) -> list[dict]:
     matched.sort(key=lambda x: x["weight"], reverse=True)
     return matched
 
+# ── Primary source special handling ───────────────────────────────────────────
+
+def handle_primary_source(item: dict) -> dict:
+    """
+    Extra metadata flags for is_primary=True sources.
+    EIA WPSR   → flag as inventory_trigger (rescore pipeline on receipt)
+    EIA STEO   → flag as balance_revision (track direction vs prior month)
+    OPEC       → flag as policy_event with compliance_state = ANNOUNCED
+    IEA        → flag as omr_release (extract call-on-opec direction)
+    """
+    source = item.get("source", "")
+    flags  = {}
+
+    if source == "EIA Weekly Petroleum Status Report":
+        flags["inventory_trigger"] = True
+        flags["note"] = (
+            "Re-run inventory signal scoring. "
+            "Draw vs consensus → bullish; build → bearish."
+        )
+
+    elif source == "EIA Short-Term Energy Outlook":
+        flags["balance_revision"] = True
+        flags["note"] = (
+            "Track demand revision direction vs prior STEO. "
+            "Compare vs IEA OMR and OPEC MOMR this month."
+        )
+
+    elif source == "OPEC Press Releases":
+        flags["policy_event"]     = True
+        flags["compliance_state"] = "ANNOUNCED"   # upgrade to CONFIRMED when Kpler/BH data arrives
+        flags["note"] = (
+            "Score at full weight now. "
+            "Downgrade 0.5x if compliance < 80% confirmed in following weeks."
+        )
+
+    elif source == "IEA News":
+        flags["omr_release"] = True
+        flags["note"] = (
+            "Extract call-on-OPEC direction. "
+            "Call > actual OPEC output = oversupplied = bearish. "
+            "Call < actual = tight = bullish."
+        )
+
+    return flags
+
 # ── RSS fetching ──────────────────────────────────────────────────────────────
 
 def fetch_rss(source: dict, lookback_hours: int = 4) -> list[dict]:
-    """
-    Fetch RSS feed and return raw items within lookback window.
-    """
     try:
         feed = feedparser.parse(
             source["url"],
@@ -555,13 +693,17 @@ def fetch_rss(source: dict, lookback_hours: int = 4) -> list[dict]:
                         source["name"], feed.bozo_exception)
             return []
 
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
+        # Primary sources use their own longer lookback window
+        effective_lookback = (
+            source["decay_halflife_hours"] * 2
+            if source.get("is_primary") else lookback_hours
+        )
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=effective_lookback)
         items  = []
 
         for entry in feed.entries:
-            # Parse timestamp
             published = None
-            for attr in ("published_parsed","updated_parsed"):
+            for attr in ("published_parsed", "updated_parsed"):
                 t = getattr(entry, attr, None)
                 if t:
                     try:
@@ -570,7 +712,6 @@ def fetch_rss(source: dict, lookback_hours: int = 4) -> list[dict]:
                     except Exception:
                         pass
 
-            # If no timestamp, include anyway (FinancialJuice often omits)
             if published and published < cutoff:
                 continue
 
@@ -582,12 +723,16 @@ def fetch_rss(source: dict, lookback_hours: int = 4) -> list[dict]:
                 continue
 
             items.append({
-                "title":     title,
-                "summary":   summary[:300] if summary else "",
-                "link":      link,
-                "published": published.isoformat() if published else None,
-                "source":    source["name"],
-                "priority":  source["priority"],
+                "title":                title,
+                "summary":              summary[:300] if summary else "",
+                "link":                 link,
+                "published":            published.isoformat() if published else None,
+                "source":               source["name"],
+                "priority":             source["priority"],
+                "tier":                 source["tier"],
+                "credibility_weight":   CREDIBILITY_WEIGHTS[source["tier"]],
+                "is_primary":           source.get("is_primary", False),
+                "decay_halflife_hours": source["decay_halflife_hours"],
             })
 
         log.info("  %s: %d items fetched", source["name"], len(items))
@@ -599,12 +744,15 @@ def fetch_rss(source: dict, lookback_hours: int = 4) -> list[dict]:
 
 # ── NCI News Score ────────────────────────────────────────────────────────────
 
-def compute_news_score(headlines: list[dict],
-                           decay_halflife_hours: float = 2.0) -> dict:
+def compute_news_score(headlines: list[dict]) -> dict:
     """
     Aggregate scored headlines into one News score (-10 to +10).
-    More recent headlines are weighted higher using exponential time decay.
-    Only BULLISH and BEARISH headlines contribute — NEUTRAL excluded.
+
+    Weighting formula per headline:
+      w = decay(t) × signal_type_weight × credibility_weight
+
+    decay uses per-source half-life so primary sources (OPEC, STEO)
+    stay valid much longer than breaking wire headlines.
     """
     now = datetime.now(timezone.utc)
     weighted_sum = 0.0
@@ -615,31 +763,36 @@ def compute_news_score(headlines: list[dict],
         if h["direction"] == "NEUTRAL":
             continue
 
-        score = h["final_score"]
+        score              = h["final_score"]
+        credibility_weight = h.get("credibility_weight", 0.75)
+        halflife           = h.get("decay_halflife_hours", 2.0)
 
-        # Time decay weight
+        # Time decay — uses per-source half-life
         if h.get("published"):
             try:
-                pub = datetime.fromisoformat(h["published"])
+                pub       = datetime.fromisoformat(h["published"])
                 age_hours = (now - pub).total_seconds() / 3600
-                decay = 0.5 ** (age_hours / decay_halflife_hours)
+                decay     = 0.5 ** (age_hours / halflife)
             except Exception:
-                decay = 0.5  # unknown age = half weight
+                decay = 0.5
         else:
-            decay = 0.8  # no timestamp = near-present assumed
+            # No timestamp: near-present assumed; primary sources get higher default
+            decay = 0.9 if h.get("is_primary") else 0.8
 
-        # Signal type weight (higher weight = more market-moving)
         type_weight = h.get("signal_weight", 2)
 
-        w = decay * type_weight
+        w             = decay * type_weight * credibility_weight
         weighted_sum += score * w
         total_weight += w
 
         contributors.append({
-            "headline": h["headline"][:80],
-            "direction": h["direction"],
-            "score": round(score, 2),
-            "decay": round(decay, 3),
+            "headline":           h["headline"][:80],
+            "direction":          h["direction"],
+            "score":              round(score, 2),
+            "decay":              round(decay, 3),
+            "credibility_weight": credibility_weight,
+            "source":             h.get("source", ""),
+            "is_primary":         h.get("is_primary", False),
         })
 
     if total_weight == 0:
@@ -649,7 +802,7 @@ def compute_news_score(headlines: list[dict],
         }
 
     raw = weighted_sum / total_weight
-    nci = round(max(-10, min(10, raw * 2)), 2)  # scale to -10/+10
+    nci = round(max(-10, min(10, raw * 2)), 2)
 
     if nci >= 6:    label = "STRONGLY_BULLISH"
     elif nci >= 3:  label = "BULLISH"
@@ -682,23 +835,28 @@ def run(lookback_hours: int = 4,
     # ── Step 1: Fetch all RSS sources ────────────────────────────────────────
     all_raw = []
     for source in RSS_SOURCES:
-        log.info("Fetching: %s", source["name"])
+        log.info("Fetching: %s [%s]", source["name"], source["tier"])
         items = fetch_rss(source, lookback_hours)
         all_raw.extend(items)
         time.sleep(0.5)
-    # ── Also include FinancialJuice headlines (from Apify fetcher) ───────────
+
+    # ── Also include FinancialJuice headlines from Apify cache ───────────────
     fj_path = Path(__file__).resolve().parents[1] / "data" / "financialjuice_latest.json"
     if fj_path.exists():
         try:
             fj_data = json.loads(fj_path.read_text())
             for h in fj_data.get("oil_headlines", []):
                 all_raw.append({
-                    "title":    h.get("title", ""),
-                    "summary":  "",
-                    "link":     h.get("link", ""),
-                    "published": h.get("pubDate"),
-                    "source":   "FinancialJuice",
-                    "priority": 4,
+                    "title":                h.get("title", ""),
+                    "summary":              "",
+                    "link":                 h.get("link", ""),
+                    "published":            h.get("pubDate"),
+                    "source":               "FinancialJuice",
+                    "priority":             4,
+                    "tier":                 "tier1_wire",
+                    "credibility_weight":   CREDIBILITY_WEIGHTS["tier1_wire"],
+                    "is_primary":           False,
+                    "decay_halflife_hours": 2.0,
                 })
             log.info("FinancialJuice: %d oil headlines added from cache",
                      len(fj_data.get("oil_headlines", [])))
@@ -728,49 +886,56 @@ def run(lookback_hours: int = 4,
     for item in relevant:
         title = item["title"]
 
-        # Classify
-        signals     = classify(title)
-        sig_type    = signals[0]["type"]     if signals else "general"
-        nci_layer   = signals[0]["nci_layer"] if signals else "macro"
-        sig_weight  = signals[0]["weight"]    if signals else 1
+        signals    = classify(title)
+        sig_type   = signals[0]["type"]      if signals else "general"
+        nci_layer  = signals[0]["nci_layer"] if signals else "macro"
+        sig_weight = signals[0]["weight"]    if signals else 1
 
-        # Sentiment
         lm_pol              = lm_polarity(title)
         ov, ov_phrases      = override_score(title)
         direction, strength = compute_direction(lm_pol, ov)
 
-        # Geo risk
         geo = geo_risk_score(title, spare_capacity_mbd)
 
+        # Primary source special handling flags
+        primary_flags = (
+            handle_primary_source(item) if item.get("is_primary") else {}
+        )
+
         scored.append({
-            "headline":       title,
-            "summary":        item.get("summary", ""),
-            "link":           item.get("link", ""),
-            "source":         item["source"],
-            "published":      item.get("published"),
-            "relevant":       True,
-            "signal_type":    sig_type,
-            "nci_layer":      nci_layer,
-            "signal_weight":  sig_weight,
-            "direction":      direction,
-            "final_score":    round(strength, 2),
-            "lm_polarity":    round(lm_pol, 3),
-            "override_score": round(ov, 2),
-            "override_phrases": ov_phrases[:5],
-            "geo_risk":       geo,
-            "all_signals":    signals,
+            "headline":             title,
+            "summary":              item.get("summary", ""),
+            "link":                 item.get("link", ""),
+            "source":               item["source"],
+            "published":            item.get("published"),
+            "tier":                 item.get("tier", "specialist"),
+            "credibility_weight":   item.get("credibility_weight", 0.75),
+            "is_primary":           item.get("is_primary", False),
+            "decay_halflife_hours": item.get("decay_halflife_hours", 2.0),
+            "primary_flags":        primary_flags,
+            "relevant":             True,
+            "signal_type":          sig_type,
+            "nci_layer":            nci_layer,
+            "signal_weight":        sig_weight,
+            "direction":            direction,
+            "final_score":          round(strength, 2),
+            "lm_polarity":          round(lm_pol, 3),
+            "override_score":       round(ov, 2),
+            "override_phrases":     ov_phrases[:5],
+            "geo_risk":             geo,
+            "all_signals":          signals,
         })
 
-    # ── Step 5: News score ───────────────────────────────────────────────
+    # ── Step 5: News score ───────────────────────────────────────────────────
     news_score = compute_news_score(scored)
 
     # ── Step 6: Summary stats ────────────────────────────────────────────────
-    bullish = [h for h in scored if h["direction"] == "BULLISH"]
-    bearish = [h for h in scored if h["direction"] == "BEARISH"]
-    neutral = [h for h in scored if h["direction"] == "NEUTRAL"]
+    bullish    = [h for h in scored if h["direction"] == "BULLISH"]
+    bearish    = [h for h in scored if h["direction"] == "BEARISH"]
+    neutral    = [h for h in scored if h["direction"] == "NEUTRAL"]
     geo_alerts = [h for h in scored if h.get("geo_risk")]
+    primaries  = [h for h in scored if h.get("is_primary")]
 
-    # Top signal per type
     by_type = {}
     for h in scored:
         t = h["signal_type"]
@@ -778,15 +943,13 @@ def run(lookback_hours: int = 4,
             by_type[t] = h
 
     output = {
-        "fetcher":         "news_fetcher",
-        "computed_at":     datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "lookback_hours":  lookback_hours,
-        "spare_cap_used":  spare_capacity_mbd,
+        "fetcher":        "news_fetcher",
+        "computed_at":    datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "lookback_hours": lookback_hours,
+        "spare_cap_used": spare_capacity_mbd,
 
-        # NCI score
         "news_score": news_score,
 
-        # Summary
         "summary": {
             "total_fetched":    len(all_raw),
             "after_dedup":      len(unique),
@@ -795,15 +958,27 @@ def run(lookback_hours: int = 4,
             "bearish_count":    len(bearish),
             "neutral_count":    len(neutral),
             "geo_alerts":       len(geo_alerts),
+            "primary_releases": len(primaries),
             "sources_used":     list({h["source"] for h in scored}),
         },
 
-        # Top headlines by direction
+        # Primary source releases (EIA, OPEC, IEA) separated out
+        "primary_releases": [
+            {
+                "headline":      h["headline"],
+                "source":        h["source"],
+                "published":     h["published"],
+                "direction":     h["direction"],
+                "final_score":   h["final_score"],
+                "primary_flags": h["primary_flags"],
+            }
+            for h in primaries
+        ],
+
         "top_bullish": sorted(bullish, key=lambda x: x["final_score"],
                               reverse=True)[:5],
         "top_bearish": sorted(bearish, key=lambda x: x["final_score"])[:5],
 
-        # Geo risk alerts
         "geo_risk_alerts": [
             {
                 "headline": h["headline"],
@@ -813,11 +988,8 @@ def run(lookback_hours: int = 4,
             for h in geo_alerts
         ],
 
-        # Top story per signal type
         "by_signal_type": by_type,
-
-        # All scored headlines
-        "all_headlines": scored,
+        "all_headlines":  scored,
     }
 
     # ── Save ─────────────────────────────────────────────────────────────────
@@ -831,6 +1003,10 @@ def run(lookback_hours: int = 4,
              news_score["score"], news_score["label"])
     log.info("Headlines:  %d relevant | %d bullish | %d bearish | %d neutral",
              len(relevant), len(bullish), len(bearish), len(neutral))
+    if primaries:
+        log.info("PRIMARY RELEASES (%d):", len(primaries))
+        for p in primaries:
+            log.info("  ★ [%s] %s", p["source"], p["headline"][:65])
     if geo_alerts:
         log.warning("GEO ALERTS (%d):", len(geo_alerts))
         for g in geo_alerts:
