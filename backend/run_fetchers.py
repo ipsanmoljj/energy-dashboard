@@ -54,6 +54,12 @@ FETCHER_REGISTRY = [
     "output":   "duc_latest.json",
     "label":    "EIA DUC Wells + Regional Rig Count (DPR)",
     "priority": 12,},
+    {
+    "id":       "wcs",
+    "module":   "wcs_fetcher",
+    "output":   "wcs_latest.json",
+    "label":    "WCS Price + WTI-WCS Differential (Alberta Govt API)",
+    "priority": 4,},
     ]
 
 
