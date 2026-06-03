@@ -7,7 +7,6 @@ Computes crude quality spreads using a hybrid approach:
   - EIA API for US Gulf Coast Diesel (gasoil proxy)
 
 Spreads computed:
-  1. Brent - WTI       (benchmark spread)
   2. Brent - Urals     (sanctions premium)
   3. WTI - WCS         (Canadian heavy differential)
   4. Naphtha - Gasoil  (product spread)
@@ -58,13 +57,6 @@ GRADE_DIFFS = {
 # chartable=True → line chart in frontend (history available)
 # chartable=False → bar chart only until paid data available
 SPREADS = [
-    {
-        "id": "brent_wti", "label": "Brent – WTI",
-        "long": "brent", "short": "wti",
-        "category": "benchmark", "chartable": True,
-        "bull_threshold": 8.0, "bear_threshold": 2.0,
-        "note": "US export capacity & North Sea supply signal. >$8 = US bottleneck; <$2 = US flooding market.",
-    },
     {
         "id": "brent_urals", "label": "Brent – Urals (Sanctions Premium)",
         "long": "brent", "short": "urals",
