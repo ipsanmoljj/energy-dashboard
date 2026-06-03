@@ -12,6 +12,7 @@ Writes: backend/data/wcs_latest.json
 
 Also updates quality_spreads_latest.json and quality_spreads_history.json
 with live WTI-WCS differential instead of fixed differential.
+Backfills 36 months of history into quality_spreads_history.json on first run.
 """
 
 import json
@@ -77,7 +78,6 @@ def get_latest(series: dict) -> tuple:
     """Get latest non-null value and its date."""
     if not series:
         return None, None
-    # Sort dates descending, pick first with value
     for date in sorted(series.keys(), reverse=True):
         val = series[date]
         if val is not None:
@@ -90,8 +90,6 @@ def compute_signal(differential: float | None) -> dict:
     if differential is None:
         return {"signal": "NO_DATA", "strength": 0, "interpretation": "No data"}
 
-    # Historical context: $14.73 avg 2024, $18.65 avg 2023
-    # TMX expansion narrowed it in May 2024
     if differential > 20:
         signal, strength = "BULLISH", 3
         interp = f"WTI-WCS at ${differential:.1f}/bbl — Alberta pipeline severely constrained, wide discount"
@@ -120,10 +118,9 @@ def build_history(series: dict, n: int = 36) -> list:
 
     all_dates = sorted(set(list(wti.keys()) + list(wcs.keys()) + list(diff.keys())))
     for date in all_dates[-n:]:
-        w  = wti.get(date)
-        c  = wcs.get(date)
-        d  = diff.get(date)
-        # Compute differential if not provided but both prices available
+        w = wti.get(date)
+        c = wcs.get(date)
+        d = diff.get(date)
         if d is None and w and c:
             d = round(w - c, 2)
         history.append({
@@ -136,51 +133,79 @@ def build_history(series: dict, n: int = 36) -> list:
 
 
 def update_quality_spreads(wcs_val: float, wcs_date: str, wti_val: float):
-    """Update WTI-WCS in quality_spreads_latest.json and history with live data."""
-    # Update latest
+    """Update WTI-WCS in quality_spreads_latest.json with live data."""
     qs_path = DATA_DIR / "quality_spreads_latest.json"
-    if qs_path.exists():
-        try:
-            qs = json.loads(qs_path.read_text())
-            if "spreads" in qs and "wti_wcs" in qs["spreads"]:
-                spread_val = round(wti_val - wcs_val, 2) if wti_val and wcs_val else None
-                qs["spreads"]["wti_wcs"]["value"] = spread_val
-                qs["spreads"]["wti_wcs"]["long_leg"]["price"]  = wti_val
-                qs["spreads"]["wti_wcs"]["short_leg"]["price"] = wcs_val
-                qs["spreads"]["wti_wcs"]["data_source"] = f"Alberta Govt API (period: {wcs_date[:7]})"
+    if not qs_path.exists():
+        return
+    try:
+        qs = json.loads(qs_path.read_text())
+        spread_val = round(wti_val - wcs_val, 2) if wti_val and wcs_val else None
 
-                # Update spreads_list too
-                for s in qs.get("spreads_list", []):
-                    if s["id"] == "wti_wcs":
-                        s["value"] = spread_val
-                        s["long_leg"]["price"]  = wti_val
-                        s["short_leg"]["price"] = wcs_val
-                for s in qs.get("chartable", []):
-                    if s["id"] == "wti_wcs":
-                        s["value"] = spread_val
-                        s["long_leg"]["price"]  = wti_val
-                        s["short_leg"]["price"] = wcs_val
+        if "spreads" in qs and "wti_wcs" in qs["spreads"]:
+            qs["spreads"]["wti_wcs"]["value"] = spread_val
+            qs["spreads"]["wti_wcs"]["long_leg"]["price"]  = wti_val
+            qs["spreads"]["wti_wcs"]["short_leg"]["price"] = wcs_val
+            qs["spreads"]["wti_wcs"]["data_source"] = f"Alberta Govt API (period: {wcs_date[:7]})"
 
-                qs_path.write_text(json.dumps(qs, indent=2))
-                log.info("Updated quality_spreads_latest.json WTI-WCS: $%.2f", spread_val or 0)
-        except Exception as e:
-            log.warning("Could not update quality_spreads_latest: %s", e)
+        for s in qs.get("spreads_list", []):
+            if s["id"] == "wti_wcs":
+                s["value"] = spread_val
+                s["long_leg"]["price"]  = wti_val
+                s["short_leg"]["price"] = wcs_val
+        for s in qs.get("chartable", []):
+            if s["id"] == "wti_wcs":
+                s["value"] = spread_val
+                s["long_leg"]["price"]  = wti_val
+                s["short_leg"]["price"] = wcs_val
 
-    # Update history
+        qs_path.write_text(json.dumps(qs, indent=2))
+        log.info("Updated quality_spreads_latest.json WTI-WCS: $%.2f", spread_val or 0)
+    except Exception as e:
+        log.warning("Could not update quality_spreads_latest: %s", e)
+
+
+def backfill_quality_spread_history(history: list):
+    """Backfill quality_spreads_history.json with 36 months of WCS historical data."""
     hist_path = DATA_DIR / "quality_spreads_history.json"
+
+    # Load existing history
+    existing = []
     if hist_path.exists():
         try:
-            hist = json.loads(hist_path.read_text())
-            spread_val = round(wti_val - wcs_val, 2) if wti_val and wcs_val else None
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            for entry in hist:
-                if entry.get("date") == today:
-                    entry["wti_wcs"] = spread_val
+            existing = json.loads(hist_path.read_text())
+        except:
+            existing = []
+
+    existing_dates = {e["date"] for e in existing}
+
+    added, updated = 0, 0
+    for h in history:
+        # Alberta history uses YYYY-MM, convert to YYYY-MM-01
+        date = h["date"] + "-01" if len(h["date"]) == 7 else h["date"]
+        diff = h.get("differential")
+        if diff is None:
+            continue
+
+        if date not in existing_dates:
+            existing.append({
+                "date":      date,
+                "timestamp": date + "T00:00:00Z",
+                "wti_wcs":   diff,
+            })
+            existing_dates.add(date)
+            added += 1
+        else:
+            # Update existing entry with live Alberta WCS data
+            for entry in existing:
+                if entry["date"] == date:
+                    entry["wti_wcs"] = diff
+                    updated += 1
                     break
-            hist_path.write_text(json.dumps(hist, indent=2))
-            log.info("Updated quality_spreads_history.json WTI-WCS for %s", today)
-        except Exception as e:
-            log.warning("Could not update quality_spreads_history: %s", e)
+
+    existing = sorted(existing, key=lambda x: x["date"])[-365:]
+    hist_path.write_text(json.dumps(existing, indent=2))
+    log.info("WCS history backfill: %d added, %d updated → quality_spreads_history.json (%d total)",
+             added, updated, len(existing))
 
 
 def run():
@@ -188,7 +213,7 @@ def run():
     log.info("WCS FETCHER — Alberta Economic Dashboard API")
     log.info("=" * 60)
 
-    raw  = fetch_alberta_oil()
+    raw = fetch_alberta_oil()
     if not raw:
         return {}
 
@@ -198,29 +223,28 @@ def run():
     wti_val,  wti_date  = get_latest(series["wti"])
     diff_val, diff_date = get_latest(series["differential"])
 
-    # Compute differential from prices if not directly available
     if diff_val is None and wcs_val and wti_val:
         diff_val = round(wti_val - wcs_val, 2)
 
     signal  = compute_signal(diff_val)
     history = build_history(series, n=36)
 
-    log.info("Latest WCS:          $%.2f/bbl (%s)", wcs_val or 0, wcs_date or "—")
+    log.info("Latest WCS:           $%.2f/bbl (%s)", wcs_val or 0, wcs_date or "—")
     log.info("Latest WTI (Alberta): $%.2f/bbl (%s)", wti_val or 0, wti_date or "—")
     log.info("WTI-WCS Differential: $%.2f/bbl (%s)", diff_val or 0, diff_date or "—")
     log.info("Signal: %s", signal["signal"])
 
     output = {
-        "fetched_at":   datetime.now(timezone.utc).isoformat(),
-        "source":       "Alberta Economic Dashboard — api.economicdata.alberta.ca",
-        "note":         "Monthly data, ~1-2 month lag. Official Government of Alberta source.",
+        "fetched_at":     datetime.now(timezone.utc).isoformat(),
+        "source":         "Alberta Economic Dashboard — api.economicdata.alberta.ca",
+        "note":           "Monthly data, ~1-2 month lag. Official Government of Alberta source.",
         "latest": {
             "wcs":          {"value": wcs_val,  "date": wcs_date},
             "wti":          {"value": wti_val,  "date": wti_date},
             "differential": {"value": diff_val, "date": diff_date},
         },
-        "signal":   signal,
-        "history":  history,
+        "signal":         signal,
+        "history":        history,
         "history_months": len(history),
     }
 
@@ -232,6 +256,7 @@ def run():
     # Update quality spreads with live WCS data
     if wcs_val and wti_val:
         update_quality_spreads(wcs_val, wcs_date, wti_val)
+        backfill_quality_spread_history(history)
 
     log.info("=" * 60)
     return output
