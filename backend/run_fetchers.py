@@ -48,6 +48,12 @@ FETCHER_REGISTRY = [
     "output":   "quality_spreads_latest.json",
     "label":    "Quality Spreads (Brent-Maya, LLS-Mars, WTI-WCS, Brent-Urals, Naphtha-Gasoil)",
     "priority": 11,},
+    {
+    "id":       "duc",
+    "module":   "duc_fetcher",
+    "output":   "duc_latest.json",
+    "label":    "EIA DUC Wells + Regional Rig Count (DPR)",
+    "priority": 12,},
     ]
 
 
