@@ -152,6 +152,9 @@ def history():          return load("price_history.json")
 @app.get("/api/quality-spreads-history")
 def quality_spreads_history(): return load("quality_spreads_history.json")
 
+@app.get("/api/duc")
+def duc(): return load("duc_latest.json")
+
 # ── Signal layer endpoints (Day 4 + 5) ───────────────────────────────────────
 
 @app.get("/api/inventory-signals")
