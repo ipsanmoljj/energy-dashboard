@@ -69,6 +69,7 @@ def job_prices():
 def job_inventory():
     """EIA inventory signals (every 30 min)"""
     run_script("fetchers/eia_fetcher.py", "eia")
+    run_script("fetchers/wcs_fetcher.py", "wcs")
     try:
         run_inventory_signals()
     except Exception as e:
@@ -160,6 +161,9 @@ def quality_spreads_history(): return load("quality_spreads_history.json")
 
 @app.get("/api/duc")
 def duc(): return load("duc_latest.json")
+
+@app.get("/api/wcs")
+def wcs(): return load("wcs_latest.json")
 
 # ── Signal layer endpoints (Day 4 + 5) ───────────────────────────────────────
 
