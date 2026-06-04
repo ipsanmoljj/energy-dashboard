@@ -91,12 +91,36 @@ def job_cftc():
     run_script("fetchers/cftc_fetcher.py", "cftc")
 
 scheduler = BackgroundScheduler()
+def job_curve():
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
+        from curve_fetcher import run as curve_run
+        curve_run()
+        from curve_history import run as hist_run
+        hist_run()
+        log.info("Curve + history updated")
+    except Exception as e:
+        log.warning("job_curve failed: %s", e)
+
+def job_curve_backfill():
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
+        from curve_backfill import run as backfill_run
+        backfill_run()
+        log.info("Curve backfill done")
+    except Exception as e:
+        log.warning("job_curve_backfill failed: %s", e)
+
 scheduler.add_job(job_prices,    "interval", minutes=5,  id="prices",    max_instances=1)
 scheduler.add_job(job_inventory, "interval", minutes=30, id="inventory", max_instances=1)
 scheduler.add_job(job_fred,      "interval", hours=1,    id="fred",      max_instances=1)
 scheduler.add_job(job_gie,       "interval", hours=1,    id="gie",       max_instances=1)
 scheduler.add_job(job_weather,   "interval", hours=1,    id="weather",   max_instances=1)
 scheduler.add_job(job_news,      "interval", minutes=15, id="news",      max_instances=1)
+scheduler.add_job(job_curve,         "interval", minutes=5,  id="curve",         max_instances=1)
+scheduler.add_job(job_curve_backfill,"cron",     hour=2,     id="curve_backfill", max_instances=1)
 scheduler.add_job(job_cftc,      "cron",     day_of_week="fri", hour=16,
                   minute=5, id="cftc", max_instances=1, timezone="America/New_York")
 
@@ -106,6 +130,8 @@ def startup():
     log.info("Scheduler started — running initial fetch...")
     job_prices()
     job_inventory()
+    job_curve()
+    job_curve_backfill()
     log.info("API ready → http://localhost:8000")
 
 @app.on_event("shutdown")
