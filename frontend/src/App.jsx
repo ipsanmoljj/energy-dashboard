@@ -856,7 +856,7 @@ function TabSentiment({ d }) {
 }
 
 
-const TabCurve = React.memo(function TabCurve({ d, curveHistory }) {
+function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurveRange }) {
   const curve    = d?.curve  || {}
   const curves   = curve.curves  || {}
   const signals  = curve.signals || {}
@@ -888,8 +888,10 @@ const TabCurve = React.memo(function TabCurve({ d, curveHistory }) {
     { label: "All", days: 9999},
   ]
 
-  const [sel,      setSel]      = React.useState({brent:"M1-M2", wti:"M1-M2", rbob:"M1-M2", ho:"M1-M2"})
-  const [range,    setRange]    = React.useState({brent:"3M",    wti:"3M",    rbob:"3M",    ho:"3M"   })
+  const sel      = curveSel
+  const setSel   = setCurveSel
+  const range    = curveRange
+  const setRange = setCurveRange
 
   const getHistKey = (product, label) => {
     const opt = SPREAD_OPTIONS.find(o => o.label === label)
@@ -1092,7 +1094,7 @@ const TabCurve = React.memo(function TabCurve({ d, curveHistory }) {
       </Card>
     </>
   )
-})
+}
 
 function TabGeo({ d }) {
   const geo  = d?.geo || {}
@@ -1267,15 +1269,27 @@ function TabGeo({ d }) {
   )
 }
 // ── Main App — unchanged ───────────────────────────────────────────────────
+function CountdownDisplay({ initialSeconds = 30 }) {
+  const [sec, setSec] = React.useState(initialSeconds)
+  React.useEffect(() => {
+    const t = setInterval(() => setSec(s => s > 0 ? s - 1 : initialSeconds), 1000)
+    return () => clearInterval(t)
+  }, [initialSeconds])
+  return <span style={{ fontSize:11, color:"#1f2937" }}>· Refresh in {sec}s</span>
+}
+
 export default function App() {
   const [activeTab,  setActiveTab]  = useState("overview")
   const [data,       setData]       = useState(null)
   const [curveHistory, setCurveHistory] = useState([])
+  const [curveData, setCurveData] = useState(null)
   const [history,    setHistory]    = useState([])
   const [alerts,     setAlerts]     = useState([])
   const [loading,    setLoading]    = useState(true)
   const [lastUpdate, setLastUpdate] = useState(null)
-  const [countdown,  setCountdown]  = useState(30)
+
+  const [curveSel,   setCurveSel]   = useState({brent:"M1-M2", wti:"M1-M2", rbob:"M1-M2", ho:"M1-M2"})
+  const [curveRange, setCurveRange] = useState({brent:"3M",    wti:"3M",    rbob:"3M",    ho:"3M"   })
 
   const fetchAll = useCallback(async () => {
     try {
@@ -1298,9 +1312,13 @@ export default function App() {
       const merged = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig, fj, quality_spreads: qs, duc, qs_history: Array.isArray(qsHist) ? qsHist : [], geo, curve, curve_history: Array.isArray(curveHist) ? curveHist : [] }
       const histArr = Array.isArray(hist) ? hist : []
       setData(merged)
-      // Only update curve history state when row count changes (avoids flicker)
+      // Only update curve history when row count changes
       const newCH = Array.isArray(curveHist) ? curveHist : []
-      setCurveHistory(prev => prev.length !== newCH.length ? newCH : prev)
+      setCurveHistory(prev => {
+        if (prev.length !== newCH.length) return newCH
+        if (prev.length === 0) return newCH
+        return prev
+      })
       setHistory(histArr)
       setLastUpdate(new Date())
       setCountdown(30)
@@ -1312,8 +1330,8 @@ export default function App() {
   useEffect(() => {
     fetchAll()
     const d = setInterval(fetchAll, 30000)
-    const c = setInterval(() => setCountdown(n => n > 0 ? n-1 : 30), 1000)
-    return () => { clearInterval(d); clearInterval(c) }
+
+    return () => { clearInterval(d) }
   }, [fetchAll])
 
   const comp     = data?.composite?.composite || {}
@@ -1336,7 +1354,7 @@ export default function App() {
           <span style={{ fontSize:11, color:"#4b5563" }}>
             {loading ? "Loading..." : lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : "Live"}
           </span>
-          <span style={{ fontSize:11, color:"#1f2937" }}>· Refresh in {countdown}s</span>
+          <CountdownDisplay initialSeconds={30} />
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
           {alerts.length > 0 && (
@@ -1388,7 +1406,7 @@ export default function App() {
             {activeTab === "macro"     && <TabMacro     d={data} />}
             {activeTab === "sentiment" && <TabSentiment d={data} />}
             {activeTab === "geo"       && <TabGeo       d={data} />}
-            {activeTab === "curve"     && <TabCurve     d={data} curveHistory={curveHistory} />}
+            {activeTab === "curve"     && <TabCurve     d={data} curveHistory={curveHistory} curveSel={curveSel} setCurveSel={setCurveSel} curveRange={curveRange} setCurveRange={setCurveRange} />}
           </>
         )}
       </div>
