@@ -376,17 +376,13 @@ function TabSpreads({ d, history }) {
   const qsHist  = d?.qs_history       || []
   const qsList  = qs.spreads_list     || []
 
-  // Split into chartable (line charts) and non-chartable (bar chart only)
   const chartable    = qsList.filter(s => s.chartable)
   const nonchartable = qsList.filter(s => !s.chartable)
-
-  // Max abs value for bar chart scaling (non-chartable only)
   const maxAbs = nonchartable.length > 0 ? Math.max(...nonchartable.map(s => Math.abs(s.value || 0)), 1) : 30
 
   const catLabel = c => c === "light_heavy" ? "Light-Heavy" : c === "sweet_sour" ? "Sweet-Sour" : c === "benchmark" ? "Benchmark" : "Product"
   const catColor = c => c === "light_heavy" ? "#a78bfa" : c === "sweet_sour" ? "#f59e0b" : c === "benchmark" ? "#3b82f6" : "#22c55e"
 
-  // Colors for each chartable spread
   const spreadColors = {
     brent_wti:      "#3b82f6",
     brent_urals:    "#f59e0b",
@@ -396,7 +392,6 @@ function TabSpreads({ d, history }) {
 
   return (
     <>
-      {/* ── Section 1: Crack spread line charts (price history) ── */}
       <div style={{ fontSize: 10, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em",
         textTransform: "uppercase", marginBottom: 8 }}>Crack Spreads — Historical</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
@@ -405,7 +400,6 @@ function TabSpreads({ d, history }) {
         <SeriesChart title="HO – RBOB Spread"   data={prepChartData(history, "ho_rbob")}        color="#f97316" currentPrice={der.ho_rbob_spread?.value_bbl} currentSignal={der.ho_rbob_spread?.signal} />
       </div>
 
-      {/* ── Section 2: Quality spread line charts (accumulating daily history) ── */}
       <div style={{ fontSize: 10, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em",
         textTransform: "uppercase", marginBottom: 8 }}>
         Quality & Grade Spreads — Historical
@@ -415,7 +409,6 @@ function TabSpreads({ d, history }) {
         </span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        {/* Brent-WTI uses price_history (42 days) for better chart */}
         <SeriesChart
           title="Brent – WTI Spread"
           data={prepChartData(history, "brent_wti")}
@@ -424,7 +417,6 @@ function TabSpreads({ d, history }) {
           currentPrice={der.brent_wti?.value_bbl}
           currentSignal={der.brent_wti?.signal}
         />
-        {/* WTI-WCS uses wcs history (36 months) */}
         <SeriesChart
           title="WTI – WCS (Canadian Heavy)"
           data={prepChartData(qsHist, "wti_wcs")}
@@ -433,7 +425,6 @@ function TabSpreads({ d, history }) {
           currentPrice={d?.quality_spreads?.spreads?.wti_wcs?.value}
           currentSignal={d?.quality_spreads?.spreads?.wti_wcs?.signal}
         />
-        {/* Remaining chartable spreads from qs history */}
         {chartable.filter(s => s.id !== "wti_wcs").map((s, i) => (
           <SeriesChart
             key={s.id}
@@ -447,7 +438,6 @@ function TabSpreads({ d, history }) {
         ))}
       </div>
 
-      {/* ── Section 3: Non-chartable spreads — bar chart (history building) ── */}
       {nonchartable.length > 0 && (
         <Card title="Additional Spreads — History Building (Paid Data Needed for Charts)" style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 9, color: "#374151", fontStyle: "italic", marginBottom: 10 }}>
@@ -563,7 +553,6 @@ function TabInventory({ d }) {
         <Row label="Distillate Demand"     value={fmt(eia.distillate_demand?.value,2)} unit="mbd" note={`WoW ${fmt(eia.distillate_demand?.wow,2)}`} />
       </Card>
 
-      {/* ── Rig Count + DUC ── */}
       <Card title="Rig Count — Baker Hughes vs EIA DPR" style={{ marginTop: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
           <div style={{ background: "#0a0f1a", border: "1px solid #1a2535", borderRadius: 8, padding: "12px" }}>
@@ -697,6 +686,11 @@ function TabMacro({ d }) {
   )
 }
 
+// ── TabSentiment — UPDATED ─────────────────────────────────────────────────
+// Changes vs original:
+//   1. h.score → h.final_score in RSS headlines list (field name fix)
+//   2. Primary releases card added at top of return (EIA/OPEC/IEA official sources)
+
 function TabSentiment({ d }) {
   const news      = d?.news              || {}
   const cftc      = d?.cftc             || {}
@@ -714,6 +708,38 @@ function TabSentiment({ d }) {
 
   return (
     <>
+      {/* ── CHANGE 1: Primary releases card (EIA / OPEC / IEA) ── */}
+      {news.primary_releases?.length > 0 && (
+        <Card title="★ Primary Source Releases (EIA / OPEC / IEA)" style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: "#374151", marginBottom: 8 }}>
+            Official releases — credibility weight 1.0 · slow decay
+          </div>
+          {news.primary_releases.map((r, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8,
+              fontSize: 11, padding: "6px 0", borderBottom: "1px solid #0f1e30",
+              alignItems: "flex-start" }}>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: "#4b5563",
+                  background: "#1a2535", borderRadius: 3, padding: "1px 5px", marginRight: 6 }}>
+                  {r.source}
+                </span>
+                <span style={{ color: "#9ca3af" }}>{r.headline}</span>
+                {r.primary_flags?.note && (
+                  <div style={{ fontSize: 9, color: "#374151", marginTop: 2, fontStyle: "italic" }}>
+                    {r.primary_flags.note}
+                  </div>
+                )}
+              </div>
+              <span style={{ color: r.final_score > 0 ? "#22c55e" : r.final_score < 0 ? "#ef4444" : "#6b7280",
+                fontWeight: 700, whiteSpace: "nowrap", fontSize: 12 }}>
+                {r.final_score > 0 ? "+" : ""}{Number(r.final_score).toFixed(1)}
+              </span>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {/* ── FinancialJuice card — unchanged ── */}
       <Card title="FinancialJuice — Live Headlines" style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <div style={{ fontSize: 11, color: "#4b5563" }}>
@@ -763,6 +789,7 @@ function TabSentiment({ d }) {
         </div>
       </Card>
 
+      {/* ── RSS News Sentiment card — CHANGE 2: h.score → h.final_score ── */}
       <Card title="RSS News Sentiment" style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 12 }}>
           <div>
@@ -783,13 +810,15 @@ function TabSentiment({ d }) {
           <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8,
             fontSize: 11, color: "#9ca3af", padding: "5px 0", borderBottom: "1px solid #0f1e30" }}>
             <span style={{ flex: 1 }}>{h.title || h.headline}</span>
-            <span style={{ color: h.score > 0 ? "#22c55e" : h.score < 0 ? "#ef4444" : "#6b7280", fontWeight: 700, whiteSpace: "nowrap" }}>
-              {h.score != null ? (h.score > 0 ? "+" : "") + Number(h.score).toFixed(1) : "—"}
+            <span style={{ color: h.final_score > 0 ? "#22c55e" : h.final_score < 0 ? "#ef4444" : "#6b7280",
+              fontWeight: 700, whiteSpace: "nowrap" }}>
+              {h.final_score != null ? (h.final_score > 0 ? "+" : "") + Number(h.final_score).toFixed(1) : "—"}
             </span>
           </div>
         ))}
       </Card>
 
+      {/* ── CFTC card — unchanged ── */}
       <Card title="CFTC Positioning — Speculative">
         <div style={{ fontSize: 10, color: "#4b5563", marginBottom: 10 }}>
           Managed Money net positioning as % of open interest · Published Friday 3:30 PM ET
@@ -811,7 +840,7 @@ function TabSentiment({ d }) {
   )
 }
 
-// ── Main App ───────────────────────────────────────────────────────────────
+// ── Main App — unchanged ───────────────────────────────────────────────────
 export default function App() {
   const [activeTab,  setActiveTab]  = useState("overview")
   const [data,       setData]       = useState(null)
