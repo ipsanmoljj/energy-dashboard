@@ -372,6 +372,17 @@ OIL_OVERRIDES = {
     "backwardation":       +1.5,
     "oil backwardation":   +2.0,
 
+     # Gulf / Iran military — bullish supply risk (LM misclassifies these as bearish)
+    "irgc":                +2.0,
+    "iran strike":         +2.5,
+    "strait of hormuz":    +3.0,
+    "us forces launched":  +1.5,
+    "iranian drones":      +2.0,
+    "qeshm":               +2.5,
+    "hormuz closure":      +3.0,
+    "tanker seized":       +2.5,   # already exists but confirm it's there
+    "gulf escalation":     +2.5,
+
     # Strongly BEARISH supply signals
     "inventory build":     -2.5,
     "crude build":         -2.5,
