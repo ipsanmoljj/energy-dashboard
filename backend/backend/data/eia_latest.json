@@ -1,0 +1,76 @@
+{
+  "total_crude_stocks": {
+    "value": 433.712,
+    "prev": 441.686,
+    "unit": "mmbbls",
+    "wow": -7.974,
+    "vs_5yr_avg": -16.29
+  },
+  "gasoline_stocks": {
+    "value": 214.955,
+    "prev": 211.591,
+    "unit": "mmbbls",
+    "wow": 3.364,
+    "vs_5yr_avg": -20.04
+  },
+  "distillate_stocks": {
+    "value": 102.301,
+    "prev": 100.799,
+    "unit": "mmbbls",
+    "wow": 1.502,
+    "vs_5yr_avg": -17.7
+  },
+  "crude_production": {
+    "value": 13.707,
+    "prev": 13.715,
+    "unit": "mbd",
+    "wow": -0.008,
+    "vs_5yr_avg": 0.51
+  },
+  "crude_imports": {
+    "value": 6.397,
+    "prev": 5.212,
+    "unit": "mbd",
+    "wow": 1.185,
+    "vs_5yr_avg": null
+  },
+  "crude_exports": {
+    "value": 5.874,
+    "prev": 4.44,
+    "unit": "mbd",
+    "wow": 1.434,
+    "vs_5yr_avg": null
+  },
+  "gasoline_demand": {
+    "value": 8.594,
+    "prev": 9.256,
+    "unit": "mbd",
+    "wow": -0.662,
+    "vs_5yr_avg": null
+  },
+  "distillate_demand": {
+    "value": 3.468,
+    "prev": 3.948,
+    "unit": "mbd",
+    "wow": -0.48,
+    "vs_5yr_avg": null
+  },
+  "refinery_util": {
+    "value": 94.7,
+    "prev": 94.5,
+    "unit": "%",
+    "wow": 0.2,
+    "vs_5yr_avg": 4.7
+  },
+  "cushing_stocks": {
+    "value": 22.441,
+    "prev": 23.024,
+    "unit": "mmbbls",
+    "wow": -0.583,
+    "vs_5yr_avg": -4.56
+  },
+  "days_cover": 62.3,
+  "net_supply_mbd": 14.23,
+  "composite_score": 1,
+  "composite_signal": "NEUTRAL"
+}

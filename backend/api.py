@@ -167,6 +167,16 @@ def wcs(): return load("wcs_latest.json")
 
 # ── Signal layer endpoints (Day 4 + 5) ───────────────────────────────────────
 
+@app.get("/api/geo-score")
+async def get_geo_score():
+    p = DATA_DIR / "geo_score_latest.json"
+    if not p.exists():
+        import sys, os
+        sys.path.insert(0, os.path.dirname(__file__))
+        from geo_scorer import run as geo_run
+        return geo_run()
+    return json.loads(p.read_text())
+
 @app.get("/api/inventory-signals")
 def get_inventory_signals():
     path = DATA_DIR / "inventory_signals.json"
