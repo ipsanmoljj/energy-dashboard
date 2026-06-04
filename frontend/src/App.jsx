@@ -14,7 +14,7 @@ const TABS = [
   { id: "macro",     label: "Macro" },
   { id: "sentiment", label: "Sentiment" },
   { id: "geo",       label: "Geopolitical risk" },
-  { id: "curve",     label: "Forward Curve" },
+  { id: "curve",     label: "Futures Curve" },
 ]
 
 const ALERT_KEYS = [
