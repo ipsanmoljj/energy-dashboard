@@ -13,6 +13,7 @@ const TABS = [
   { id: "inventory", label: "Inventory" },
   { id: "macro",     label: "Macro" },
   { id: "sentiment", label: "Sentiment" },
+  { id: "geo",       label: "Geopolitical risk" },
 ]
 
 const ALERT_KEYS = [
@@ -853,6 +854,178 @@ function TabSentiment({ d }) {
   )
 }
 
+function TabGeo({ d }) {
+  const geo  = d?.geo || {}
+  const agg  = geo.aggregate || {}
+  const events     = geo.active_events    || []
+  const chokepoints = geo.chokepoints     || []
+  const score      = agg.composite        ?? null
+  const scoreCol   = score >= 8 ? "#ef4444" : score >= 6 ? "#f97316" : score >= 4 ? "#f59e0b" : "#22c55e"
+  const pct        = score != null ? (score / 10) * 100 : 0
+
+  const durationLabel = d => ({ days_weeks:"Days–Weeks", weeks_months:"Weeks–Months", multi_year:"Multi-Year", structural:"Structural" }[d] || d)
+  const riskCol = r => ({ CRITICAL:"#ef4444", HIGH:"#f97316", MODERATE:"#f59e0b", LOW:"#22c55e", LOW_RISK:"#22c55e", MODERATE_RISK:"#f59e0b", ELEVATED_RISK:"#f97316", HIGH_RISK:"#ef4444", CRITICAL_RISK:"#ef4444" }[r] || "#6b7280")
+
+  return (
+    <>
+      {/* ── Aggregate score card ── */}
+      <Card title="Geopolitical Risk Score" style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 56, fontWeight: 900, color: scoreCol, lineHeight: 1 }}>
+              {score != null ? score.toFixed(1) : "—"}
+            </div>
+            <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>out of 10.0</div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: scoreCol,
+                background: scoreCol + "22", borderRadius: 6, padding: "3px 12px" }}>
+                {agg.signal || "—"}
+              </span>
+              <span style={{ fontSize: 12, color: "#6b7280" }}>
+                {agg.event_count || 0} active events
+              </span>
+            </div>
+            <div style={{ height: 8, background: "#1a2535", borderRadius: 4, marginBottom: 8 }}>
+              <div style={{ width: pct + "%", height: "100%", background: scoreCol, borderRadius: 4, transition: "width 0.6s" }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#374151" }}>
+              <span>0 — LOW</span><span>5 — MODERATE</span><span>10 — CRITICAL</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Implied premium */}
+        <div style={{ background: scoreCol + "12", border: `1px solid ${scoreCol}30`,
+          borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase",
+            letterSpacing: "0.08em", marginBottom: 4 }}>Implied Price Risk Premium</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: scoreCol }}>
+            ${agg.implied_premium?.low}–${agg.implied_premium?.high}/bbl
+          </div>
+          <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>
+            Composite signal score: +{agg.composite_signal_score?.toFixed(2)} (feeds into overall composite)
+          </div>
+        </div>
+
+        {/* Scoring legend */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          {[
+            { label: "Supply Weight", value: "40%" },
+            { label: "Spare Cap Weight", value: "40%" },
+            { label: "Duration Weight", value: "20%" },
+          ].map((item, i) => (
+            <div key={i} style={{ background: "#0a0f1a", borderRadius: 6, padding: "8px 10px",
+              border: "1px solid #1a2535", textAlign: "center" }}>
+              <div style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase",
+                letterSpacing: "0.08em" }}>{item.label}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#e5e7eb" }}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* ── Active events ── */}
+      <Card title="Active Geopolitical Events" style={{ marginBottom: 12 }}>
+        {events.length === 0
+          ? <div style={{ color: "#374151", fontSize: 12, padding: "8px 0" }}>No active events</div>
+          : events.map((ev, i) => {
+            const col  = riskCol(ev.signal)
+            const comp = ev.scoring?.composite ?? 0
+            const pctBar = (comp / 10) * 100
+            return (
+              <div key={i} style={{ padding: "12px 0", borderBottom: "1px solid #0f1e30" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#e5e7eb" }}>{ev.name}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: col,
+                        background: col + "22", borderRadius: 4, padding: "1px 6px" }}>
+                        {ev.signal}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 3 }}>
+                      📍 {ev.region}
+                      {ev.chokepoint && <span style={{ color: "#f97316", marginLeft: 8 }}>⚠ {ev.chokepoint}</span>}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#374151", fontStyle: "italic" }}>{ev.notes}</div>
+                  </div>
+                  <div style={{ textAlign: "right", marginLeft: 16, flexShrink: 0 }}>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: col, lineHeight: 1 }}>{comp.toFixed(1)}</div>
+                    <div style={{ fontSize: 9, color: "#374151" }}>/ 10</div>
+                  </div>
+                </div>
+
+                {/* Score bar */}
+                <div style={{ height: 4, background: "#0a0f1a", borderRadius: 2, marginBottom: 6 }}>
+                  <div style={{ width: pctBar + "%", height: "100%", background: col, borderRadius: 2 }} />
+                </div>
+
+                {/* Score breakdown */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
+                  {[
+                    { label: "Supply Risk", value: ev.supply_at_risk_mbd + " mbd", pts: ev.scoring?.supply_pts },
+                    { label: "Duration",    value: durationLabel(ev.duration),      pts: ev.scoring?.duration_pts },
+                    { label: "Supply pts",  value: ev.scoring?.supply_pts + " pts"  },
+                    { label: "Duration pts",value: ev.scoring?.duration_pts + " pts"},
+                  ].map((item, j) => (
+                    <div key={j} style={{ background: "#0a0f1a", borderRadius: 4,
+                      padding: "5px 8px", border: "1px solid #1a2535" }}>
+                      <div style={{ fontSize: 8, color: "#4b5563", textTransform: "uppercase",
+                        letterSpacing: "0.06em" }}>{item.label}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af",
+                        marginTop: 1 }}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ fontSize: 9, color: "#1f2937", marginTop: 6 }}>
+                  Since {ev.start_date} · Implied premium: ${ev.implied_premium?.low}–${ev.implied_premium?.high}/bbl
+                </div>
+              </div>
+            )
+          })
+        }
+      </Card>
+
+      {/* ── Chokepoint reference ── */}
+      <Card title="Global Maritime Chokepoints">
+        <div style={{ fontSize: 9, color: "#374151", marginBottom: 10, fontStyle: "italic" }}>
+          Flows in mbd · ⚠ = active threat from current events
+        </div>
+        {chokepoints.map((cp, i) => {
+          const col = riskCol(cp.risk_level)
+          return (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12,
+              padding: "8px 0", borderBottom: "1px solid #0f1e30" }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: col,
+                flexShrink: 0, boxShadow: cp.active_threat ? `0 0 6px ${col}` : "none" }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#e5e7eb" }}>{cp.name}</span>
+                  {cp.active_threat && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: "#f97316",
+                      background: "#f9731622", borderRadius: 3, padding: "1px 5px" }}>⚠ ACTIVE THREAT</span>
+                  )}
+                </div>
+                {cp.bypass_mbd && (
+                  <div style={{ fontSize: 9, color: "#374151" }}>Bypass: {cp.bypass_mbd} mbd</div>
+                )}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#e5e7eb" }}>
+                  {cp.flow_mbd > 0 ? cp.flow_mbd + " mbd" : "bypass"}
+                </div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: col }}>{cp.risk_level}</div>
+              </div>
+            </div>
+          )
+        })}
+      </Card>
+    </>
+  )
+}
 // ── Main App — unchanged ───────────────────────────────────────────────────
 export default function App() {
   const [activeTab,  setActiveTab]  = useState("overview")
@@ -865,7 +1038,7 @@ export default function App() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, qsHist] = await Promise.all([
+      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, qsHist, geo] = await Promise.all([
         fetch(`${API}/api/all`).then(r => r.json()),
         fetch(`${API}/api/eia`).then(r => r.json()),
         fetch(`${API}/api/rig-count`).then(r => r.json()).catch(() => null),
@@ -876,9 +1049,10 @@ export default function App() {
         fetch(`${API}/api/financialjuice`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/quality-spreads`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/duc`).then(r => r.json()).catch(() => null),
+        fetch(`${API}/api/geo-score`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/quality-spreads-history`).then(r => r.json()).catch(() => []),
       ])
-      const merged = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig, fj, quality_spreads: qs, duc, qs_history: Array.isArray(qsHist) ? qsHist : [] }
+      const merged = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig, fj, quality_spreads: qs, duc, qs_history: Array.isArray(qsHist) ? qsHist : [], geo }
       const histArr = Array.isArray(hist) ? hist : []
       setData(merged)
       setHistory(histArr)
