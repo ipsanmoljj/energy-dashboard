@@ -681,18 +681,27 @@ def handle_primary_source(item: dict) -> dict:
     return flags
 
 # ── RSS fetching ──────────────────────────────────────────────────────────────
+# edit- fetching rss request to fetch opec and eia rss better
+import requests as _requests
 
 def fetch_rss(source: dict, lookback_hours: int = 4) -> list[dict]:
     try:
-        feed = feedparser.parse(
-            source["url"],
-            agent="Mozilla/5.0 EnergyDashboard/1.0 (oil market monitor)",
-        )
+        # Fetch raw bytes first — fixes encoding/token issues with EIA/OPEC/IEA feeds
+        try:
+            resp = _requests.get(
+                source["url"],
+                headers={"User-Agent": "Mozilla/5.0 EnergyDashboard/1.0"},
+                timeout=15,
+            )
+            feed = feedparser.parse(resp.text)
+        except Exception:
+            feed = feedparser.parse(source["url"])  # fallback to direct parse
+
         if feed.bozo and not feed.entries:
             log.warning("  %s: feed parse error — %s",
                         source["name"], feed.bozo_exception)
             return []
-
+          
         # Primary sources use their own longer lookback window
         effective_lookback = (
             source["decay_halflife_hours"] * 2
