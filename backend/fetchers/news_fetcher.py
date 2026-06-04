@@ -1047,8 +1047,8 @@ def run(lookback_hours: int = 4,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Oil Market News Sentiment")
-    parser.add_argument("--hours", type=int, default=4,
-                        help="Lookback window in hours (default: 4)")
+    parser.add_argument("--hours", type=int, default=24,
+                        help="Lookback window in hours (default: 24)")
     parser.add_argument("--spare-cap", type=float, default=3.5,
                         help="Current global spare capacity mbd (default: 3.5)")
     args = parser.parse_args()
