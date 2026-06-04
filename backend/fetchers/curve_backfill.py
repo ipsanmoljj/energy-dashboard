@@ -18,12 +18,47 @@ TICKERS = {
     "ho":    {"ticker": "HO=F", "mult": 42.0},
 }
 
-SHAPE_OFFSETS = {
-    "brent": [0, -0.5, -0.8, -1.0, -1.2, -1.3, -1.35, -1.4,  -1.42, -1.44, -1.45, -1.46],
-    "wti":   [0, -0.4, -0.7, -0.9, -1.1, -1.2, -1.3,  -1.35, -1.4,  -1.42, -1.44, -1.45],
-    "rbob":  [0, -0.3, -0.6, -1.0, -1.3, -1.5, -1.6,  -1.65, -1.7,  -1.72, -1.74, -1.75],
-    "ho":    [0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.1,  -1.15, -1.2,  -1.22, -1.24, -1.25],
-}
+# Price-dependent curve shape:
+# When price is high (>80) market tends to backwardation (positive spreads)
+# When price is low (<60) market tends to contango (negative spreads)
+# We model this as a linear function of price level
+# Carry cost ~$0.77/bbl/mo is the contango floor
+
+def get_shape_offsets(product, m1_price):
+    """
+    Returns M1-M12 offsets based on price level.
+    High price → backwardation (positive offsets from M1)
+    Low price  → contango (negative offsets from M1)
+    """
+    # Base carry cost per month (contango threshold)
+    carry = 0.77
+
+    # Price-regime factor: ranges from -1.5 (deep contango at $40)
+    # to +1.5 (strong backwardation at $120+)
+    # Linear interpolation: neutral at $70, +/- 1.5 at extremes
+    if m1_price is None:
+        regime = 0.0
+    else:
+        regime = max(-1.5, min(1.5, (m1_price - 70) / 35))
+
+    # Shape: spread widens with tenor
+    # tenor_factors: how much the regime affects each month
+    tenor = [0, 0.3, 0.5, 0.65, 0.75, 0.85, 0.90, 0.93, 0.95, 0.96, 0.97, 0.98]
+
+    # Product-specific sensitivity
+    sensitivity = {"brent": 1.0, "wti": 0.9, "rbob": 0.7, "ho": 0.6}
+    sens = sensitivity.get(product, 1.0)
+
+    offsets = []
+    for i, t in enumerate(tenor):
+        # Backwardation component (regime-driven)
+        back = regime * t * sens
+        # Carry component (always present, increases with tenor)
+        carry_cost = -carry * i * 0.15  # muted — real carry needs SOFR
+        offset = round(back + carry_cost, 3)
+        offsets.append(offset)
+
+    return offsets
 
 SPREAD_OPTIONS = [("m1_m2", 0,1), ("m1_m3", 0,2), ("m1_m6", 0,5), ("m1_m12", 0,11)]
 FLY_OPTIONS    = [("m1_fly", 0,1,2), ("m3_fly", 2,3,4), ("m5_fly", 4,5,6)]
@@ -54,7 +89,7 @@ def fetch_yahoo_history(ticker, mult):
         return {}
 
 def build_curve(m1, product):
-    offsets = SHAPE_OFFSETS.get(product, SHAPE_OFFSETS["wti"])
+    offsets = get_shape_offsets(product, m1)
     return [round(m1 + o, 3) for o in offsets]
 
 def compute_row(date, prices_by_product):

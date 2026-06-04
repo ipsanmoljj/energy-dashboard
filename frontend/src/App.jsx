@@ -856,13 +856,13 @@ function TabSentiment({ d }) {
 }
 
 
-function TabCurve({ d }) {
+const TabCurve = React.memo(function TabCurve({ d, curveHistory }) {
   const curve    = d?.curve  || {}
   const curves   = curve.curves  || {}
   const signals  = curve.signals || {}
   const prices   = curve.front_month_prices || {}
   const carry    = d?.fred?.derived?.storage_carry?.total_carry_per_bbl_mo || 0.77
-  const ch       = d?.curve_history || []
+  const ch       = curveHistory || []
 
   const PRODUCTS = [
     { key: "brent", label: "Brent ICE",        color: "#3b82f6" },
@@ -893,7 +893,8 @@ function TabCurve({ d }) {
 
   const getHistKey = (product, label) => {
     const opt = SPREAD_OPTIONS.find(o => o.label === label)
-    return opt ? `${product}_${opt.key}` : null
+    if (!opt) return null
+    return `${product}_${opt.key}`
   }
 
   const getCurrentVal = (product, label) => {
@@ -937,10 +938,8 @@ function TabCurve({ d }) {
     const strCol    = structureCol(sig?.structure)
 
     // Filter history to selected range
-    const allPts = ch.filter(r => histKey && r[histKey] != null)
-    const pts    = allPts.slice(-days)
-
-    // Chart data for recharts
+    const allPts    = ch.filter(r => histKey && r[histKey] != null)
+    const pts       = allPts.slice(-days)
     const chartData = pts.map(r => ({
       date:  r.date?.slice(5),
       value: r[histKey],
@@ -1053,7 +1052,7 @@ function TabCurve({ d }) {
               <span>Max: <span style={{ color:"#22c55e" }}>{sorted[sorted.length-1].toFixed(3)}</span></span>
               <span>P10: <span style={{ color:"#6b7280" }}>{p10?.toFixed(3)}</span></span>
               <span>P90: <span style={{ color:"#6b7280" }}>{p90?.toFixed(3)}</span></span>
-              <span style={{ marginLeft:"auto" }}>{pts.length}d</span>
+              <span style={{ marginLeft:"auto" }}>{chartData.length}d</span>
             </div>
           )
         })()}
@@ -1093,7 +1092,7 @@ function TabCurve({ d }) {
       </Card>
     </>
   )
-}
+})
 
 function TabGeo({ d }) {
   const geo  = d?.geo || {}
@@ -1271,6 +1270,7 @@ function TabGeo({ d }) {
 export default function App() {
   const [activeTab,  setActiveTab]  = useState("overview")
   const [data,       setData]       = useState(null)
+  const [curveHistory, setCurveHistory] = useState([])
   const [history,    setHistory]    = useState([])
   const [alerts,     setAlerts]     = useState([])
   const [loading,    setLoading]    = useState(true)
@@ -1279,7 +1279,7 @@ export default function App() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, geo, curve, qsHist, curveHist] = await Promise.all([
+      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, geo, curve, curveHist, qsHist] = await Promise.all([
         fetch(`${API}/api/all`).then(r => r.json()),
         fetch(`${API}/api/eia`).then(r => r.json()),
         fetch(`${API}/api/rig-count`).then(r => r.json()).catch(() => null),
@@ -1298,6 +1298,9 @@ export default function App() {
       const merged = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig, fj, quality_spreads: qs, duc, qs_history: Array.isArray(qsHist) ? qsHist : [], geo, curve, curve_history: Array.isArray(curveHist) ? curveHist : [] }
       const histArr = Array.isArray(hist) ? hist : []
       setData(merged)
+      // Only update curve history state when row count changes (avoids flicker)
+      const newCH = Array.isArray(curveHist) ? curveHist : []
+      setCurveHistory(prev => prev.length !== newCH.length ? newCH : prev)
       setHistory(histArr)
       setLastUpdate(new Date())
       setCountdown(30)
@@ -1385,7 +1388,7 @@ export default function App() {
             {activeTab === "macro"     && <TabMacro     d={data} />}
             {activeTab === "sentiment" && <TabSentiment d={data} />}
             {activeTab === "geo"       && <TabGeo       d={data} />}
-            {activeTab === "curve"     && <TabCurve     d={data} />}
+            {activeTab === "curve"     && <TabCurve     d={data} curveHistory={curveHistory} />}
           </>
         )}
       </div>
