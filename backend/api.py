@@ -167,6 +167,13 @@ def wcs(): return load("wcs_latest.json")
 
 # ── Signal layer endpoints (Day 4 + 5) ───────────────────────────────────────
 
+@app.get("/api/curve-history")
+async def get_curve_history():
+    p = DATA_DIR / "curve_history.json"
+    if not p.exists():
+        return []
+    return json.loads(p.read_text())
+
 @app.get("/api/curve")
 async def get_curve():
     p = DATA_DIR / "curve_latest.json"

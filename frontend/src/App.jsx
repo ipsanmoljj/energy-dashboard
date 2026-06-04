@@ -10,11 +10,11 @@ const TABS = [
   { id: "overview",  label: "Overview" },
   { id: "prices",    label: "Prices" },
   { id: "spreads",   label: "Spreads" },
+  { id: "curve",     label: "Futures Curve" },
   { id: "inventory", label: "Inventory" },
   { id: "macro",     label: "Macro" },
   { id: "sentiment", label: "Sentiment" },
   { id: "geo",       label: "Geopolitical risk" },
-  { id: "curve",     label: "Futures Curve" },
 ]
 
 const ALERT_KEYS = [
@@ -857,31 +857,55 @@ function TabSentiment({ d }) {
 
 
 function TabCurve({ d }) {
-  const curve   = d?.curve   || {}
-  const curves  = curve.curves  || {}
-  const signals = curve.signals || {}
-  const prices  = curve.front_month_prices || {}
-  const spreads = curve.key_spreads || {}
-  const carry   = d?.fred?.derived?.storage_carry?.total_carry_per_bbl_mo || 0.77
+  const curve    = d?.curve  || {}
+  const curves   = curve.curves  || {}
+  const signals  = curve.signals || {}
+  const prices   = curve.front_month_prices || {}
+  const carry    = d?.fred?.derived?.storage_carry?.total_carry_per_bbl_mo || 0.77
+  const ch       = d?.curve_history || []
 
   const PRODUCTS = [
-    { key: "brent", label: "Brent ICE",        color: "#3b82f6", unit: "$/bbl" },
-    { key: "wti",   label: "WTI NYMEX",        color: "#60a5fa", unit: "$/bbl" },
-    { key: "rbob",  label: "RBOB Gasoline",    color: "#f59e0b", unit: "$/bbl" },
-    { key: "ho",    label: "Heating Oil/ULSD", color: "#f97316", unit: "$/bbl" },
+    { key: "brent", label: "Brent ICE",        color: "#3b82f6" },
+    { key: "wti",   label: "WTI NYMEX",        color: "#60a5fa" },
+    { key: "rbob",  label: "RBOB Gasoline",    color: "#f59e0b" },
+    { key: "ho",    label: "Heating Oil/ULSD", color: "#f97316" },
   ]
 
-  const SPREAD_MONTHS = ["M1-M2","M1-M4","M1-M6","M1-M12"]
+  const SPREAD_OPTIONS = [
+    { label: "M1-M2",  key: "m1_m2",  type: "spread", m1: 0, m2: 1  },
+    { label: "M1-M3",  key: "m1_m3",  type: "spread", m1: 0, m2: 2  },
+    { label: "M1-M6",  key: "m1_m6",  type: "spread", m1: 0, m2: 5  },
+    { label: "M1-M12", key: "m1_m12", type: "spread", m1: 0, m2: 11 },
+    { label: "M1 Fly", key: "m1_fly", type: "fly",    m: [0,1,2]    },
+    { label: "M3 Fly", key: "m3_fly", type: "fly",    m: [2,3,4]    },
+    { label: "M5 Fly", key: "m5_fly", type: "fly",    m: [4,5,6]    },
+  ]
 
-  const getSpread = (product, label) => {
-    const sig = signals[product]
+  const RANGES = [
+    { label: "1M",  days: 21  },
+    { label: "3M",  days: 63  },
+    { label: "6M",  days: 125 },
+    { label: "All", days: 9999},
+  ]
+
+  const [sel,      setSel]      = React.useState({brent:"M1-M2", wti:"M1-M2", rbob:"M1-M2", ho:"M1-M2"})
+  const [range,    setRange]    = React.useState({brent:"3M",    wti:"3M",    rbob:"3M",    ho:"3M"   })
+
+  const getHistKey = (product, label) => {
+    const opt = SPREAD_OPTIONS.find(o => o.label === label)
+    return opt ? `${product}_${opt.key}` : null
+  }
+
+  const getCurrentVal = (product, label) => {
     const c   = curves[product]
-    if (!sig || !c) return null
-    if (label === "M1-M2")  return sig.m1_m2
-    if (label === "M1-M4")  return c[0] && c[3] ? Math.round((c[0].price - c[3].price)*100)/100 : null
-    if (label === "M1-M6")  return sig.m1_m6
-    if (label === "M1-M12") return sig.m1_m12
-    return null
+    const opt = SPREAD_OPTIONS.find(o => o.label === label)
+    if (!c || !opt) return null
+    if (opt.type === "spread") {
+      return c[opt.m1] && c[opt.m2] ? Math.round((c[opt.m1].price - c[opt.m2].price)*100)/100 : null
+    } else {
+      const [a,b,cc] = opt.m
+      return c[a] && c[b] && c[cc] ? Math.round((c[a].price - 2*c[b].price + c[cc].price)*1000)/1000 : null
+    }
   }
 
   const spreadCol = v => {
@@ -902,160 +926,166 @@ function TabCurve({ d }) {
     return "#ef4444"
   }
 
-  const bwVal    = spreads.brent_wti
-  const bwSignal = spreads.brent_wti_signal
+  const ProductChart = ({ product, color, label }) => {
+    const selLabel  = sel[product]
+    const rangeLabel = range[product]
+    const histKey   = getHistKey(product, selLabel)
+    const days      = RANGES.find(r => r.label === rangeLabel)?.days || 63
+    const curVal    = getCurrentVal(product, selLabel)
+    const curCol    = spreadCol(curVal)
+    const sig       = signals[product]
+    const strCol    = structureCol(sig?.structure)
+
+    // Filter history to selected range
+    const allPts = ch.filter(r => histKey && r[histKey] != null)
+    const pts    = allPts.slice(-days)
+
+    // Chart data for recharts
+    const chartData = pts.map(r => ({
+      date:  r.date?.slice(5),
+      value: r[histKey],
+    }))
+
+    const vals   = chartData.map(r => r.value).filter(v => v != null)
+    const minVal = vals.length ? Math.min(...vals) : -1
+    const maxVal = vals.length ? Math.max(...vals) :  1
+    const hasZero = minVal < 0 && maxVal > 0
+
+    const CustomTooltip = ({ active, payload, label: lbl }) => {
+      if (!active || !payload?.length) return null
+      const v = payload[0]?.value
+      return (
+        <div style={{ background:"#0d1117", border:"1px solid #1a2535",
+          borderRadius:6, padding:"6px 10px", fontSize:11 }}>
+          <div style={{ color:"#6b7280", marginBottom:3 }}>{lbl}</div>
+          <div style={{ color, fontWeight:700 }}>
+            {selLabel}: {v >= 0 ? "+" : ""}{typeof v === "number" ? v.toFixed(3) : "—"}
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <Card style={{ marginBottom: 0 }}>
+        {/* Header */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+          <div>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:color }}/>
+              <span style={{ fontSize:12, fontWeight:700, color:"#e5e7eb" }}>{label}</span>
+              <span style={{ fontSize:10, fontWeight:700, color:strCol,
+                background:strCol+"22", borderRadius:4, padding:"1px 6px" }}>
+                {sig?.structure?.replace(/_/g," ") || "—"}
+              </span>
+            </div>
+            {/* Spread selector */}
+            <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+              {SPREAD_OPTIONS.map(o => (
+                <button key={o.label} onClick={() => setSel(prev => ({...prev, [product]: o.label}))}
+                  style={{
+                    background: sel[product]===o.label ? color+"33" : "transparent",
+                    border: `1px solid ${sel[product]===o.label ? color : "#1a2535"}`,
+                    borderRadius:4, padding:"2px 7px", fontSize:9, fontWeight:700,
+                    color: sel[product]===o.label ? color : "#4b5563",
+                    cursor:"pointer", letterSpacing:"0.05em",
+                  }}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Current value + range buttons */}
+          <div style={{ textAlign:"right" }}>
+            <div style={{ fontSize:22, fontWeight:900, color:curCol, fontFamily:"monospace", lineHeight:1 }}>
+              {curVal != null ? (curVal >= 0 ? "+" : "") + curVal.toFixed(3) : "—"}
+            </div>
+            <div style={{ fontSize:9, color:"#374151", marginBottom:4 }}>$/bbl today</div>
+            <div style={{ display:"flex", gap:3, justifyContent:"flex-end" }}>
+              {RANGES.map(r => (
+                <button key={r.label} onClick={() => setRange(prev => ({...prev, [product]: r.label}))}
+                  style={{
+                    background: range[product]===r.label ? "#1a2535" : "transparent",
+                    border: `1px solid ${range[product]===r.label ? "#374151" : "#0f1e30"}`,
+                    borderRadius:4, padding:"2px 6px", fontSize:9, fontWeight:700,
+                    color: range[product]===r.label ? "#e5e7eb" : "#374151",
+                    cursor:"pointer",
+                  }}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Chart */}
+        {chartData.length < 2 ? (
+          <div style={{ height:160, display:"flex", alignItems:"center", justifyContent:"center",
+            color:"#1f2937", fontSize:10, fontFamily:"monospace" }}>
+            BUILDING HISTORY — RUN curve_backfill.py
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={160}>
+            <ComposedChart data={chartData} margin={{ top:4, right:4, left:-20, bottom:0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#0f1e30" />
+              <XAxis dataKey="date" tick={{ fontSize:8, fill:"#374151" }} tickLine={false}
+                interval={Math.floor(chartData.length / 5)} />
+              <YAxis tick={{ fontSize:8, fill:"#374151" }} tickLine={false}
+                domain={["auto","auto"]} width={48}
+                tickFormatter={v => (v >= 0 ? "+" : "") + v.toFixed(2)} />
+              <Tooltip content={<CustomTooltip />} />
+              {hasZero && <ReferenceLine y={0} stroke="#374151" strokeDasharray="4 4" />}
+              <Line dataKey="value" stroke={color} strokeWidth={2} dot={false}
+                activeDot={{ r:3, fill:color }} name={selLabel} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
+
+        {/* Stats row */}
+        {vals.length > 1 && (() => {
+          const mean = vals.reduce((a,b) => a+b, 0) / vals.length
+          const sorted = [...vals].sort((a,b) => a-b)
+          const p10 = sorted[Math.floor(sorted.length*0.1)]
+          const p90 = sorted[Math.floor(sorted.length*0.9)]
+          return (
+            <div style={{ display:"flex", gap:12, marginTop:6, fontSize:9, color:"#374151" }}>
+              <span>Avg: <span style={{ color }}>{mean >= 0 ? "+" : ""}{mean.toFixed(3)}</span></span>
+              <span>Min: <span style={{ color:"#ef4444" }}>{sorted[0].toFixed(3)}</span></span>
+              <span>Max: <span style={{ color:"#22c55e" }}>{sorted[sorted.length-1].toFixed(3)}</span></span>
+              <span>P10: <span style={{ color:"#6b7280" }}>{p10?.toFixed(3)}</span></span>
+              <span>P90: <span style={{ color:"#6b7280" }}>{p90?.toFixed(3)}</span></span>
+              <span style={{ marginLeft:"auto" }}>{pts.length}d</span>
+            </div>
+          )
+        })()}
+      </Card>
+    )
+  }
 
   return (
     <>
-      <Card title="Curve Structure — All Products" style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 9, color: "#374151", marginBottom: 10, fontStyle: "italic" }}>
-          M1 prices live (Stooq / Yahoo query2) · M2–M12 synthetic shape · Storage carry ${carry.toFixed(2)}/bbl/mo · Positive spread = backwardation (bullish) · Negative = contango (bearish)
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
-          {PRODUCTS.map(p => {
-            const sig = signals[p.key]
-            const m1  = prices[p.key]
-            const col = structureCol(sig?.structure)
-            return (
-              <div key={p.key} style={{ background: "#0a0f1a", border: `1px solid ${p.color}30`, borderRadius: 8, padding: "12px" }}>
-                <div style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{p.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: p.color, lineHeight: 1, marginBottom: 4 }}>
-                  {m1 != null ? m1.toFixed(2) : "—"}
-                </div>
-                <div style={{ fontSize: 9, color: "#374151", marginBottom: 6 }}>{p.unit}</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: col, background: col + "22", borderRadius: 4, padding: "2px 6px", display: "inline-block" }}>
-                  {sig?.structure?.replace(/_/g," ") || "—"}
-                </div>
-                <div style={{ fontSize: 9, color: "#6b7280", marginTop: 4 }}>{sig?.note}</div>
-              </div>
-            )
-          })}
-        </div>
-        <div style={{ background: "#0a0f1a", border: "1px solid #1a2535", borderRadius: 8, padding: "10px 14px", display: "flex", alignItems: "center", gap: 16 }}>
-          <div>
-            <div style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em" }}>Brent – WTI Spread</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: bwVal > 8 ? "#ef4444" : bwVal < 2 ? "#22c55e" : "#f59e0b" }}>
-              {bwVal != null ? `$${bwVal.toFixed(2)}/bbl` : "—"}
-            </div>
-          </div>
-          <div style={{ flex: 1 }}>
-            <Badge label={bwSignal} />
-            <div style={{ fontSize: 10, color: "#6b7280", marginTop: 4 }}>
-              {bwVal > 8 ? "US export bottleneck or North Sea disruption" :
-               bwVal < 2 ? "US exports flooding Atlantic basin" :
-               "Normal range — no structural signal"}
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <Card title="Time Spreads — M1 vs Deferred Contracts" style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 9, color: "#374151", marginBottom: 10, fontStyle: "italic" }}>
-          All spreads in $/bbl · Green = backwardation (tight market) · Red = contango (oversupply)
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "140px repeat(4,1fr)", gap: 0, borderBottom: "1px solid #1a2535", paddingBottom: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase" }}>Product</span>
-          {SPREAD_MONTHS.map(m => (
-            <span key={m} style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase", textAlign: "center" }}>{m}</span>
-          ))}
-        </div>
-        {PRODUCTS.map(p => (
-          <div key={p.key} style={{ display: "grid", gridTemplateColumns: "140px repeat(4,1fr)", gap: 0, padding: "8px 0", borderBottom: "1px solid #0f1e30", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: p.color }} />
-              <span style={{ fontSize: 11, color: "#9ca3af" }}>{p.label}</span>
-            </div>
-            {SPREAD_MONTHS.map(m => {
-              const val = getSpread(p.key, m)
-              const col = spreadCol(val)
-              return (
-                <div key={m} style={{ textAlign: "center" }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: col, fontFamily: "monospace" }}>
-                    {val != null ? (val >= 0 ? "+" : "") + val.toFixed(2) : "—"}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        ))}
-        <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 9 }}>
-          <span><span style={{ color: "#22c55e" }}>■</span> Strong backwardation (&gt;+1.0)</span>
-          <span><span style={{ color: "#86efac" }}>■</span> Mild backwardation (0–+1.0)</span>
-          <span><span style={{ color: "#6b7280" }}>■</span> Flat (±0.2)</span>
-          <span><span style={{ color: "#fca5a5" }}>■</span> Mild contango (0 to -1.5)</span>
-          <span><span style={{ color: "#ef4444" }}>■</span> Deep contango (&lt;-1.5)</span>
-        </div>
-      </Card>
-
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>M1–M12 Curve Shape</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-        {PRODUCTS.map(p => {
-          const c   = curves[p.key] || []
-          const sig = signals[p.key]
-          if (c.length === 0) return null
-          const max   = Math.max(...c.map(x => x.price))
-          const min   = Math.min(...c.map(x => x.price))
-          const range = max - min || 1
-          const col   = structureCol(sig?.structure)
-          return (
-            <Card key={p.key} style={{ marginBottom: 0 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#4b5563", letterSpacing: "0.1em", textTransform: "uppercase" }}>{p.label}</div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: col, marginTop: 2 }}>{sig?.structure?.replace(/_/g," ") || "—"}</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: p.color }}>{prices[p.key]?.toFixed(2) || "—"}</div>
-                  <div style={{ fontSize: 9, color: "#374151" }}>{p.unit} M1</div>
-                </div>
-              </div>
-              <svg width="100%" height="80" style={{ overflow: "visible", display: "block", marginBottom: 4 }}>
-                {c.map((pt, i) => {
-                  const x  = (i / (c.length - 1)) * 100
-                  const y  = 70 - ((pt.price - min) / range) * 60
-                  const px = i > 0 ? ((i-1) / (c.length-1)) * 100 : x
-                  const py = i > 0 ? 70 - ((c[i-1].price - min) / range) * 60 : y
-                  return (
-                    <g key={i}>
-                      {i > 0 && <line x1={px+"%"} y1={py} x2={x+"%"} y2={y} stroke={p.color} strokeWidth={2} opacity={0.8} />}
-                      <circle cx={x+"%"} cy={y} r={i===0?4:2.5} fill={i===0?p.color:"#0a0f1a"} stroke={p.color} strokeWidth={1.5} />
-                    </g>
-                  )
-                })}
-              </svg>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "#374151", marginBottom: 8 }}>
-                {["M1","M2","M3","M4","M5","M6","M7","M8","M9","M10","M11","M12"].map(m => <span key={m}>{m}</span>)}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4 }}>
-                {SPREAD_MONTHS.map(m => {
-                  const val = getSpread(p.key, m)
-                  const c2  = spreadCol(val)
-                  return (
-                    <div key={m} style={{ background: "#0a0f1a", borderRadius: 4, padding: "4px 6px", textAlign: "center", border: "1px solid #1a2535" }}>
-                      <div style={{ fontSize: 8, color: "#4b5563" }}>{m}</div>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: c2, fontFamily: "monospace" }}>
-                        {val != null ? (val >= 0 ? "+" : "") + val.toFixed(2) : "—"}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </Card>
-          )
-        })}
+      <div style={{ fontSize:9, color:"#374151", marginBottom:12, fontStyle:"italic" }}>
+        M1 live (Stooq / Yahoo query2) · M2–M12 synthetic shape · Carry ${carry.toFixed(2)}/bbl/mo ·
+        Select spread or fly per product · Use range buttons to zoom time window
       </div>
 
-      <Card title="Signal Reference — Curve Interpretation">
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+        {PRODUCTS.map(p => (
+          <ProductChart key={p.key} product={p.key} color={p.color} label={p.label} />
+        ))}
+      </div>
+
+      <Card title="Signal Reference" style={{ marginTop:12 }}>
         {[
-          ["M1-M2 > +1.0",       "Strong backwardation — physical urgency, prompt barrels scarce"],
-          ["M1-M2 +0.2 to +1.0", "Mild backwardation — market slightly undersupplied"],
-          ["M1-M2 ±0.2",         "Flat curve — roughly balanced supply/demand"],
-          ["M1-M2 -0.2 to -1.5", "Mild contango — storage becoming economic (~$1.5/bbl/mo threshold)"],
-          ["M1-M2 < -1.5",       "Deep contango — significant oversupply, storage fills"],
-          ["Brent-WTI > $8",     "US export bottleneck or North Sea disruption"],
-          ["Brent-WTI < $2",     "US exports flooding Atlantic — WTI surplus at Cushing"],
+          ["Spread > +1.0",       "Strong backwardation — physical urgency, prompt scarce"],
+          ["Spread +0.2 to +1.0", "Mild backwardation — market slightly undersupplied"],
+          ["Spread ±0.2",         "Flat — balanced supply/demand"],
+          ["Spread -0.2 to -1.5", "Mild contango — storage becoming economic"],
+          ["Spread < -1.5",       "Deep contango — oversupply, storage fills"],
+          ["Fly > 0",             "Hump — near-term tighter than deferred, fading"],
+          ["Fly < 0",             "Trough — deferred months pricing tighter than prompt"],
         ].map(([k,v],i) => (
-          <div key={i} style={{ display:"flex", gap:8, padding:"5px 0", borderBottom:"1px solid #0f1e30", fontSize:11 }}>
+          <div key={i} style={{ display:"flex", gap:8, padding:"5px 0",
+            borderBottom:"1px solid #0f1e30", fontSize:11 }}>
             <span style={{ color:"#f59e0b", fontWeight:700, minWidth:200 }}>{k}</span>
             <span style={{ color:"#6b7280" }}>{v}</span>
           </div>
@@ -1249,7 +1279,7 @@ export default function App() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, geo, curve, qsHist] = await Promise.all([
+      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, geo, curve, qsHist, curveHist] = await Promise.all([
         fetch(`${API}/api/all`).then(r => r.json()),
         fetch(`${API}/api/eia`).then(r => r.json()),
         fetch(`${API}/api/rig-count`).then(r => r.json()).catch(() => null),
@@ -1262,9 +1292,10 @@ export default function App() {
         fetch(`${API}/api/duc`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/geo-score`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/curve`).then(r => r.json()).catch(() => null),
+        fetch(`${API}/api/curve-history`).then(r => r.json()).catch(() => []),
         fetch(`${API}/api/quality-spreads-history`).then(r => r.json()).catch(() => []),
       ])
-      const merged = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig, fj, quality_spreads: qs, duc, qs_history: Array.isArray(qsHist) ? qsHist : [], geo, curve }
+      const merged = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig, fj, quality_spreads: qs, duc, qs_history: Array.isArray(qsHist) ? qsHist : [], geo, curve, curve_history: Array.isArray(curveHist) ? curveHist : [] }
       const histArr = Array.isArray(hist) ? hist : []
       setData(merged)
       setHistory(histArr)
