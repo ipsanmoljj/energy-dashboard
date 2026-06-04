@@ -120,17 +120,30 @@ function Badge({ label }) {
 }
 
 function Row({ label, value, unit, signal, note, highlight }) {
+  const col = signalCol(signal)
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "7px 0", borderBottom: "1px solid #0f1e30",
-      background: highlight ? "#0d2a1a" : "transparent" }}>
-      <span style={{ fontSize: 12, color: "#9ca3af" }}>{label}</span>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {note && <span style={{ fontSize: 10, color: "#4b5563" }}>{note}</span>}
-        {signal && <Badge label={signal} />}
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#e5e7eb", minWidth: 60, textAlign: "right" }}>
-          {value}{unit && <span style={{ fontSize: 10, color: "#6b7280", marginLeft: 3 }}>{unit}</span>}
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: 2,
+      padding: "7px 0",
+      borderBottom: "1px solid #0f1e30",
+      background: highlight ? "#0d2a1a" : "transparent",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+          {label}
         </span>
+        {note && (
+          <span style={{ fontSize: 9, color: "#374151", fontStyle: "italic" }}>{note}</span>
+        )}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "#e5e7eb", fontFamily: "monospace" }}>
+          {value}
+          {unit && <span style={{ fontSize: 10, color: "#6b7280", marginLeft: 3 }}>{unit}</span>}
+        </span>
+        {signal && <Badge label={signal} />}
       </div>
     </div>
   )
