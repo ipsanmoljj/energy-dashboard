@@ -167,6 +167,13 @@ def wcs(): return load("wcs_latest.json")
 
 # ── Signal layer endpoints (Day 4 + 5) ───────────────────────────────────────
 
+@app.get("/api/curve")
+async def get_curve():
+    p = DATA_DIR / "curve_latest.json"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Run curve_fetcher.py first")
+    return json.loads(p.read_text())
+
 @app.get("/api/geo-score")
 async def get_geo_score():
     p = DATA_DIR / "geo_score_latest.json"

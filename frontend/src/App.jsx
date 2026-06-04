@@ -14,6 +14,7 @@ const TABS = [
   { id: "macro",     label: "Macro" },
   { id: "sentiment", label: "Sentiment" },
   { id: "geo",       label: "Geopolitical risk" },
+  { id: "curve",     label: "Forward Curve" },
 ]
 
 const ALERT_KEYS = [
@@ -854,6 +855,216 @@ function TabSentiment({ d }) {
   )
 }
 
+
+function TabCurve({ d }) {
+  const curve   = d?.curve   || {}
+  const curves  = curve.curves  || {}
+  const signals = curve.signals || {}
+  const prices  = curve.front_month_prices || {}
+  const spreads = curve.key_spreads || {}
+  const carry   = d?.fred?.derived?.storage_carry?.total_carry_per_bbl_mo || 0.77
+
+  const PRODUCTS = [
+    { key: "brent", label: "Brent ICE",        color: "#3b82f6", unit: "$/bbl" },
+    { key: "wti",   label: "WTI NYMEX",        color: "#60a5fa", unit: "$/bbl" },
+    { key: "rbob",  label: "RBOB Gasoline",    color: "#f59e0b", unit: "$/bbl" },
+    { key: "ho",    label: "Heating Oil/ULSD", color: "#f97316", unit: "$/bbl" },
+  ]
+
+  const SPREAD_MONTHS = ["M1-M2","M1-M4","M1-M6","M1-M12"]
+
+  const getSpread = (product, label) => {
+    const sig = signals[product]
+    const c   = curves[product]
+    if (!sig || !c) return null
+    if (label === "M1-M2")  return sig.m1_m2
+    if (label === "M1-M4")  return c[0] && c[3] ? Math.round((c[0].price - c[3].price)*100)/100 : null
+    if (label === "M1-M6")  return sig.m1_m6
+    if (label === "M1-M12") return sig.m1_m12
+    return null
+  }
+
+  const spreadCol = v => {
+    if (v == null) return "#374151"
+    if (v >  1.0) return "#22c55e"
+    if (v >  0.2) return "#86efac"
+    if (v > -0.2) return "#6b7280"
+    if (v > -1.5) return "#fca5a5"
+    return "#ef4444"
+  }
+
+  const structureCol = s => {
+    if (!s) return "#6b7280"
+    if (s.includes("STRONG_BACK")) return "#22c55e"
+    if (s.includes("MILD_BACK"))   return "#86efac"
+    if (s === "FLAT")              return "#6b7280"
+    if (s.includes("MILD_CONT"))   return "#fca5a5"
+    return "#ef4444"
+  }
+
+  const bwVal    = spreads.brent_wti
+  const bwSignal = spreads.brent_wti_signal
+
+  return (
+    <>
+      <Card title="Curve Structure — All Products" style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 9, color: "#374151", marginBottom: 10, fontStyle: "italic" }}>
+          M1 prices live (Stooq / Yahoo query2) · M2–M12 synthetic shape · Storage carry ${carry.toFixed(2)}/bbl/mo · Positive spread = backwardation (bullish) · Negative = contango (bearish)
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
+          {PRODUCTS.map(p => {
+            const sig = signals[p.key]
+            const m1  = prices[p.key]
+            const col = structureCol(sig?.structure)
+            return (
+              <div key={p.key} style={{ background: "#0a0f1a", border: `1px solid ${p.color}30`, borderRadius: 8, padding: "12px" }}>
+                <div style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{p.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: p.color, lineHeight: 1, marginBottom: 4 }}>
+                  {m1 != null ? m1.toFixed(2) : "—"}
+                </div>
+                <div style={{ fontSize: 9, color: "#374151", marginBottom: 6 }}>{p.unit}</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: col, background: col + "22", borderRadius: 4, padding: "2px 6px", display: "inline-block" }}>
+                  {sig?.structure?.replace(/_/g," ") || "—"}
+                </div>
+                <div style={{ fontSize: 9, color: "#6b7280", marginTop: 4 }}>{sig?.note}</div>
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ background: "#0a0f1a", border: "1px solid #1a2535", borderRadius: 8, padding: "10px 14px", display: "flex", alignItems: "center", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em" }}>Brent – WTI Spread</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: bwVal > 8 ? "#ef4444" : bwVal < 2 ? "#22c55e" : "#f59e0b" }}>
+              {bwVal != null ? `$${bwVal.toFixed(2)}/bbl` : "—"}
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <Badge label={bwSignal} />
+            <div style={{ fontSize: 10, color: "#6b7280", marginTop: 4 }}>
+              {bwVal > 8 ? "US export bottleneck or North Sea disruption" :
+               bwVal < 2 ? "US exports flooding Atlantic basin" :
+               "Normal range — no structural signal"}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Time Spreads — M1 vs Deferred Contracts" style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 9, color: "#374151", marginBottom: 10, fontStyle: "italic" }}>
+          All spreads in $/bbl · Green = backwardation (tight market) · Red = contango (oversupply)
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "140px repeat(4,1fr)", gap: 0, borderBottom: "1px solid #1a2535", paddingBottom: 6, marginBottom: 4 }}>
+          <span style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase" }}>Product</span>
+          {SPREAD_MONTHS.map(m => (
+            <span key={m} style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase", textAlign: "center" }}>{m}</span>
+          ))}
+        </div>
+        {PRODUCTS.map(p => (
+          <div key={p.key} style={{ display: "grid", gridTemplateColumns: "140px repeat(4,1fr)", gap: 0, padding: "8px 0", borderBottom: "1px solid #0f1e30", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: p.color }} />
+              <span style={{ fontSize: 11, color: "#9ca3af" }}>{p.label}</span>
+            </div>
+            {SPREAD_MONTHS.map(m => {
+              const val = getSpread(p.key, m)
+              const col = spreadCol(val)
+              return (
+                <div key={m} style={{ textAlign: "center" }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: col, fontFamily: "monospace" }}>
+                    {val != null ? (val >= 0 ? "+" : "") + val.toFixed(2) : "—"}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        ))}
+        <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 9 }}>
+          <span><span style={{ color: "#22c55e" }}>■</span> Strong backwardation (&gt;+1.0)</span>
+          <span><span style={{ color: "#86efac" }}>■</span> Mild backwardation (0–+1.0)</span>
+          <span><span style={{ color: "#6b7280" }}>■</span> Flat (±0.2)</span>
+          <span><span style={{ color: "#fca5a5" }}>■</span> Mild contango (0 to -1.5)</span>
+          <span><span style={{ color: "#ef4444" }}>■</span> Deep contango (&lt;-1.5)</span>
+        </div>
+      </Card>
+
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>M1–M12 Curve Shape</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+        {PRODUCTS.map(p => {
+          const c   = curves[p.key] || []
+          const sig = signals[p.key]
+          if (c.length === 0) return null
+          const max   = Math.max(...c.map(x => x.price))
+          const min   = Math.min(...c.map(x => x.price))
+          const range = max - min || 1
+          const col   = structureCol(sig?.structure)
+          return (
+            <Card key={p.key} style={{ marginBottom: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#4b5563", letterSpacing: "0.1em", textTransform: "uppercase" }}>{p.label}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: col, marginTop: 2 }}>{sig?.structure?.replace(/_/g," ") || "—"}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: p.color }}>{prices[p.key]?.toFixed(2) || "—"}</div>
+                  <div style={{ fontSize: 9, color: "#374151" }}>{p.unit} M1</div>
+                </div>
+              </div>
+              <svg width="100%" height="80" style={{ overflow: "visible", display: "block", marginBottom: 4 }}>
+                {c.map((pt, i) => {
+                  const x  = (i / (c.length - 1)) * 100
+                  const y  = 70 - ((pt.price - min) / range) * 60
+                  const px = i > 0 ? ((i-1) / (c.length-1)) * 100 : x
+                  const py = i > 0 ? 70 - ((c[i-1].price - min) / range) * 60 : y
+                  return (
+                    <g key={i}>
+                      {i > 0 && <line x1={px+"%"} y1={py} x2={x+"%"} y2={y} stroke={p.color} strokeWidth={2} opacity={0.8} />}
+                      <circle cx={x+"%"} cy={y} r={i===0?4:2.5} fill={i===0?p.color:"#0a0f1a"} stroke={p.color} strokeWidth={1.5} />
+                    </g>
+                  )
+                })}
+              </svg>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "#374151", marginBottom: 8 }}>
+                {["M1","M2","M3","M4","M5","M6","M7","M8","M9","M10","M11","M12"].map(m => <span key={m}>{m}</span>)}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4 }}>
+                {SPREAD_MONTHS.map(m => {
+                  const val = getSpread(p.key, m)
+                  const c2  = spreadCol(val)
+                  return (
+                    <div key={m} style={{ background: "#0a0f1a", borderRadius: 4, padding: "4px 6px", textAlign: "center", border: "1px solid #1a2535" }}>
+                      <div style={{ fontSize: 8, color: "#4b5563" }}>{m}</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: c2, fontFamily: "monospace" }}>
+                        {val != null ? (val >= 0 ? "+" : "") + val.toFixed(2) : "—"}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )
+        })}
+      </div>
+
+      <Card title="Signal Reference — Curve Interpretation">
+        {[
+          ["M1-M2 > +1.0",       "Strong backwardation — physical urgency, prompt barrels scarce"],
+          ["M1-M2 +0.2 to +1.0", "Mild backwardation — market slightly undersupplied"],
+          ["M1-M2 ±0.2",         "Flat curve — roughly balanced supply/demand"],
+          ["M1-M2 -0.2 to -1.5", "Mild contango — storage becoming economic (~$1.5/bbl/mo threshold)"],
+          ["M1-M2 < -1.5",       "Deep contango — significant oversupply, storage fills"],
+          ["Brent-WTI > $8",     "US export bottleneck or North Sea disruption"],
+          ["Brent-WTI < $2",     "US exports flooding Atlantic — WTI surplus at Cushing"],
+        ].map(([k,v],i) => (
+          <div key={i} style={{ display:"flex", gap:8, padding:"5px 0", borderBottom:"1px solid #0f1e30", fontSize:11 }}>
+            <span style={{ color:"#f59e0b", fontWeight:700, minWidth:200 }}>{k}</span>
+            <span style={{ color:"#6b7280" }}>{v}</span>
+          </div>
+        ))}
+      </Card>
+    </>
+  )
+}
+
 function TabGeo({ d }) {
   const geo  = d?.geo || {}
   const agg  = geo.aggregate || {}
@@ -1038,7 +1249,7 @@ export default function App() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, geo, qsHist] = await Promise.all([
+      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, geo, qsHist, curve] = await Promise.all([
         fetch(`${API}/api/all`).then(r => r.json()),
         fetch(`${API}/api/eia`).then(r => r.json()),
         fetch(`${API}/api/rig-count`).then(r => r.json()).catch(() => null),
@@ -1050,9 +1261,10 @@ export default function App() {
         fetch(`${API}/api/quality-spreads`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/duc`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/geo-score`).then(r => r.json()).catch(() => null),
+        fetch(`${API}/api/curve`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/quality-spreads-history`).then(r => r.json()).catch(() => []),
       ])
-      const merged = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig, fj, quality_spreads: qs, duc, qs_history: Array.isArray(qsHist) ? qsHist : [], geo }
+      const merged = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig, fj, quality_spreads: qs, duc, qs_history: Array.isArray(qsHist) ? qsHist : [], geo, curve }
       const histArr = Array.isArray(hist) ? hist : []
       setData(merged)
       setHistory(histArr)
@@ -1142,6 +1354,7 @@ export default function App() {
             {activeTab === "macro"     && <TabMacro     d={data} />}
             {activeTab === "sentiment" && <TabSentiment d={data} />}
             {activeTab === "geo"       && <TabGeo       d={data} />}
+            {activeTab === "curve"     && <TabCurve     d={data} />}
           </>
         )}
       </div>
