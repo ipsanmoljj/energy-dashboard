@@ -1141,6 +1141,7 @@ export default function App() {
             {activeTab === "inventory" && <TabInventory d={data} />}
             {activeTab === "macro"     && <TabMacro     d={data} />}
             {activeTab === "sentiment" && <TabSentiment d={data} />}
+            {activeTab === "geo"       && <TabGeo       d={data} />}
           </>
         )}
       </div>
