@@ -72,7 +72,7 @@ SPREADS = [
         "note": "Alberta pipeline capacity signal. Wide = Trans Mountain congested.",
     },
     {
-        "id": "naphtha_gasoil", "label": "Naphtha – Gasoil (Product Spread)",
+        "id": "naphtha_gasoil", "label": "Naphtha – ULSD (Product Spread)",
         "long": "naphtha_bbl", "short": "gasoil_bbl",
         "category": "product", "chartable": True,
         "bull_threshold": 0.0, "bear_threshold": -10.0,
