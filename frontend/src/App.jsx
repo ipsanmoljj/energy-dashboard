@@ -344,7 +344,7 @@ function TabOverview({ d }) {
           <PriceCard label="Brent ICE"    price={fut.brent?.price_bbl}       unit="$/bbl" change={fut.brent?.change_pct}       color="#3b82f6" error={!!fut.brent?.error} />
           <PriceCard label="WTI NYMEX"   price={fut.wti?.price_bbl}         unit="$/bbl" change={fut.wti?.change_pct}         color="#60a5fa" error={!!fut.wti?.error} />
           <PriceCard label="RBOB"        price={fut.rbob?.price_bbl}        unit="$/bbl" change={fut.rbob?.change_pct}        color="#f59e0b" error={!!fut.rbob?.error} />
-          <PriceCard label="Heating Oil" price={fut.heating_oil?.price_bbl} unit="$/bbl" change={fut.heating_oil?.change_pct} color="#f97316" error={!!fut.heating_oil?.error} />
+          <PriceCard label="ULSD / HO"   price={fut.heating_oil?.price_bbl} unit="$/bbl" change={fut.heating_oil?.change_pct} color="#f97316" error={!!fut.heating_oil?.error} />
           <PriceCard label="Dubai/Oman"  price={fut.dubai?.price_bbl}       unit="$/bbl" change={fut.dubai?.change_pct}       color="#a78bfa" error={!!fut.dubai?.error} />
         </div>
       </Card>
@@ -371,7 +371,7 @@ function TabPrices({ d, history }) {
         <SeriesChart title="Brent ICE"        data={prepChartData(history, "brent")}       color="#3b82f6" currentPrice={fut.brent?.price_bbl} />
         <SeriesChart title="WTI NYMEX"        data={prepChartData(history, "wti")}         color="#60a5fa" currentPrice={fut.wti?.price_bbl} />
         <SeriesChart title="RBOB Gasoline"    data={prepChartData(history, "rbob")}        color="#f59e0b" currentPrice={fut.rbob?.price_bbl} />
-        <SeriesChart title="Heating Oil/ULSD" data={prepChartData(history, "heating_oil")} color="#f97316" currentPrice={fut.heating_oil?.price_bbl} />
+        <SeriesChart title="ULSD / Heating Oil" data={prepChartData(history, "heating_oil")} color="#f97316" currentPrice={fut.heating_oil?.price_bbl} />
         <SeriesChart title="Dubai / Oman"     data={prepChartData(history, "dubai")}       color="#a78bfa" currentPrice={fut.dubai?.price_bbl} />
       </div>
       <Card title="Key Spreads">
@@ -868,7 +868,7 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
     { key: "brent", label: "Brent ICE",        color: "#3b82f6" },
     { key: "wti",   label: "WTI NYMEX",        color: "#60a5fa" },
     { key: "rbob",  label: "RBOB Gasoline",    color: "#f59e0b" },
-    { key: "ho",    label: "Heating Oil/ULSD", color: "#f97316" },
+    { key: "ho",    label: "ULSD / HO",        color: "#f97316" },
   ]
 
   const SPREAD_OPTIONS = [
