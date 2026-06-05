@@ -103,6 +103,16 @@ def job_curve():
     except Exception as e:
         log.warning("job_curve failed: %s", e)
 
+def job_quality_spreads():
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
+        from quality_spreads_fetcher import run as qs_run
+        qs_run()
+        log.info("Quality spreads updated")
+    except Exception as e:
+        log.warning("job_quality_spreads failed: %s", e)
+
 def job_qs_backfill():
     try:
         import sys, os
@@ -130,6 +140,7 @@ scheduler.add_job(job_gie,       "interval", hours=1,    id="gie",       max_ins
 scheduler.add_job(job_weather,   "interval", hours=1,    id="weather",   max_instances=1)
 scheduler.add_job(job_news,      "interval", minutes=15, id="news",      max_instances=1)
 scheduler.add_job(job_curve,         "interval", minutes=5,  id="curve",         max_instances=1)
+scheduler.add_job(job_quality_spreads,"interval", minutes=30, id="quality_spreads", max_instances=1)
 scheduler.add_job(job_qs_backfill,   "cron",     hour=2,     id="qs_backfill",    max_instances=1)
 scheduler.add_job(job_curve_backfill,"cron",     hour=2,     id="curve_backfill", max_instances=1)
 scheduler.add_job(job_cftc,      "cron",     day_of_week="fri", hour=16,
@@ -143,6 +154,7 @@ def startup():
     job_inventory()
     job_curve()
     job_curve_backfill()
+    job_quality_spreads()
     job_qs_backfill()
     log.info("API ready → http://localhost:8000")
 
