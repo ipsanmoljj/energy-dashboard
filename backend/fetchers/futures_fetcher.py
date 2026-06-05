@@ -57,7 +57,7 @@ STOOQ_TICKERS = {
     "RB=F": "rb.f",   # RBOB Gasoline
     "HO=F": "ho.f",   # Heating Oil / ULSD
     "BG=F": None,     # ICE Gasoil — not on Stooq
-    "MCL=F": None
+    "MCL=F": None  # Dubai — handled separately via oilprice.com
 }
 STOOQ_BASE = "https://stooq.com/q/d/l/?s={ticker}&i=d"
 
@@ -168,6 +168,41 @@ def _yf_headers(ticker=None) -> dict:
         "Referer":         f"https://finance.yahoo.com/quote/{ticker}/" if ticker else "https://finance.yahoo.com/",
     }
 
+
+def fetch_oilprice_all() -> dict:
+    """Scrape WTI, Brent, RBOB, HO, Dubai from oilprice.com — 11min lag fallback."""
+    import re, urllib.request
+    url = "https://oilprice.com/oil-price-charts/"
+    results = {}
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": random.choice(USER_AGENTS)})
+        with urllib.request.urlopen(req, timeout=12) as r:
+            html = r.read().decode("utf-8", errors="ignore")
+        matches = re.finditer(r"data-price=.([\d.]+).", html)
+        for m in matches:
+            price = float(m.group(1))
+            if not (50 <= price <= 250):
+                continue
+            context = html[max(0, m.start()-400):m.start()].lower()
+            if "wti" in context and "wti" not in results:
+                results["wti"] = price
+            elif ("brent" in context or ("crude" in context and "brent" not in results and "wti" not in context)) and "brent" not in results:
+                results["brent"] = price
+            elif "rbob" in context and "rbob" not in results:
+                results["rbob"] = round(price * 42, 2)
+            elif "heating" in context and "ho" not in results:
+                results["ho"] = round(price * 42, 2)
+            elif ("dubai" in context or "oman" in context) and "dubai" not in results:
+                results["dubai"] = price
+            if len(results) >= 5:
+                break
+        log.info("oilprice.com prices: %s", {k: v for k,v in results.items()})
+    except Exception as e:
+        log.warning("oilprice.com fetch failed: %s", e)
+    return results
+
+def fetch_oilprice_dubai() -> float | None:
+    return fetch_oilprice_all().get("dubai")
 
 def fetch_stooq(yahoo_ticker: str) -> dict | None:
     """
@@ -424,6 +459,12 @@ def run() -> dict:
     tickers = list(FUTURES.keys())
     batch   = fetch_quote_batch(tickers)
 
+    # Pre-fetch all prices from oilprice.com as fallback
+    oilprice_data = fetch_oilprice_all()
+    dubai_oilprice = oilprice_data.get("dubai")
+    if dubai_oilprice:
+        log.info("Dubai pre-fetch (oilprice.com): $%.2f/bbl", dubai_oilprice)
+
     for ticker, cfg in FUTURES.items():
         log.info("Processing %s (%s)", ticker, cfg["label"])
 
@@ -450,7 +491,64 @@ def run() -> dict:
             time.sleep(random.uniform(1.0, 2.0))
             chart = fetch_single_chart(ticker, days=30)
 
+        # For Dubai — prefer oilprice.com over MCL=F (Micro WTI)
+        if cfg["key"] == "dubai" and dubai_oilprice:
+            output["contracts"][cfg["key"]] = {
+                "ticker": ticker, "label": cfg["label"],
+                "exchange": cfg["exchange"],
+                "raw_price": dubai_oilprice, "raw_unit": "usd_per_bbl",
+                "price_bbl": dubai_oilprice, "prev_close": None,
+                "change": None, "change_pct": None,
+                "market_state": "delayed_11min",
+                "lot_size_bbl": cfg.get("lot_size_bbl", 1000),
+                "signal_note": cfg.get("signal_note", ""),
+                "source": "oilprice_com",
+                "history": [],
+            }
+            prices_bbl[cfg["key"]] = dubai_oilprice
+            log.info("  DUBAI (oilprice.com): $%.2f/bbl", dubai_oilprice)
+            continue
+
         if chart is None or chart.get("price") is None:
+            # Fallback for Dubai if oilprice.com also failed
+            if cfg["key"] == "dubai":
+                dubai_price = fetch_oilprice_dubai()
+                if dubai_price:
+                    output["contracts"][cfg["key"]] = {
+                        "ticker": ticker, "label": cfg["label"],
+                        "exchange": cfg["exchange"],
+                        "raw_price": dubai_price, "raw_unit": "usd_per_bbl",
+                        "price_bbl": dubai_price, "prev_close": None,
+                        "change": None, "change_pct": None,
+                        "market_state": "delayed_11min",
+                        "lot_size_bbl": cfg.get("lot_size_bbl", 1000),
+                        "signal_note": cfg.get("signal_note", ""),
+                        "source": "oilprice_com",
+                        "history": [],
+                    }
+                    prices_bbl[cfg["key"]] = dubai_price
+                    log.info("  DUBAI (oilprice.com fallback): $%.2f/bbl", dubai_price)
+                    continue
+            # Try oilprice.com as last resort
+            op_key_map = {"wti": "wti", "brent": "brent", "rbob": "rbob", "heating_oil": "ho"}
+            op_key = op_key_map.get(cfg["key"])
+            op_price = oilprice_data.get(op_key) if op_key else None
+            if op_price:
+                output["contracts"][cfg["key"]] = {
+                    "ticker": ticker, "label": cfg["label"],
+                    "exchange": cfg.get("exchange",""),
+                    "raw_price": op_price, "raw_unit": cfg.get("unit","usd_per_bbl"),
+                    "price_bbl": op_price, "prev_close": None,
+                    "change": None, "change_pct": None,
+                    "market_state": "delayed_11min",
+                    "lot_size_bbl": cfg.get("lot_size_bbl", 1000),
+                    "signal_note": cfg.get("signal_note", ""),
+                    "source": "oilprice_com",
+                    "history": [],
+                }
+                prices_bbl[cfg["key"]] = op_price
+                log.info("  %s (oilprice.com fallback): $%.2f/bbl", cfg["key"].upper(), op_price)
+                continue
             log.error("  Could not fetch %s from Stooq or Yahoo", ticker)
             output["contracts"][cfg["key"]] = {
                 "error": "fetch_failed", "ticker": ticker, "label": cfg["label"],
