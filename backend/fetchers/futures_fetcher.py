@@ -129,14 +129,14 @@ FUTURES = {
     },
     "BG=F": {
         "key":          "ice_gasoil",
-        "label":        "ICE Gasoil (front-month)",
+        "label":        "ULSD/Gasoil (EIA proxy)",
         "exchange":     "ICE Futures Europe",
         "unit":         "usd_per_mt",
         "lot_size_bbl": 745,
         "multiplier":   0.1342,
         "benchmark":    False,
         "signal_note":  (
-            "European diesel benchmark. Gasoil crack (GO - Brent) is the most actively "
+            "EIA ULSD used as proxy for ICE Gasoil. Not a live ICE feed — EIA monthly data. "
             "traded crack spread in European hours. Reference price for jet fuel and "
             "heating oil in Europe. Wide gasoil crack > $25/bbl = European diesel tight. "
             "Note: Yahoo BG=F returns stale data — Barchart LFY00 to be added when API key available."
@@ -538,7 +538,7 @@ def run() -> dict:
             else "INSUFFICIENT_DATA"
         ),
         "note": (
-            f"ICE Gasoil crack ${round(gasoil_bbl - brent_bbl, 2):.1f}/bbl"
+            f"ULSD crack ${round(gasoil_bbl - brent_bbl, 2):.1f}/bbl (EIA proxy)"
             if (gasoil_bbl and brent_bbl) else
             "Insufficient data — Barchart LFY00 to be added when API key available"
         ),

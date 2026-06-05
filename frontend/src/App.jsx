@@ -22,7 +22,7 @@ const ALERT_KEYS = [
   { key: "wti",         label: "WTI NYMEX",  color: "#60a5fa" },
   { key: "rbob",        label: "RBOB",       color: "#f59e0b" },
   { key: "heating_oil", label: "Heating Oil",color: "#f97316" },
-  { key: "gasoil",      label: "ICE Gasoil", color: "#a78bfa" },
+  { key: "gasoil",      label: "ULSD (EIA)", color: "#a78bfa" },
 ]
 const WARN_PCT = 2
 const CRIT_PCT = 4
@@ -498,11 +498,11 @@ function TabSpreads({ d, history }) {
           ["Brent-Urals < $3",       "Russian discount compressed — sanctions leaking"],
           ["WTI-WCS > $20",          "Alberta pipeline constraints severe"],
           ["WTI-WCS < $10",          "Trans Mountain relieving congestion"],
-          ["Naphtha-Gasoil < -$15",  "Diesel tight, naphtha/petrochem demand weak"],
-          ["Naphtha-Gasoil > $0",    "Naphtha premium — petrochemical demand strong"],
+          ["Naphtha-ULSD < -$15",    "Diesel tight, naphtha/petrochem demand weak"],
+          ["Naphtha-ULSD > $0",      "Naphtha premium — petrochemical demand strong"],
           ["3-2-1 Crack > $20",      "Product demand tight — crude demand bullish"],
           ["3-2-1 Crack < $10",      "Margins compressed — refinery runs may fall"],
-          ["Gasoil Crack > $25",     "European diesel/heating oil tightness"],
+          ["ULSD Crack > $25",       "US diesel/heating oil tightness (EIA ULSD proxy)"],
           ["Brent-Maya > $20",       "Complex refinery upgrading premium elevated"],
         ].map(([k,v],i) => (
           <div key={i} style={{ display:"flex", gap:8, padding:"5px 0", borderBottom:"1px solid #0f1e30", fontSize:11 }}>
