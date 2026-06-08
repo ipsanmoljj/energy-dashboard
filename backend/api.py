@@ -214,7 +214,9 @@ def duc(): return load("duc_latest.json")
 
 @app.get("/api/wcs")
 def wcs(): return load("wcs_latest.json")
-
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 # ── Signal layer endpoints (Day 4 + 5) ───────────────────────────────────────
 
 @app.get("/api/curve-history")
