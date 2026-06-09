@@ -504,7 +504,6 @@ function TabOverview({ d }) {
       {/* CHANGE 3b: Composite gauge card now includes DivergenceFlag below the gauge */}
       <Card title="Composite Index">
         <CompositeGauge score={comp.score} label={comp.label} reasons={comp.reasons || []} />
-        <DivergenceFlag divergence={divergence} momentum={momentum} />
       </Card>
 
       <Card title="Signal Layers">
