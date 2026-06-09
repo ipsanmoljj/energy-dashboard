@@ -561,17 +561,148 @@ function TabOverview({ d }) {
   )
 }
 
+
+// ── PriceMomentumBar — sits below each price chart in TabPrices ───────────
+// Shows: current price vs 5-day avg (volatility) and vs 5-week avg (trend)
+// history = price_history.json array; priceKey = "brent" | "wti" etc.
+// currentPrice = live price from futures endpoint (may differ from last history row)
+function PriceMomentumBar({ history, priceKey, currentPrice, color }) {
+  if (!history || history.length < 5 || currentPrice == null) return null
+
+  // Exclude today's live snapshot from avg calculations
+  const histForAvg = history.slice(0, -1).filter(h => h[priceKey] != null)
+
+  const last5  = histForAvg.slice(-5)
+  const last35 = histForAvg.slice(-35)
+
+  if (last5.length < 3) return null
+
+  const avg5d = last5.reduce((s, h) => s + h[priceKey], 0) / last5.length
+  const avg5w = last35.length >= 5
+    ? last35.reduce((s, h) => s + h[priceKey], 0) / last35.length
+    : null
+
+  const dev5d = ((currentPrice - avg5d) / avg5d) * 100
+  const dev5w = avg5w != null ? ((currentPrice - avg5w) / avg5w) * 100 : null
+
+  const devCol = v => v == null ? "#6b7280" : v > 0 ? "#22c55e" : v < 0 ? "#ef4444" : "#6b7280"
+  const devArrow = v => v == null ? "→" : v > 0.5 ? "▲" : v < -0.5 ? "▼" : "→"
+
+  // Trend label from 5-week deviation
+  const trendLabel = dev5w == null ? null
+    : dev5w >  4  ? "UPTREND"
+    : dev5w >  1  ? "mild uptrend"
+    : dev5w > -1  ? "flat"
+    : dev5w > -4  ? "mild downtrend"
+    : "DOWNTREND"
+
+  const trendCol = dev5w == null ? "#6b7280"
+    : dev5w >  1  ? "#22c55e"
+    : dev5w < -1  ? "#ef4444"
+    : "#6b7280"
+
+  return (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: avg5w != null ? "1fr 1fr 1fr" : "1fr 1fr",
+      gap: 0,
+      borderTop: `1px solid ${color}20`,
+      marginTop: 4,
+    }}>
+      {/* Live price */}
+      <div style={{ padding: "6px 10px", borderRight: "1px solid #0f1e30" }}>
+        <div style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase",
+          letterSpacing: "0.07em", marginBottom: 2 }}>Live</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color, fontFamily: "monospace" }}>
+          ${currentPrice.toFixed(2)}
+        </div>
+      </div>
+
+      {/* vs 5-day avg — volatility context */}
+      <div style={{ padding: "6px 10px", borderRight: avg5w != null ? "1px solid #0f1e30" : "none" }}>
+        <div style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase",
+          letterSpacing: "0.07em", marginBottom: 2 }}>
+          vs 5-day avg
+          <span style={{ color: "#374151", fontWeight: 400, marginLeft: 4, textTransform: "none" }}>
+            volatility
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+          <span style={{ fontSize: 11, color: "#6b7280", fontFamily: "monospace" }}>
+            ${avg5d.toFixed(2)}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: devCol(dev5d) }}>
+            {devArrow(dev5d)}{dev5d > 0 ? "+" : ""}{dev5d.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+
+      {/* vs 5-week avg — trend context */}
+      {avg5w != null && (
+        <div style={{ padding: "6px 10px" }}>
+          <div style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase",
+            letterSpacing: "0.07em", marginBottom: 2 }}>
+            vs 5-week avg
+            <span style={{ color: "#374151", fontWeight: 400, marginLeft: 4, textTransform: "none" }}>
+              trend
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+            <span style={{ fontSize: 11, color: "#6b7280", fontFamily: "monospace" }}>
+              ${avg5w.toFixed(2)}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: devCol(dev5w) }}>
+              {devArrow(dev5w)}{dev5w > 0 ? "+" : ""}{dev5w.toFixed(1)}%
+            </span>
+            {trendLabel && (
+              <span style={{ fontSize: 9, fontWeight: 700, color: trendCol,
+                background: trendCol + "20", borderRadius: 3, padding: "1px 5px" }}>
+                {trendLabel}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function TabPrices({ d, history }) {
   const fut = d?.futures?.contracts || {}
   const der = d?.crack?.spreads     || {}
+
+  // Each entry: chart config + price key in history + live price source
+  const PRICE_CHARTS = [
+    { title: "Brent ICE",          histKey: "brent",       color: "#3b82f6", price: fut.brent?.price_bbl },
+    { title: "WTI NYMEX",          histKey: "wti",         color: "#60a5fa", price: fut.wti?.price_bbl },
+    { title: "RBOB Gasoline",      histKey: "rbob",        color: "#f59e0b", price: fut.rbob?.price_bbl },
+    { title: "ULSD / Heating Oil", histKey: "heating_oil", color: "#f97316", price: fut.heating_oil?.price_bbl },
+    { title: "Dubai / Oman",       histKey: "dubai",       color: "#a78bfa", price: fut.dubai?.price_bbl },
+  ]
+
   return (
     <>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-        <SeriesChart title="Brent ICE"        data={prepChartData(history, "brent")}       color="#3b82f6" currentPrice={fut.brent?.price_bbl} />
-        <SeriesChart title="WTI NYMEX"        data={prepChartData(history, "wti")}         color="#60a5fa" currentPrice={fut.wti?.price_bbl} />
-        <SeriesChart title="RBOB Gasoline"    data={prepChartData(history, "rbob")}        color="#f59e0b" currentPrice={fut.rbob?.price_bbl} />
-        <SeriesChart title="ULSD / Heating Oil" data={prepChartData(history, "heating_oil")} color="#f97316" currentPrice={fut.heating_oil?.price_bbl} />
-        <SeriesChart title="Dubai / Oman"     data={prepChartData(history, "dubai")}       color="#a78bfa" currentPrice={fut.dubai?.price_bbl} />
+        {PRICE_CHARTS.map(({ title, histKey, color, price }) => (
+          <div key={histKey} style={{ display: "flex", flexDirection: "column" }}>
+            <SeriesChart
+              title={title}
+              data={prepChartData(history, histKey)}
+              color={color}
+              currentPrice={price}
+            />
+            {/* Price momentum context — 5-day volatility + 5-week trend */}
+            <div style={{ background: "#0d1117", border: "1px solid #1a2535",
+              borderTop: "none", borderRadius: "0 0 10px 10px", overflow: "hidden" }}>
+              <PriceMomentumBar
+                history={history}
+                priceKey={histKey}
+                currentPrice={price}
+                color={color}
+              />
+            </div>
+          </div>
+        ))}
       </div>
       <Card title="Key Spreads">
         <Row label="Brent – WTI"    value={fmt(der.brent_wti?.value_bbl)}      unit="$/bbl" signal={der.brent_wti?.signal} note={der.brent_wti?.note} />
