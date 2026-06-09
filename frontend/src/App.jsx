@@ -27,69 +27,151 @@ const ALERT_KEYS = [
 const WARN_PCT = 2
 const CRIT_PCT = 4
 
+// ── CHANGE 1: computeAlerts — adds 5-week avg alongside 5-day avg ──────────
 function computeAlerts(hist, contracts) {
   if (!hist || hist.length < 4 || !contracts) return []
+
+  // Exclude today's live price from historical avg calculations
   const histForAvg = hist.slice(0, -1)
   const alerts = []
+
   for (const { key, label, color } of ALERT_KEYS) {
     const current = contracts[key]?.price_bbl ?? null
     if (current == null) continue
-    const last5 = histForAvg.filter(h => h[key] != null).slice(-5)
+
+    // 5-day avg: last 5 history rows before today
+    const last5  = histForAvg.filter(h => h[key] != null).slice(-5)
     if (last5.length < 3) continue
     const avg5d  = last5.reduce((s, h) => s + h[key], 0) / last5.length
-    const devPct = ((current - avg5d) / avg5d) * 100
-    const absDev = Math.abs(devPct)
+
+    // 5-week avg: last 35 history rows before today
+    const last35 = histForAvg.filter(h => h[key] != null).slice(-35)
+    const avg5w  = last35.length >= 5
+      ? last35.reduce((s, h) => s + h[key], 0) / last35.length
+      : null
+
+    const dev5d  = ((current - avg5d) / avg5d) * 100
+    const dev5w  = avg5w != null ? ((current - avg5w) / avg5w) * 100 : null
+    const absDev = Math.abs(dev5d)
+
     if (absDev < WARN_PCT) continue
+
     alerts.push({
       key, label, color,
       current:  Math.round(current * 100) / 100,
       avg5d:    Math.round(avg5d * 100) / 100,
-      devPct:   Math.round(devPct * 10) / 10,
+      avg5w:    avg5w != null ? Math.round(avg5w * 100) / 100 : null,
+      dev5d:    Math.round(dev5d * 10) / 10,
+      dev5w:    dev5w != null ? Math.round(dev5w * 10) / 10 : null,
       severity: absDev >= CRIT_PCT ? "critical" : "warning",
-      isUp:     devPct > 0,
+      isUp5d:   dev5d > 0,
+      // 5-week trend direction: independent of 5-day deviation
+      trend5w:  dev5w != null ? (dev5w > 1 ? "up" : dev5w < -1 ? "down" : "flat") : null,
     })
   }
+
   return alerts.sort((a, b) => {
     if (a.severity !== b.severity) return a.severity === "critical" ? -1 : 1
-    return Math.abs(b.devPct) - Math.abs(a.devPct)
+    return Math.abs(b.dev5d) - Math.abs(a.dev5d)
   })
 }
 
+// ── CHANGE 2: AlertBanner — shows 5-day volatility + 5-week trend context ──
 function AlertBanner({ alerts }) {
   if (!alerts || alerts.length === 0) return null
   const hasCrit = alerts.some(a => a.severity === "critical")
+
   return (
     <div style={{
       background: "#0d1117",
       borderBottom: `1px solid ${hasCrit ? "#ef444440" : "#f59e0b30"}`,
-      padding: "5px 20px", display: "flex", alignItems: "center",
-      gap: 6, overflowX: "auto", flexShrink: 0,
+      padding: "5px 20px",
+      display: "flex",
+      alignItems: "flex-start",
+      gap: 6,
+      overflowX: "auto",
+      flexShrink: 0,
     }}>
-      <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
-        color: hasCrit ? "#ef4444" : "#f59e0b", whiteSpace: "nowrap", marginRight: 4, flexShrink: 0 }}>
+      {/* Left label */}
+      <span style={{
+        fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
+        color: hasCrit ? "#ef4444" : "#f59e0b",
+        whiteSpace: "nowrap", marginRight: 4, flexShrink: 0,
+        paddingTop: 3,
+      }}>
         {hasCrit ? "⚠" : "◉"} ALERTS
       </span>
-      <span style={{ width: 1, height: 14, background: "#1a2535", flexShrink: 0 }} />
+      <span style={{ width: 1, minHeight: 28, background: "#1a2535", flexShrink: 0 }} />
+
+      {/* Alert chips */}
       {alerts.map(a => {
-        const isCrit = a.severity === "critical"
-        const border = isCrit ? "#ef444455" : "#f59e0b44"
-        const bg     = isCrit ? "#ef444410" : "#f59e0b0d"
-        const sevCol = isCrit ? "#ef4444"   : "#f59e0b"
-        const dirCol = a.isUp ? "#ef4444"   : "#22c55e"
-        const arrow  = a.isUp ? "▲" : "▼"
+        const isCrit  = a.severity === "critical"
+        const border  = isCrit ? "#ef444455" : "#f59e0b44"
+        const bg      = isCrit ? "#ef444410" : "#f59e0b0d"
+        const sevCol  = isCrit ? "#ef4444"   : "#f59e0b"
+        const dirCol5d = a.isUp5d ? "#ef4444" : "#22c55e"
+        const arrow5d  = a.isUp5d ? "▲" : "▼"
+
+        // 5-week trend colours: up=red (overbought vs trend), down=green (oversold vs trend)
+        const trend5wCol = a.trend5w === "up"   ? "#ef4444"
+                         : a.trend5w === "down" ? "#22c55e"
+                         : "#6b7280"
+        const trend5wArrow = a.trend5w === "up" ? "↑" : a.trend5w === "down" ? "↓" : "→"
+        const trend5wLabel = a.trend5w === "up"   ? "uptrend"
+                           : a.trend5w === "down" ? "downtrend"
+                           : "flat"
+
         return (
-          <div key={a.key} style={{ display: "flex", alignItems: "center", gap: 5,
-            background: bg, border: `0.5px solid ${border}`,
-            borderRadius: 5, padding: "3px 9px", whiteSpace: "nowrap", flexShrink: 0 }}>
-            <span style={{ fontSize: 9, fontWeight: 800, color: sevCol }}>{isCrit ? "⚠" : "◉"}</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: a.color }}>{a.label}</span>
-            <span style={{ fontSize: 12, fontWeight: 800, color: "#e5e7eb" }}>${a.current}</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: dirCol }}>{arrow}{a.devPct > 0 ? "+" : ""}{a.devPct}%</span>
-            <span style={{ fontSize: 9, color: "#374151" }}>vs 5d ${a.avg5d}</span>
+          <div key={a.key} style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            background: bg,
+            border: `0.5px solid ${border}`,
+            borderRadius: 6,
+            padding: "4px 10px",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}>
+            {/* Row 1: commodity name + current price + 5-day deviation */}
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 9, fontWeight: 800, color: sevCol }}>{isCrit ? "⚠" : "◉"}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: a.color }}>{a.label}</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#e5e7eb" }}>${a.current}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: dirCol5d }}>
+                {arrow5d}{a.dev5d > 0 ? "+" : ""}{a.dev5d}%
+              </span>
+            </div>
+            {/* Row 2: 5-day context (volatility) + 5-week context (trend) */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {/* 5-day avg: volatility context */}
+              <span style={{ fontSize: 9, color: "#6b7280" }}>
+                5d avg:
+                <span style={{ color: "#9ca3af", marginLeft: 3 }}>${a.avg5d}</span>
+              </span>
+              {/* Divider */}
+              {a.avg5w != null && (
+                <span style={{ fontSize: 9, color: "#1a2535" }}>|</span>
+              )}
+              {/* 5-week avg: trend context */}
+              {a.avg5w != null && (
+                <span style={{ fontSize: 9, color: "#6b7280" }}>
+                  5w avg:
+                  <span style={{ color: "#9ca3af", marginLeft: 3 }}>${a.avg5w}</span>
+                  <span style={{ color: trend5wCol, fontWeight: 700, marginLeft: 4 }}>
+                    {trend5wArrow} {trend5wLabel}
+                  </span>
+                </span>
+              )}
+            </div>
           </div>
         )
       })}
-      <span style={{ fontSize: 9, color: "#1f2937", marginLeft: "auto", flexShrink: 0, whiteSpace: "nowrap" }}>
+
+      <span style={{
+        fontSize: 9, color: "#1f2937", marginLeft: "auto",
+        flexShrink: 0, whiteSpace: "nowrap", paddingTop: 3,
+      }}>
         updates every 30s
       </span>
     </div>
@@ -125,20 +207,15 @@ function Row({ label, value, unit, signal, note, highlight }) {
   const col = signalCol(signal)
   return (
     <div style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: 2,
-      padding: "7px 0",
-      borderBottom: "1px solid #0f1e30",
+      display: "flex", flexDirection: "column", gap: 2,
+      padding: "7px 0", borderBottom: "1px solid #0f1e30",
       background: highlight ? "#0d2a1a" : "transparent",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <span style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em" }}>
           {label}
         </span>
-        {note && (
-          <span style={{ fontSize: 9, color: "#374151", fontStyle: "italic" }}>{note}</span>
-        )}
+        {note && <span style={{ fontSize: 9, color: "#374151", fontStyle: "italic" }}>{note}</span>}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: 14, fontWeight: 700, color: "#e5e7eb", fontFamily: "monospace" }}>
@@ -293,6 +370,106 @@ function CompositeGauge({ score, label, reasons=[] }) {
   )
 }
 
+// ── CHANGE 3: DivergenceFlag component — shown in TabOverview ─────────────
+function DivergenceFlag({ divergence, momentum }) {
+  if (!momentum) return null
+
+  const { avg_5w, avg_5d, dev_from_5w_pct, dev_from_5d_pct, trend_direction, today_brent, label: momLabel } = momentum
+
+  // Always show momentum context row, even without divergence
+  const trendCol = trend_direction === "UP"   ? "#22c55e"
+                 : trend_direction === "DOWN" ? "#ef4444"
+                 : "#6b7280"
+  const trendArrow = trend_direction === "UP" ? "↑" : trend_direction === "DOWN" ? "↓" : "→"
+
+  const dev5wCol = dev_from_5w_pct > 0 ? "#22c55e" : dev_from_5w_pct < 0 ? "#ef4444" : "#6b7280"
+  const dev5dCol = dev_from_5d_pct > 0 ? "#22c55e" : dev_from_5d_pct < 0 ? "#ef4444" : "#6b7280"
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      {/* Brent momentum context — always visible */}
+      <div style={{
+        background: "#0a1628",
+        border: "1px solid #1a2535",
+        borderRadius: 8,
+        padding: "10px 12px",
+        marginBottom: divergence ? 8 : 0,
+      }}>
+        <div style={{ fontSize: 9, fontWeight: 700, color: "#4b5563",
+          textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
+          Brent Price Context
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          {/* 5-day */}
+          <div>
+            <div style={{ fontSize: 9, color: "#374151", marginBottom: 3 }}>vs 5-day avg</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af" }}>
+              ${avg_5d != null ? avg_5d.toFixed(2) : "—"}
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: dev5dCol }}>
+              {dev_from_5d_pct != null ? (dev_from_5d_pct > 0 ? "+" : "") + dev_from_5d_pct.toFixed(1) + "%" : "—"}
+            </div>
+            <div style={{ fontSize: 9, color: "#374151", marginTop: 2 }}>volatility signal</div>
+          </div>
+          {/* 5-week */}
+          <div>
+            <div style={{ fontSize: 9, color: "#374151", marginBottom: 3 }}>vs 5-week avg</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af" }}>
+              ${avg_5w != null ? avg_5w.toFixed(2) : "—"}
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: dev5wCol }}>
+              {dev_from_5w_pct != null ? (dev_from_5w_pct > 0 ? "+" : "") + dev_from_5w_pct.toFixed(1) + "%" : "—"}
+            </div>
+            <div style={{ fontSize: 9, color: "#374151", marginTop: 2 }}>short-term trend</div>
+          </div>
+          {/* Trend direction */}
+          <div>
+            <div style={{ fontSize: 9, color: "#374151", marginBottom: 3 }}>trend direction</div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: trendCol, lineHeight: 1 }}>
+              {trendArrow}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: trendCol, marginTop: 2 }}>
+              {momLabel || trend_direction || "—"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Divergence warning — only shown when composite and price disagree */}
+      {divergence && (
+        <div style={{
+          background: divergence.severity === "STRONG" ? "#f9731610" : "#f59e0b0d",
+          border: `1px solid ${divergence.severity === "STRONG" ? "#f9731640" : "#f59e0b30"}`,
+          borderRadius: 8,
+          padding: "10px 12px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 800,
+              color: divergence.severity === "STRONG" ? "#f97316" : "#f59e0b" }}>
+              ⚡ DIVERGENCE
+            </span>
+            <span style={{ fontSize: 9, fontWeight: 700,
+              color: divergence.severity === "STRONG" ? "#f97316" : "#f59e0b",
+              background: divergence.severity === "STRONG" ? "#f9731620" : "#f59e0b20",
+              borderRadius: 3, padding: "1px 6px" }}>
+              {divergence.severity}
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: "#9ca3af", lineHeight: 1.5 }}>
+            {divergence.message}
+          </div>
+          <div style={{ fontSize: 9, color: "#374151", marginTop: 6, fontStyle: "italic" }}>
+            {divergence.type === "BULL_FUNDAMENTAL_BEAR_PRICE"
+              ? "Fundamentals leading price — wait for price to confirm, or watch for fundamental deterioration."
+              : "Price leading fundamentals — rally may be short-lived if fundamentals don't improve."
+            }
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Tabs ───────────────────────────────────────────────────────────────────
 
 function TabOverview({ d }) {
@@ -305,9 +482,15 @@ function TabOverview({ d }) {
   const invSigs    = d?.inv_signals?.signals     || {}
   const crackSigs  = d?.crack_signals?.signals   || {}
 
+  // Momentum + divergence data from composite output
+  const momentum   = comp.momentum   || null
+  const divergence = comp.divergence || null
+
   const layers = [
     { label: "Inventory",     score: invComp.score != null ? invComp.score / 10 : (eia?.cushing_stocks?.vs_5yr_avg < 0 ? 0.5 : -0.5), label2: invComp.overall_signal || "NO_DATA" },
     { label: "Crack",         score: crackComp.score != null ? crackComp.score / 10 : 0, label2: crackSigs.curve_shape?.structure || crackComp.overall_signal || "NO_DATA" },
+    // CHANGE 3a: momentum layer row in signal layers panel
+    { label: "Price Momentum",score: layers_raw.momentum?.available ? (layers_raw.momentum.score / 10) : 0, label2: layers_raw.momentum?.label || "NO_DATA" },
     { label: "Macro",         score: layers_raw.macro?.available ? (layers_raw.macro.score / 10) : 0, label2: layers_raw.macro?.label },
     { label: "Demand/Weather",score: layers_raw.demand?.available ? (layers_raw.demand.score / 10) : 0, label2: layers_raw.demand?.label },
     { label: "EU Gas Storage",score: invSigs.gie_storage?.signal === "BULLISH" ? 0.8 : invSigs.gie_storage?.signal === "BEARISH" ? -0.8 : 0, label2: invSigs.gie_storage?.signal || "NO_DATA" },
@@ -318,17 +501,31 @@ function TabOverview({ d }) {
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      {/* CHANGE 3b: Composite gauge card now includes DivergenceFlag below the gauge */}
       <Card title="Composite Index">
         <CompositeGauge score={comp.score} label={comp.label} reasons={comp.reasons || []} />
+        <DivergenceFlag divergence={divergence} momentum={momentum} />
       </Card>
+
       <Card title="Signal Layers">
         {layers.map((l,i) => {
           const col = l.score > 0 ? "#22c55e" : l.score < 0 ? "#ef4444" : "#374151"
+          // Highlight momentum row if it's the bearish outlier vs a bullish composite
+          const isMomentum = l.label === "Price Momentum"
+          const momBearishFlag = isMomentum && l.score < -0.2 && (comp.score > 3)
           return (
-            <div key={i} style={{ marginBottom: 10 }}>
+            <div key={i} style={{
+              marginBottom: 10,
+              padding: momBearishFlag ? "4px 6px" : 0,
+              background: momBearishFlag ? "#1a0a0a" : "transparent",
+              borderRadius: momBearishFlag ? 4 : 0,
+              border: momBearishFlag ? "1px solid #ef444430" : "none",
+            }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                <span style={{ color: "#9ca3af" }}>{l.label}
+                <span style={{ color: "#9ca3af" }}>
+                  {l.label}
                   {l.label2 && <span style={{ color: "#374151", fontSize: 10, marginLeft: 6 }}>{l.label2}</span>}
+                  {momBearishFlag && <span style={{ color: "#ef4444", fontSize: 9, marginLeft: 6 }}>↓ bearish outlier</span>}
                 </span>
                 <span style={{ color: col, fontWeight: 700 }}>{l.score > 0 ? "+" : ""}{l.score.toFixed(1)}</span>
               </div>
@@ -339,6 +536,7 @@ function TabOverview({ d }) {
           )
         })}
       </Card>
+
       <Card title="Live Prices" style={{ gridColumn: "1 / -1" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 10 }}>
           <PriceCard label="Brent ICE"    price={fut.brent?.price_bbl}       unit="$/bbl" change={fut.brent?.change_pct}       color="#3b82f6" error={!!fut.brent?.error} />
@@ -348,6 +546,7 @@ function TabOverview({ d }) {
           <PriceCard label="Dubai/Oman"  price={fut.dubai?.price_bbl}       unit="$/bbl" change={fut.dubai?.change_pct}       color="#a78bfa" error={!!fut.dubai?.error} />
         </div>
       </Card>
+
       <Card title="EIA Snapshot" style={{ gridColumn: "1 / -1" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 0 }}>
           <Row label="Cushing Stocks"   value={fmt(eia.cushing_stocks?.value,1)}    unit="mmbbls" signal={eia.cushing_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR" : "ABOVE 5YR"}   note={`WoW: ${fmt(eia.cushing_stocks?.wow,1)}`} />
@@ -424,32 +623,10 @@ function TabSpreads({ d, history }) {
         </span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        <SeriesChart
-          title="Brent – WTI Spread"
-          data={prepChartData(history, "brent_wti")}
-          color="#3b82f6"
-          unit="$/bbl"
-          currentPrice={der.brent_wti?.value_bbl}
-          currentSignal={der.brent_wti?.signal}
-        />
-        <SeriesChart
-          title="WTI – WCS (Canadian Heavy)"
-          data={prepChartData(qsHist, "wti_wcs")}
-          color="#a78bfa"
-          unit="$/bbl"
-          currentPrice={d?.quality_spreads?.spreads?.wti_wcs?.value}
-          currentSignal={d?.quality_spreads?.spreads?.wti_wcs?.signal}
-        />
+        <SeriesChart title="Brent – WTI Spread" data={prepChartData(history, "brent_wti")} color="#3b82f6" unit="$/bbl" currentPrice={der.brent_wti?.value_bbl} currentSignal={der.brent_wti?.signal} />
+        <SeriesChart title="WTI – WCS (Canadian Heavy)" data={prepChartData(qsHist, "wti_wcs")} color="#a78bfa" unit="$/bbl" currentPrice={d?.quality_spreads?.spreads?.wti_wcs?.value} currentSignal={d?.quality_spreads?.spreads?.wti_wcs?.signal} />
         {chartable.filter(s => s.id !== "wti_wcs").map((s, i) => (
-          <SeriesChart
-            key={s.id}
-            title={s.label}
-            data={prepChartData(qsHist, s.id)}
-            color={spreadColors[s.id] || "#6b7280"}
-            unit="$/bbl"
-            currentPrice={s.value}
-            currentSignal={s.signal}
-          />
+          <SeriesChart key={s.id} title={s.label} data={prepChartData(qsHist, s.id)} color={spreadColors[s.id] || "#6b7280"} unit="$/bbl" currentPrice={s.value} currentSignal={s.signal} />
         ))}
       </div>
 
@@ -701,11 +878,6 @@ function TabMacro({ d }) {
   )
 }
 
-// ── TabSentiment — UPDATED ─────────────────────────────────────────────────
-// Changes vs original:
-//   1. h.score → h.final_score in RSS headlines list (field name fix)
-//   2. Primary releases card added at top of return (EIA/OPEC/IEA official sources)
-
 function TabSentiment({ d }) {
   const news      = d?.news              || {}
   const cftc      = d?.cftc             || {}
@@ -723,7 +895,6 @@ function TabSentiment({ d }) {
 
   return (
     <>
-      {/* ── CHANGE 1: Primary releases card (EIA / OPEC / IEA) ── */}
       {news.primary_releases?.length > 0 && (
         <Card title="★ Primary Source Releases (EIA / OPEC / IEA)" style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 9, color: "#374151", marginBottom: 8 }}>
@@ -754,7 +925,6 @@ function TabSentiment({ d }) {
         </Card>
       )}
 
-      {/* ── FinancialJuice card — unchanged ── */}
       <Card title="FinancialJuice — Live Headlines" style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <div style={{ fontSize: 11, color: "#4b5563" }}>
@@ -804,7 +974,6 @@ function TabSentiment({ d }) {
         </div>
       </Card>
 
-      {/* ── RSS News Sentiment card — CHANGE 2: h.score → h.final_score ── */}
       <Card title="RSS News Sentiment" style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 12 }}>
           <div>
@@ -833,7 +1002,6 @@ function TabSentiment({ d }) {
         ))}
       </Card>
 
-      {/* ── CFTC card — unchanged ── */}
       <Card title="CFTC Positioning — Speculative">
         <div style={{ fontSize: 10, color: "#4b5563", marginBottom: 10 }}>
           Managed Money net positioning as % of open interest · Published Friday 3:30 PM ET
@@ -854,7 +1022,6 @@ function TabSentiment({ d }) {
     </>
   )
 }
-
 
 function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurveRange }) {
   const curve    = d?.curve  || {}
@@ -939,13 +1106,9 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
     const sig       = signals[product]
     const strCol    = structureCol(sig?.structure)
 
-    // Filter history to selected range
     const allPts    = ch.filter(r => histKey && r[histKey] != null)
     const pts       = allPts.slice(-days)
-    const chartData = pts.map(r => ({
-      date:  r.date?.slice(5),
-      value: r[histKey],
-    }))
+    const chartData = pts.map(r => ({ date: r.date?.slice(5), value: r[histKey] }))
 
     const vals   = chartData.map(r => r.value).filter(v => v != null)
     const minVal = vals.length ? Math.min(...vals) : -1
@@ -968,7 +1131,6 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
 
     return (
       <Card style={{ marginBottom: 0 }}>
-        {/* Header */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
           <div>
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
@@ -979,7 +1141,6 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
                 {sig?.structure?.replace(/_/g," ") || "—"}
               </span>
             </div>
-            {/* Spread selector */}
             <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
               {SPREAD_OPTIONS.map(o => (
                 <button key={o.label} onClick={() => setSel(prev => ({...prev, [product]: o.label}))}
@@ -995,7 +1156,6 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
               ))}
             </div>
           </div>
-          {/* Current value + range buttons */}
           <div style={{ textAlign:"right" }}>
             <div style={{ fontSize:22, fontWeight:900, color:curCol, fontFamily:"monospace", lineHeight:1 }}>
               {curVal != null ? (curVal >= 0 ? "+" : "") + curVal.toFixed(3) : "—"}
@@ -1018,7 +1178,6 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
           </div>
         </div>
 
-        {/* Chart */}
         {chartData.length < 2 ? (
           <div style={{ height:160, display:"flex", alignItems:"center", justifyContent:"center",
             color:"#1f2937", fontSize:10, fontFamily:"monospace" }}>
@@ -1041,7 +1200,6 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
           </ResponsiveContainer>
         )}
 
-        {/* Stats row */}
         {vals.length > 1 && (() => {
           const mean = vals.reduce((a,b) => a+b, 0) / vals.length
           const sorted = [...vals].sort((a,b) => a-b)
@@ -1068,13 +1226,11 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
         M1 live (Stooq / Yahoo query2) · M2–M12 synthetic shape · Carry ${carry.toFixed(2)}/bbl/mo ·
         Select spread or fly per product · Use range buttons to zoom time window
       </div>
-
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
         {PRODUCTS.map(p => (
           <ProductChart key={p.key} product={p.key} color={p.color} label={p.label} />
         ))}
       </div>
-
       <Card title="Signal Reference" style={{ marginTop:12 }}>
         {[
           ["Spread > +1.0",       "Strong backwardation — physical urgency, prompt scarce"],
@@ -1099,18 +1255,17 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
 function TabGeo({ d }) {
   const geo  = d?.geo || {}
   const agg  = geo.aggregate || {}
-  const events     = geo.active_events    || []
-  const chokepoints = geo.chokepoints     || []
-  const score      = agg.composite        ?? null
-  const scoreCol   = score >= 8 ? "#ef4444" : score >= 6 ? "#f97316" : score >= 4 ? "#f59e0b" : "#22c55e"
-  const pct        = score != null ? (score / 10) * 100 : 0
+  const events      = geo.active_events    || []
+  const chokepoints = geo.chokepoints      || []
+  const score       = agg.composite        ?? null
+  const scoreCol    = score >= 8 ? "#ef4444" : score >= 6 ? "#f97316" : score >= 4 ? "#f59e0b" : "#22c55e"
+  const pct         = score != null ? (score / 10) * 100 : 0
 
   const durationLabel = d => ({ days_weeks:"Days–Weeks", weeks_months:"Weeks–Months", multi_year:"Multi-Year", structural:"Structural" }[d] || d)
   const riskCol = r => ({ CRITICAL:"#ef4444", HIGH:"#f97316", MODERATE:"#f59e0b", LOW:"#22c55e", LOW_RISK:"#22c55e", MODERATE_RISK:"#f59e0b", ELEVATED_RISK:"#f97316", HIGH_RISK:"#ef4444", CRITICAL_RISK:"#ef4444" }[r] || "#6b7280")
 
   return (
     <>
-      {/* ── Aggregate score card ── */}
       <Card title="Geopolitical Risk Score" style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16 }}>
           <div>
@@ -1138,7 +1293,6 @@ function TabGeo({ d }) {
           </div>
         </div>
 
-        {/* Implied premium */}
         <div style={{ background: scoreCol + "12", border: `1px solid ${scoreCol}30`,
           borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
           <div style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase",
@@ -1151,7 +1305,6 @@ function TabGeo({ d }) {
           </div>
         </div>
 
-        {/* Scoring legend */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
           {[
             { label: "Supply Weight", value: "40%" },
@@ -1168,7 +1321,6 @@ function TabGeo({ d }) {
         </div>
       </Card>
 
-      {/* ── Active events ── */}
       <Card title="Active Geopolitical Events" style={{ marginBottom: 12 }}>
         {events.length === 0
           ? <div style={{ color: "#374151", fontSize: 12, padding: "8px 0" }}>No active events</div>
@@ -1198,30 +1350,23 @@ function TabGeo({ d }) {
                     <div style={{ fontSize: 9, color: "#374151" }}>/ 10</div>
                   </div>
                 </div>
-
-                {/* Score bar */}
                 <div style={{ height: 4, background: "#0a0f1a", borderRadius: 2, marginBottom: 6 }}>
                   <div style={{ width: pctBar + "%", height: "100%", background: col, borderRadius: 2 }} />
                 </div>
-
-                {/* Score breakdown */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
                   {[
-                    { label: "Supply Risk", value: ev.supply_at_risk_mbd + " mbd", pts: ev.scoring?.supply_pts },
-                    { label: "Duration",    value: durationLabel(ev.duration),      pts: ev.scoring?.duration_pts },
-                    { label: "Supply pts",  value: ev.scoring?.supply_pts + " pts"  },
-                    { label: "Duration pts",value: ev.scoring?.duration_pts + " pts"},
+                    { label: "Supply Risk", value: ev.supply_at_risk_mbd + " mbd" },
+                    { label: "Duration",    value: durationLabel(ev.duration) },
+                    { label: "Supply pts",  value: ev.scoring?.supply_pts + " pts" },
+                    { label: "Duration pts",value: ev.scoring?.duration_pts + " pts" },
                   ].map((item, j) => (
                     <div key={j} style={{ background: "#0a0f1a", borderRadius: 4,
                       padding: "5px 8px", border: "1px solid #1a2535" }}>
-                      <div style={{ fontSize: 8, color: "#4b5563", textTransform: "uppercase",
-                        letterSpacing: "0.06em" }}>{item.label}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af",
-                        marginTop: 1 }}>{item.value}</div>
+                      <div style={{ fontSize: 8, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.label}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", marginTop: 1 }}>{item.value}</div>
                     </div>
                   ))}
                 </div>
-
                 <div style={{ fontSize: 9, color: "#1f2937", marginTop: 6 }}>
                   Since {ev.start_date} · Implied premium: ${ev.implied_premium?.low}–${ev.implied_premium?.high}/bbl
                 </div>
@@ -1231,7 +1376,6 @@ function TabGeo({ d }) {
         }
       </Card>
 
-      {/* ── Chokepoint reference ── */}
       <Card title="Global Maritime Chokepoints">
         <div style={{ fontSize: 9, color: "#374151", marginBottom: 10, fontStyle: "italic" }}>
           Flows in mbd · ⚠ = active threat from current events
@@ -1268,7 +1412,7 @@ function TabGeo({ d }) {
     </>
   )
 }
-// ── Main App — unchanged ───────────────────────────────────────────────────
+
 function CountdownDisplay({ initialSeconds = 30 }) {
   const [sec, setSec] = React.useState(initialSeconds)
   React.useEffect(() => {
@@ -1279,14 +1423,13 @@ function CountdownDisplay({ initialSeconds = 30 }) {
 }
 
 export default function App() {
-  const [activeTab,  setActiveTab]  = useState("overview")
-  const [data,       setData]       = useState(null)
+  const [activeTab,    setActiveTab]    = useState("overview")
+  const [data,         setData]         = useState(null)
   const [curveHistory, setCurveHistory] = useState([])
-  const [curveData, setCurveData] = useState(null)
-  const [history,    setHistory]    = useState([])
-  const [alerts,     setAlerts]     = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [lastUpdate, setLastUpdate] = useState(null)
+  const [history,      setHistory]      = useState([])
+  const [alerts,       setAlerts]       = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [lastUpdate,   setLastUpdate]   = useState(null)
 
   const [curveSel,   setCurveSel]   = useState({brent:"M1-M2", wti:"M1-M2", rbob:"M1-M2", ho:"M1-M2"})
   const [curveRange, setCurveRange] = useState({brent:"3M",    wti:"3M",    rbob:"3M",    ho:"3M"   })
@@ -1309,19 +1452,23 @@ export default function App() {
         fetch(`${API}/api/curve-history`).then(r => r.json()).catch(() => []),
         fetch(`${API}/api/quality-spreads-history`).then(r => r.json()).catch(() => []),
       ])
-      const merged = { ...all, eia, rig_count: rig, crack, inv_signals: invSig, crack_signals: crackSig, fj, quality_spreads: qs, duc, qs_history: Array.isArray(qsHist) ? qsHist : [], geo, curve, curve_history: Array.isArray(curveHist) ? curveHist : [] }
+      const merged = {
+        ...all, eia, rig_count: rig, crack, inv_signals: invSig,
+        crack_signals: crackSig, fj, quality_spreads: qs, duc,
+        qs_history: Array.isArray(qsHist) ? qsHist : [],
+        geo, curve,
+        curve_history: Array.isArray(curveHist) ? curveHist : [],
+      }
       const histArr = Array.isArray(hist) ? hist : []
       setData(merged)
-      // Only update curve history when row count changes
-      const newCH = Array.isArray(curveHist) ? curveHist : []
       setCurveHistory(prev => {
+        const newCH = Array.isArray(curveHist) ? curveHist : []
         if (prev.length !== newCH.length) return newCH
         if (prev.length === 0) return newCH
         return prev
       })
       setHistory(histArr)
       setLastUpdate(new Date())
-      setCountdown(30)
       setAlerts(computeAlerts(histArr, merged?.futures?.contracts))
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
@@ -1330,8 +1477,7 @@ export default function App() {
   useEffect(() => {
     fetchAll()
     const d = setInterval(fetchAll, 30000)
-
-    return () => { clearInterval(d) }
+    return () => clearInterval(d)
   }, [fetchAll])
 
   const comp     = data?.composite?.composite || {}
