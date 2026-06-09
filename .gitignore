@@ -4,3 +4,4 @@ backend/fetchers/__pycache__/
 backend/fetchers/data/ 
 frontend/node_modules/ 
 frontend/package-lock.json 
+logs/*.log
