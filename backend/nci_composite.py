@@ -88,22 +88,30 @@ def safe(data, *keys, default=None):
 # ── Layer signal extractors ───────────────────────────────────────────────────
 
 def get_inventory_signal() -> dict:
-    """Extract inventory score from inventory_signals.json"""
+    """Extract inventory score from inventory_signals.json.
+
+    File structure: d["composite"]["score"] + d["composite"]["overall_signal"]
+    Individual signals live under d["signals"][key].
+    """
     data  = load_json("inventory_signals.json")
-    score = safe(data, "nci_inventory", "score")
-    label = safe(data, "nci_inventory", "label", default="UNKNOWN")
+
+    # Correct key path: composite.score / composite.overall_signal
+    score = safe(data, "composite", "score")
+    label = safe(data, "composite", "overall_signal", default="UNKNOWN")
 
     if score is None:
         return {"score": 0, "label": "NO_DATA", "available": False, "details": {}, "contribution": 0}
 
+    # Pull individual signal details from d["signals"]
+    sigs = data.get("signals", {})
     details = {
-        "days_cover":          safe(data, "days_cover", "current"),
-        "cushing_mmbbls":      safe(data, "stocks", "cushing_mmbbls"),
-        "cushing_util_pct":    safe(data, "stocks", "cushing_util_pct"),
-        "distillate_vs_5yr":   safe(data, "vs_5yr", "distillate", "deviation_pct"),
-        "gasoline_vs_5yr":     safe(data, "vs_5yr", "gasoline",   "deviation_pct"),
-        "crude_wow_surprise":  safe(data, "wow_changes", "total_crude", "surprise"),
-        "refinery_util":       safe(data, "production_flows", "refinery_util_pct"),
+        "days_cover":       safe(sigs, "days_cover",         "value"),
+        "cushing_signal":   safe(sigs, "cushing_stocks",     "signal"),
+        "gasoline_signal":  safe(sigs, "gasoline_stocks",    "signal"),
+        "distillate_signal":safe(sigs, "distillate_stocks",  "signal"),
+        "refinery_util":    safe(sigs, "refinery_util",      "value"),
+        "gie_signal":       safe(sigs, "gie_storage",        "signal"),
+        "components":       data.get("composite", {}).get("components", []),
     }
 
     return {
@@ -602,7 +610,9 @@ def compute_composite() -> dict:
     if total_weight > 0 and total_weight < 1.0:
         weighted_sum = weighted_sum / total_weight
 
-    composite_score = round(max(-10, min(10, weighted_sum * 10)), 2)
+    # weighted_sum is already on the -10/+10 scale (each layer scores -10→+10,
+    # multiplied by weights that sum to 1.0). Do NOT multiply by 10 again.
+    composite_score = round(max(-10, min(10, weighted_sum)), 2)
 
     if composite_score >= 7:      label = "STRONG_BUY"
     elif composite_score >= 4:    label = "BUY"
