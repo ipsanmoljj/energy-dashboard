@@ -147,30 +147,28 @@ def get_crack_signal() -> dict:
 
 def get_momentum_signal() -> dict:
     """
-    NEW: 5-week Brent price momentum layer.
+    5-week price momentum layer — averaged across Brent AND WTI.
 
-    Reads price_history.json and computes:
-      - 5-week (35-day) rolling average of Brent
-      - % deviation of today's price from that average
-      - Score on -10/+10 scale
+    Using both benchmarks avoids over-relying on one. When Brent and WTI
+    diverge (Cushing bottleneck, North Sea disruption), the divergence itself
+    is a signal captured separately in the crack/spread layers — here we want
+    the broad flat-price trend, so averaging removes single-benchmark noise.
 
-    Scoring bands (% deviation from 5-week avg):
-      > +8%   = +8   (strong uptrend — price running above fundamentals)
+    Scoring bands (% deviation from 5-week avg, applied to the Brent+WTI avg):
+      > +8%   = +8
       +4..8%  = +5
       +2..4%  = +3
       +1..2%  = +1
-      -1..+1% = 0    (flat / noise)
+      -1..+1% = 0
       -2..-1% = -1
       -4..-2% = -3
       -8..-4% = -5
-      < -8%   = -8   (strong downtrend — price rejecting current levels)
+      < -8%   = -8
 
-    Note: momentum is capped at ±8 (not ±10) because a pure price trend
-    should never fully override fundamental signals — it confirms or cautions.
+    Capped at ±8: price trend should confirm fundamentals, not override them.
     """
     history = load_json("price_history.json")
 
-    # price_history.json is a list of {date, brent, wti, ...} dicts
     if not isinstance(history, list) or len(history) < 10:
         return {
             "score": 0, "label": "NO_DATA", "available": False,
@@ -178,7 +176,7 @@ def get_momentum_signal() -> dict:
             "weight": LAYER_WEIGHTS["momentum"], "contribution": 0,
         }
 
-    # Filter to rows with a valid Brent price, sorted oldest→newest
+    # Sort oldest→newest, keep rows that have at least Brent
     rows = sorted(
         [r for r in history if isinstance(r.get("brent"), (int, float))],
         key=lambda r: r.get("date", ""),
@@ -187,15 +185,32 @@ def get_momentum_signal() -> dict:
     if len(rows) < 10:
         return {
             "score": 0, "label": "NO_DATA", "available": False,
-            "details": {"reason": "insufficient brent data points"},
+            "details": {"reason": "insufficient data points"},
             "weight": LAYER_WEIGHTS["momentum"], "contribution": 0,
         }
 
-    # Today's price = most recent row
-    today_price = rows[-1]["brent"]
-    today_date  = rows[-1].get("date", "unknown")
+    def _price_avg(row):
+        """Return Brent+WTI average if both available, else Brent alone."""
+        b = row.get("brent")
+        w = row.get("wti")
+        if isinstance(b, (int, float)) and isinstance(w, (int, float)):
+            return (b + w) / 2
+        return b if isinstance(b, (int, float)) else None
 
-    # 5-week avg = up to 35 trading days, excluding today
+    today_row    = rows[-1]
+    today_price  = _price_avg(today_row)
+    today_brent  = today_row.get("brent")
+    today_wti    = today_row.get("wti")
+    today_date   = today_row.get("date", "unknown")
+
+    if today_price is None:
+        return {
+            "score": 0, "label": "NO_DATA", "available": False,
+            "details": {"reason": "no price in latest row"},
+            "weight": LAYER_WEIGHTS["momentum"], "contribution": 0,
+        }
+
+    # 5-week avg (up to 35 days), excluding today
     lookback_rows = rows[:-1][-35:]
     if len(lookback_rows) < 5:
         return {
@@ -204,13 +219,23 @@ def get_momentum_signal() -> dict:
             "weight": LAYER_WEIGHTS["momentum"], "contribution": 0,
         }
 
-    avg_5w       = sum(r["brent"] for r in lookback_rows) / len(lookback_rows)
-    dev_pct      = ((today_price - avg_5w) / avg_5w) * 100
+    avgs_5w  = [_price_avg(r) for r in lookback_rows if _price_avg(r) is not None]
+    avg_5w   = sum(avgs_5w) / len(avgs_5w)
+    dev_pct  = ((today_price - avg_5w) / avg_5w) * 100
 
-    # Also compute 5-day avg for context (used in divergence flag)
-    last5_rows   = rows[:-1][-5:]
-    avg_5d       = sum(r["brent"] for r in last5_rows) / len(last5_rows) if len(last5_rows) >= 3 else None
-    dev_5d_pct   = ((today_price - avg_5d) / avg_5d * 100) if avg_5d else None
+    # 5-day avg for context (used in divergence flag + DivergenceFlag UI)
+    last5_rows = rows[:-1][-5:]
+    avgs_5d    = [_price_avg(r) for r in last5_rows if _price_avg(r) is not None]
+    avg_5d     = sum(avgs_5d) / len(avgs_5d) if len(avgs_5d) >= 3 else None
+    dev_5d_pct = ((today_price - avg_5d) / avg_5d * 100) if avg_5d else None
+
+    # Individual Brent / WTI deviations (for display in DivergenceFlag)
+    brent_5w_rows = [r["brent"] for r in lookback_rows if isinstance(r.get("brent"), (int, float))]
+    wti_5w_rows   = [r["wti"]   for r in lookback_rows if isinstance(r.get("wti"),   (int, float))]
+    avg_5w_brent  = sum(brent_5w_rows) / len(brent_5w_rows) if brent_5w_rows else None
+    avg_5w_wti    = sum(wti_5w_rows)   / len(wti_5w_rows)   if wti_5w_rows   else None
+    dev_brent_5w  = ((today_brent - avg_5w_brent) / avg_5w_brent * 100) if avg_5w_brent and today_brent else None
+    dev_wti_5w    = ((today_wti   - avg_5w_wti)   / avg_5w_wti   * 100) if avg_5w_wti   and today_wti   else None
 
     # Score mapping
     if dev_pct > 8:       score =  8
@@ -224,7 +249,7 @@ def get_momentum_signal() -> dict:
     else:                 score = -8
 
     label = (
-        "UPTREND"    if score >= 3
+        "UPTREND"         if score >= 3
         else "MILD_UPTREND"   if score == 1
         else "FLAT"           if score == 0
         else "MILD_DOWNTREND" if score == -1
@@ -233,19 +258,27 @@ def get_momentum_signal() -> dict:
     )
 
     details = {
-        "today_brent":        round(today_price, 2),
+        "today_brent":        round(today_brent, 2) if today_brent else None,
+        "today_wti":          round(today_wti,   2) if today_wti   else None,
+        "today_avg":          round(today_price, 2),
         "today_date":         today_date,
         "avg_5w":             round(avg_5w, 2),
         "avg_5d":             round(avg_5d, 2) if avg_5d else None,
         "dev_from_5w_pct":    round(dev_pct, 2),
         "dev_from_5d_pct":    round(dev_5d_pct, 2) if dev_5d_pct is not None else None,
+        "dev_brent_5w_pct":   round(dev_brent_5w, 2) if dev_brent_5w is not None else None,
+        "dev_wti_5w_pct":     round(dev_wti_5w,   2) if dev_wti_5w   is not None else None,
+        "avg_5w_brent":       round(avg_5w_brent, 2) if avg_5w_brent else None,
+        "avg_5w_wti":         round(avg_5w_wti,   2) if avg_5w_wti   else None,
         "lookback_days_used": len(lookback_rows),
         "trend_direction":    "UP" if dev_pct > 1 else "DOWN" if dev_pct < -1 else "FLAT",
+        "benchmark_note":     "Brent+WTI averaged" if today_wti else "Brent only (WTI unavailable)",
     }
 
     log.info(
-        "  MOMENTUM  Brent today=$%.2f  5w_avg=$%.2f  dev=%+.1f%%  score=%+d  [%s]",
-        today_price, avg_5w, dev_pct, score, label,
+        "  MOMENTUM  Brent=$%.2f WTI=$%.2f avg=$%.2f  5w_avg=$%.2f  dev=%+.1f%%  score=%+d  [%s]",
+        today_brent or 0, today_wti or 0, today_price,
+        avg_5w, dev_pct, score, label,
     )
 
     return {
