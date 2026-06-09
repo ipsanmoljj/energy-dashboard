@@ -97,8 +97,8 @@ def job_curve():
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
         from curve_fetcher import run as curve_run
         curve_run()
-        from curve_history import run as hist_run
-        hist_run()
+        pass  # curve_history called via subprocess
+        subprocess.run([sys.executable, str(ROOT / "curve_history.py")], timeout=60, check=False)
         log.info("Curve + history updated")
     except Exception as e:
         log.warning("job_curve failed: %s", e)
