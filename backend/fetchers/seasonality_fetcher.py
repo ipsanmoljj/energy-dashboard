@@ -38,8 +38,8 @@ GITHUB_SOURCES = {
 # ── EIA API v2 series (requires EIA_API_KEY) ──────────────────────────────
 # Units: $/gallon — multiply by 42 to convert to $/bbl
 EIA_SERIES = {
-    "rbob": "EER_EPMRR_PF4_RGC_DPG",    # RBOB Regular Gasoline, NY Harbor
-    "ho":   "EER_EPDXL0_PF4_Y35NY_DPG", # Ultra-Low-Sulphur No.2 Diesel (ULSD), NY Harbor
+    "rbob": "EER_EPMRR_PF4_Y05LA_DPG",   # Reformulated Regular Gasoline, Los Angeles (RBOB proxy)
+    "ho":   "EER_EPD2F_PF4_Y35NY_DPG",   # No.2 Fuel Oil / Heating Oil, NY Harbor
 }
 
 # ── Gasoil crack seasonal ($/bbl above Brent) — empirical 10yr average ───
