@@ -8,3 +8,66 @@ logs/*.log
 backend/venv/
 keepalive.sh
 package-lock.json
+
+
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Virtual environment ────────────────────────────────────────
+venv/
+env/
+.venv/
+ENV/
+
+# ── Build artefacts ───────────────────────────────────────────
+build/
+dist/
+*.egg-info/
+
+# ── LaTeX build output ────────────────────────────────────────
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+# Keep the .tex source and the final .pdf, exclude intermediate files only
+
+# ── IDE / editor ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.code-workspace
+
+# ── OS junk ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Secrets / credentials ─────────────────────────────────────
+.env
+*.env
+secrets.py
+config_local.py
+
+# ── Data files (large) ────────────────────────────────────────
+# The source LCO_data.csv lives in the parent demsup folder, not here.
+# If a copy lands in shock_analyzer, do not push it.
+LCO_data.csv
+CL_data.csv
+HO_data.csv
+LGO_data.csv
+
+# ── Jupyter ───────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Node (from pptxgenjs install) ────────────────────────────
+node_modules/
+package-lock.json
