@@ -1543,6 +1543,293 @@ function TabGeo({ d }) {
   )
 }
 
+// ── TabSeasonality — drop this component into App.jsx ─────────────────────
+// Paste this function anywhere before the App() export, then:
+//   1. Add { id: "seasonality", label: "Seasonality" } to the TABS array
+//   2. Add {activeTab === "seasonality" && <TabSeasonality />} to the render block
+
+function TabSeasonality() {
+  const [activeSeries, setActiveSeries] = React.useState({
+    brent: true, wti: true, rbob: true, ho: true, gasoil: true
+  })
+  const [mode, setMode] = React.useState("index") // "index" | "zscore"
+  const chartRef = React.useRef(null)
+  const chartInstanceRef = React.useRef(null)
+
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+  // Representative seasonal indices (100 = Jan baseline)
+  // Replace RAW values with API-derived monthly averages once you have
+  // enough history in price_history.json (5yr rolling preferred per book)
+  const RAW = {
+    brent:  [100, 99, 101, 103, 105, 106, 107, 108, 106, 103, 101,  99],
+    wti:    [100, 99, 101, 103, 105, 106, 107, 108, 105, 102, 100,  98],
+    rbob:   [ 97,100, 107, 114, 116, 115, 113, 109, 103,  98,  94,  92],
+    ho:     [105,103,  99,  96,  94,  93,  94,  97, 102, 108, 111, 110],
+    gasoil: [106,104, 100,  97,  95,  94,  95,  98, 103, 109, 112, 111],
+  }
+
+  const SERIES = [
+    { key: "brent",  label: "Brent ICE",   color: "#3b82f6", dash: []     },
+    { key: "wti",    label: "WTI NYMEX",   color: "#22c55e", dash: [6,3]  },
+    { key: "rbob",   label: "RBOB",        color: "#f59e0b", dash: [4,2]  },
+    { key: "ho",     label: "HO / ULSD",   color: "#ef4444", dash: [8,4]  },
+    { key: "gasoil", label: "ICE Gasoil",  color: "#a78bfa", dash: [2,2]  },
+  ]
+
+  function toZScore(arr) {
+    const mean = arr.reduce((a,b) => a+b, 0) / arr.length
+    const std  = Math.sqrt(arr.map(v => (v-mean)**2).reduce((a,b) => a+b, 0) / arr.length)
+    return arr.map(v => parseFloat(((v-mean)/std).toFixed(2)))
+  }
+
+  function getDisplay(key) {
+    return mode === "index" ? RAW[key] : toZScore(RAW[key])
+  }
+
+  React.useEffect(() => {
+    if (!window.Chart || !chartRef.current) return
+    if (chartInstanceRef.current) { chartInstanceRef.current.destroy() }
+
+    const datasets = SERIES.filter(s => activeSeries[s.key]).map(s => ({
+      label: s.label,
+      data:  getDisplay(s.key),
+      borderColor:     s.color,
+      backgroundColor: s.color + "18",
+      borderWidth: 2,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      borderDash: s.dash,
+      tension: 0.4,
+      fill: false,
+    }))
+
+    chartInstanceRef.current = new window.Chart(chartRef.current, {
+      type: "line",
+      data: { labels: MONTHS, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.parsed.y
+                return ` ${ctx.dataset.label}: ${mode === "index" ? v.toFixed(1) : v.toFixed(2) + "σ"}`
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: "#0f1e30" },
+            ticks: { color: "#4b5563", font: { size: 11 } }
+          },
+          y: {
+            grid: { color: "#0f1e30" },
+            ticks: {
+              color: "#4b5563", font: { size: 11 },
+              callback: v => mode === "index" ? v : v.toFixed(1) + "σ"
+            }
+          }
+        },
+        interaction: { mode: "index", intersect: false }
+      }
+    })
+  }, [activeSeries, mode])
+
+  const toggleSeries = key => setActiveSeries(prev => ({ ...prev, [key]: !prev[key] }))
+
+  const ANNOTATIONS = [
+    { months: "Jan–Feb",  title: "Heating oil winter peak",       desc: "HO/ULSD and ICE Gasoil seasonally elevated. Cold-snap risk NE US and North Europe. Gasoline demand soft.", dir: "bull", products: ["ho","gasoil"] },
+    { months: "Mar–Apr",  title: "Spring refinery turnarounds",   desc: "Maintenance cuts crude runs and product output. Crude demand softens. Crack spreads can widen as product tightens temporarily.", dir: "neut", products: ["brent","wti"] },
+    { months: "Feb–May",  title: "RBOB crack seasonal peak",      desc: "Most reliable seasonal trade: long RBOB crack vs WTI. Refineries exit maintenance as driving season builds ahead of Memorial Day.", dir: "bull", products: ["rbob"] },
+    { months: "May–Jun",  title: "US driving season opens",       desc: "Memorial Day triggers US gasoline demand surge. Brent/WTI typically reach mid-year highs. Peak seasonal bullish window.", dir: "bull", products: ["brent","wti","rbob"] },
+    { months: "Jul–Aug",  title: "Peak driving + EM power demand",desc: "US driving season peak plus EM power gen (Middle East A/C, China industrial) adds ~1–2 mbd vs Q1. Crude at seasonal highs.", dir: "bull", products: ["brent","wti"] },
+    { months: "Sep–Oct",  title: "Autumn refinery maintenance",   desc: "Second turnaround season. Gasoline crack weakens post-Labour Day. Distillate stocks begin seasonal build for winter.", dir: "bear", products: ["rbob"] },
+    { months: "Oct–Nov",  title: "Distillate / heating demand",   desc: "European heating oil season and US ULSD demand builds. ICE Gasoil and HO cracks at annual peak. Key window: long HO crack.", dir: "bull", products: ["ho","gasoil"] },
+    { months: "Nov–Dec",  title: "Year-end softening",            desc: "Holiday slowdown reduces industrial and road demand. Chinese New Year prep begins in Dec. Crude often drifts lower into year-end.", dir: "bear", products: ["brent","wti"] },
+  ]
+
+  const QUARTERS = [
+    {
+      q: "Q1 — Jan to Mar",
+      rows: [
+        { label: "Crude (Brent/WTI)", signal: "Neutral → soft",         dir: "neut", note: "Heating demand offset by refinery maintenance beginning late-Mar" },
+        { label: "RBOB",              signal: "Rising",                  dir: "bull", note: "Pre-season builds; crack begins seasonal rally from Feb" },
+        { label: "HO / ICE Gasoil",  signal: "Elevated then declining", dir: "bear", note: "Peak Jan–Feb; cracks compress as heating season ends" },
+      ]
+    },
+    {
+      q: "Q2 — Apr to Jun",
+      rows: [
+        { label: "Crude (Brent/WTI)", signal: "Rising",        dir: "bull", note: "Demand ramp post-turnaround; driving season opens Memorial Day" },
+        { label: "RBOB",              signal: "Peak window",   dir: "bull", note: "Strongest seasonal period — Memorial Day + tight summer RVP spec" },
+        { label: "HO / ICE Gasoil",  signal: "Seasonal low",  dir: "bear", note: "Heating off-season; cracks at annual trough" },
+      ]
+    },
+    {
+      q: "Q3 — Jul to Sep",
+      rows: [
+        { label: "Crude (Brent/WTI)", signal: "Peak then falling",      dir: "bull", note: "Jul-Aug seasonal peak; softens Sep as autumn maintenance begins" },
+        { label: "RBOB",              signal: "Declining from peak",     dir: "bear", note: "Post-Labour Day demand drop; summer blend spec ends" },
+        { label: "HO / ICE Gasoil",  signal: "Bottoming → recovering", dir: "neut", note: "Pre-winter builds begin; Sep/Oct stock levels signal winter tightness" },
+      ]
+    },
+    {
+      q: "Q4 — Oct to Dec",
+      rows: [
+        { label: "Crude (Brent/WTI)", signal: "Volatile, year-end soft", dir: "neut", note: "Oct OPEC risk; holiday demand softness; year-end positioning" },
+        { label: "RBOB",              signal: "Seasonal low",            dir: "bear", note: "Off-season; winter blend cheaper; demand at annual trough" },
+        { label: "HO / ICE Gasoil",  signal: "Peak",                    dir: "bull", note: "European heating season; winter logistics diesel; strongest crack window" },
+      ]
+    },
+  ]
+
+  const dirColor = d => d === "bull" ? "#22c55e" : d === "bear" ? "#ef4444" : "#f59e0b"
+  const dirLabel = d => d === "bull" ? "Bullish" : d === "bear" ? "Bearish" : "Neutral"
+  const seriesLabel = key => SERIES.find(s => s.key === key)?.label || key
+  const seriesColor = key => SERIES.find(s => s.key === key)?.color || "#6b7280"
+
+  return (
+    <>
+      {/* ── Chart ── */}
+      <Card title="Seasonal Price Index (Jan = 100)" style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 9, color: "#374151", fontStyle: "italic", marginBottom: 10 }}>
+          Representative seasonal patterns derived from multi-year historical averages.
+          Index mode: Jan = 100. Z-score mode: deviation in standard deviations from annual mean.
+          Replace RAW values in TabSeasonality with live 5-yr history once price_history.json has sufficient depth.
+        </div>
+
+        {/* Controls */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12, alignItems: "center" }}>
+          {SERIES.map(s => (
+            <button key={s.key} onClick={() => toggleSeries(s.key)} style={{
+              padding: "4px 12px", borderRadius: 20, fontSize: 11, cursor: "pointer",
+              fontWeight: activeSeries[s.key] ? 700 : 400,
+              background: activeSeries[s.key] ? s.color + "22" : "transparent",
+              border: `${activeSeries[s.key] ? "1.5px" : "1px"} solid ${activeSeries[s.key] ? s.color : "#1a2535"}`,
+              color: activeSeries[s.key] ? s.color : "#4b5563",
+            }}>
+              {s.label}
+            </button>
+          ))}
+          <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+            {["index","zscore"].map(m => (
+              <button key={m} onClick={() => setMode(m)} style={{
+                padding: "4px 10px", fontSize: 11, borderRadius: 6, cursor: "pointer",
+                background: mode === m ? "#1a2535" : "transparent",
+                border: `1px solid ${mode === m ? "#374151" : "#1a2535"}`,
+                color: mode === m ? "#e5e7eb" : "#4b5563",
+                fontWeight: mode === m ? 700 : 400,
+              }}>
+                {m === "index" ? "Index (100)" : "Z-score"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 10, fontSize: 11, color: "#4b5563" }}>
+          {SERIES.filter(s => activeSeries[s.key]).map(s => (
+            <span key={s.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: s.color, display: "inline-block" }}/>
+              {s.label}
+              {s.dash.length > 0 && <span style={{ fontSize: 9, opacity: 0.5 }}>- -</span>}
+            </span>
+          ))}
+        </div>
+
+        <div style={{ position: "relative", width: "100%", height: 280 }}>
+          <canvas ref={chartRef} role="img"
+            aria-label="Seasonal energy price index chart showing monthly patterns for Brent, WTI, RBOB, HO and ICE Gasoil across a calendar year">
+          </canvas>
+        </div>
+      </Card>
+
+      {/* ── Inflection annotations ── */}
+      <div style={{ fontSize: 9, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em",
+        textTransform: "uppercase", marginBottom: 8 }}>
+        Key seasonal inflection points
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+        {ANNOTATIONS.map((a, i) => (
+          <div key={i} style={{ background: "#0a0f1a", border: "1px solid #1a2535",
+            borderRadius: 8, padding: "10px 12px" }}>
+            <div style={{ fontSize: 9, color: "#374151", marginBottom: 2 }}>{a.months}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#e5e7eb", marginBottom: 4 }}>{a.title}</div>
+            <div style={{ fontSize: 10, color: "#6b7280", lineHeight: 1.5, marginBottom: 8 }}>{a.desc}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
+                color: dirColor(a.dir), background: dirColor(a.dir) + "22" }}>
+                {dirLabel(a.dir)}
+              </span>
+              {a.products.map(p => (
+                <span key={p} style={{ fontSize: 9, padding: "1px 7px", borderRadius: 10,
+                  color: seriesColor(p), background: seriesColor(p) + "18", fontWeight: 600 }}>
+                  {seriesLabel(p)}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Quarterly breakdown ── */}
+      <div style={{ fontSize: 9, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em",
+        textTransform: "uppercase", marginBottom: 8 }}>
+        Seasonal signals by quarter
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
+        {QUARTERS.map((qd, qi) => (
+          <div key={qi} style={{ background: "#0a0f1a", border: "1px solid #1a2535", borderRadius: 8, padding: "10px 14px" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#e5e7eb", marginBottom: 8 }}>{qd.q}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {qd.rows.map((row, ri) => (
+                <div key={ri} style={{ background: "#060d18", border: "1px solid #0f1e30",
+                  borderRadius: 6, padding: "8px 10px" }}>
+                  <div style={{ fontSize: 9, color: "#374151", marginBottom: 3 }}>{row.label}</div>
+                  <div style={{ marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
+                      color: dirColor(row.dir), background: dirColor(row.dir) + "22" }}>
+                      {row.signal}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 10, color: "#4b5563", lineHeight: 1.5 }}>{row.note}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Key trade windows reference ── */}
+      <Card title="Seasonal Trade Windows — Reference">
+        <div style={{ fontSize: 9, color: "#374151", marginBottom: 10, fontStyle: "italic" }}>
+          Per the OilMacroTrading book framework · these are the most reliable recurring seasonal patterns
+        </div>
+        {[
+          ["Feb–May",  "Long RBOB crack (RB – CL)",          "Most consistent seasonal energy trade. Refineries exit maintenance + driving season demand builds."],
+          ["Mar–Apr",  "Short crude / long product spreads",  "Spring turnaround season: crude demand softens, product tightens. Crack spread widening expected."],
+          ["Jul–Aug",  "Long outright crude / backwardation", "US driving peak + EM power gen. Curve typically in backwardation. Physical urgency in M1-M2."],
+          ["Oct–Nov",  "Long HO crack (HO – CL)",            "European heating season + US ULSD demand. Strongest distillate window of the year."],
+          ["Oct",      "Long ICE Gasoil crack (GO – BRN)",   "European equivalent of the HO crack. Q4 peak for gasoil across ARA."],
+          ["Sep–Oct",  "Short RBOB crack",                   "Post-Labour Day demand drop + winter blend spec change. Gasoline crack seasonally weakens."],
+          ["Nov–Dec",  "Watch curve shape for year-end roll", "Low liquidity; year-end positioning can distort M1-M2 spreads. Be cautious with outright length."],
+        ].map(([window, trade, rationale], i) => (
+          <div key={i} style={{ display: "flex", gap: 10, padding: "6px 0",
+            borderBottom: "1px solid #0f1e30", fontSize: 11, alignItems: "flex-start" }}>
+            <span style={{ color: "#f59e0b", fontWeight: 700, minWidth: 70, flexShrink: 0 }}>{window}</span>
+            <span style={{ color: "#00d98b", fontWeight: 600, minWidth: 220, flexShrink: 0 }}>{trade}</span>
+            <span style={{ color: "#4b5563", lineHeight: 1.5 }}>{rationale}</span>
+          </div>
+        ))}
+      </Card>
+    </>
+  )
+}
+
 function CountdownDisplay({ initialSeconds = 30 }) {
   const [sec, setSec] = React.useState(initialSeconds)
   React.useEffect(() => {
