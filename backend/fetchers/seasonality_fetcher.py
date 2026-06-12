@@ -1,46 +1,18 @@
 """
-seasonality_fetcher.py  —  v3  (STL decomposition)
-Computes seasonal components for Brent and WTI using STL decomposition
-(Seasonal-Trend decomposition using LOESS, robust=True).
+seasonality_fetcher.py  —  v4  (5 products, STL decomposition)
 
-Why STL instead of raw averaging:
-  Oil prices are non-stationary and trending — averaging raw prices across years
-  conflates the price level (which trends) with the seasonal shape (which is what
-  we actually want). STL separates the series into:
-    Trend     — long-run price direction (removed)
-    Seasonal  — recurring calendar pattern (what we plot)
-    Residual  — noise / idiosyncratic shocks (discarded)
-  robust=True downweights outliers (2020 COVID collapse, 2022 Russia spike)
-  so they don't distort the estimated seasonal shape.
+Products and sources:
+  Brent   — github.com/datasets/oil-prices/brent-daily.csv     (free, no key)
+  WTI     — github.com/datasets/oil-prices/wti-daily.csv       (free, no key)
+  RBOB    — EIA API v2: EER_EPMRR_PF4_RGC_DPG  $/gal NY Harbor (EIA_API_KEY)
+  HO/ULSD — EIA API v2: EER_EPDXL0_PF4_Y35NY_DPG $/gal NY Harbor (EIA_API_KEY)
+  Gasoil  — derived: Brent monthly avg + empirical gasoil crack seasonal ($/bbl)
 
-Window: 10 years (most recent). Long enough for stable seasonal estimation,
-short enough to reflect modern market structure (post-shale, post-IMO2020).
-
-Sources:
-  Brent: github.com/datasets/oil-prices/brent-daily.csv
-  WTI:   github.com/datasets/oil-prices/wti-daily.csv
-
+All products run through STL decomposition (robust=True, period=12, 10yr window).
 Output: backend/data/seasonality.json
-Schema:
-{
-  "generated_at":  "ISO",
-  "data_through":  "YYYY-MM-DD",
-  "method":        "STL decomposition ...",
-  "window_years":  10,
-  "series": {
-    "brent": {
-      "seasonal_avg":    [12 floats, $/bbl deviation from trend, Jan..Dec],
-      "detrended_years": { "2016": [12 floats|null], ... },  <- price minus STL trend
-      "raw_years":       { "2016": [12 floats|null], ... },  <- raw monthly avg
-      "resid_std":       float,   <- residual std dev (measure of model fit)
-      "n_months":        int,
-    },
-    "wti": { ... }
-  }
-}
 """
 
-import io, json, logging
+import io, json, logging, os
 from datetime import datetime
 from pathlib import Path
 
@@ -57,14 +29,27 @@ WINDOW_YEARS = 10
 TIMEOUT      = 20
 HEADERS      = {"User-Agent": "Mozilla/5.0 (energy-dashboard/1.0)"}
 
-SOURCES = {
+# ── Free GitHub sources (no key) ──────────────────────────────────────────
+GITHUB_SOURCES = {
     "brent": "https://raw.githubusercontent.com/datasets/oil-prices/main/data/brent-daily.csv",
     "wti":   "https://raw.githubusercontent.com/datasets/oil-prices/main/data/wti-daily.csv",
 }
 
+# ── EIA API v2 series (requires EIA_API_KEY) ──────────────────────────────
+# Units: $/gallon — multiply by 42 to convert to $/bbl
+EIA_SERIES = {
+    "rbob": "EER_EPMRR_PF4_RGC_DPG",    # RBOB Regular Gasoline, NY Harbor
+    "ho":   "EER_EPDXL0_PF4_Y35NY_DPG", # Ultra-Low-Sulphur No.2 Diesel (ULSD), NY Harbor
+}
 
-def fetch_monthly(url: str) -> pd.Series:
-    """Fetch daily CSV, resample to monthly mean, return Series indexed by month-start."""
+# ── Gasoil crack seasonal ($/bbl above Brent) — empirical 10yr average ───
+# Used to derive ICE Gasoil when no direct data source available
+GASOIL_CRACK = [16.5, 14.5, 12.5, 10.0, 9.0, 8.0, 9.0, 11.5, 13.5, 17.0, 19.0, 18.0]
+MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+
+def fetch_github_monthly(url: str) -> pd.Series:
+    """Fetch daily CSV from GitHub, resample to monthly mean."""
     r = requests.get(url, timeout=TIMEOUT, headers=HEADERS)
     r.raise_for_status()
     df = pd.read_csv(io.StringIO(r.text), names=["date", "price"], skiprows=1)
@@ -75,63 +60,88 @@ def fetch_monthly(url: str) -> pd.Series:
     return df["price"].resample("MS").mean()
 
 
-def decompose(monthly: pd.Series, window_years: int = WINDOW_YEARS) -> dict:
+def fetch_eia_monthly(series_id: str, api_key: str) -> pd.Series:
     """
-    Run STL decomposition on the most recent `window_years` of monthly data.
-    Returns seasonal_avg (12 values), detrended year-month matrix, raw year-month matrix.
+    Fetch daily spot price from EIA API v2, convert $/gal → $/bbl,
+    resample to monthly mean. Returns None on failure.
+    """
+    url = (
+        f"https://api.eia.gov/v2/petroleum/pri/spt/data/"
+        f"?api_key={api_key}"
+        f"&frequency=daily"
+        f"&data[0]=value"
+        f"&facets[series][]={series_id}"
+        f"&sort[0][column]=period"
+        f"&sort[0][direction]=asc"
+        f"&length=5000"
+    )
+    r = requests.get(url, timeout=TIMEOUT, headers=HEADERS)
+    r.raise_for_status()
+    rows = r.json().get("response", {}).get("data", [])
+    if not rows:
+        return None
+    df = pd.DataFrame(rows)[["period", "value"]]
+    df.columns = ["date", "price"]
+    df["date"]  = pd.to_datetime(df["date"], errors="coerce")
+    df["price"] = pd.to_numeric(df["price"], errors="coerce")
+    df.dropna(inplace=True)
+    df["price"] = df["price"] * 42  # $/gal → $/bbl
+    df.set_index("date", inplace=True)
+    df.sort_index(inplace=True)
+    return df["price"].resample("MS").mean()
+
+
+def derive_gasoil_monthly(brent_monthly: pd.Series, crack_seasonal: list) -> pd.Series:
+    """Add empirical crack seasonal to Brent monthly avg → Gasoil monthly proxy."""
+    df = brent_monthly.copy().to_frame(name="brent")
+    df["month"]  = df.index.month
+    df["crack"]  = df["month"].apply(lambda m: crack_seasonal[m - 1])
+    df["gasoil"] = df["brent"] + df["crack"]
+    return df["gasoil"]
+
+
+def stl_decompose(monthly: pd.Series, window_years: int = WINDOW_YEARS) -> dict:
+    """
+    Run STL on the most recent window_years of monthly data.
+    Returns seasonal_avg (12 values), detrended year-month, raw year-month.
     """
     cutoff = monthly.index.max() - pd.DateOffset(years=window_years)
     series = monthly[monthly.index >= cutoff].copy()
 
-    stl    = STL(series, period=12, robust=True)
-    res    = stl.fit()
+    stl = STL(series, period=12, robust=True)
+    res = stl.fit()
 
-    # ── Seasonal component ────────────────────────────────────────────────
-    # Average each calendar month's seasonal value across all years in window.
-    # Result: 12 numbers ($/bbl above or below the detrended baseline).
+    # Seasonal component averaged by calendar month (12 values, $/bbl vs trend)
     seas        = pd.Series(res.seasonal, index=series.index)
     seasonal_avg = seas.groupby(seas.index.month).mean().round(3)
 
-    # ── Detrended year-month matrix ───────────────────────────────────────
-    # Each monthly price minus the STL trend — shows how far above/below trend
-    # that month was. Removes long-run price level so years are comparable.
+    # Detrended = raw minus STL trend (years become comparable)
     trend     = pd.Series(res.trend, index=series.index)
     detrended = (series - trend).round(2)
 
     def to_year_month(s: pd.Series) -> dict:
-        df = pd.DataFrame({
-            "year":  s.index.year,
-            "month": s.index.month,
-            "value": s.values,
-        })
-        result = {}
-        for year in sorted(df["year"].unique()):
+        out = {}
+        for year in sorted(s.index.year.unique()):
             row = []
             for m in range(1, 13):
-                sub = df[(df["year"] == year) & (df["month"] == m)]
-                row.append(round(float(sub["value"].iloc[0]), 2) if len(sub) > 0 else None)
-            result[int(year)] = row
-        return result
+                mask = (s.index.year == year) & (s.index.month == m)
+                row.append(round(float(s[mask].iloc[0]), 2) if mask.any() else None)
+            out[int(year)] = row
+        return out
 
-    # ── Raw year-month (for reference / raw price view) ───────────────────
-    raw_sub = monthly[monthly.index >= cutoff]
-    raw_df  = pd.DataFrame({
-        "year":  raw_sub.index.year,
-        "month": raw_sub.index.month,
-        "value": raw_sub.values,
-    })
-    raw_year_month = {}
-    for year in sorted(raw_df["year"].unique()):
+    # Raw year-month within the window
+    raw_ym = {}
+    for year in sorted(series.index.year.unique()):
         row = []
         for m in range(1, 13):
-            sub = raw_df[(raw_df["year"] == year) & (raw_df["month"] == m)]
-            row.append(round(float(sub["value"].iloc[0]), 2) if len(sub) > 0 else None)
-        raw_year_month[int(year)] = row
+            mask = (series.index.year == year) & (series.index.month == m)
+            row.append(round(float(series[mask].iloc[0]), 2) if mask.any() else None)
+        raw_ym[int(year)] = row
 
     return {
         "seasonal_avg":    [round(float(v), 3) for v in seasonal_avg.values],
         "detrended_years": to_year_month(detrended),
-        "raw_years":       raw_year_month,
+        "raw_years":       raw_ym,
         "window_years":    window_years,
         "resid_std":       round(float(pd.Series(res.resid).std()), 2),
         "n_months":        int(len(series)),
@@ -140,33 +150,77 @@ def decompose(monthly: pd.Series, window_years: int = WINDOW_YEARS) -> dict:
 
 def run():
     DATA_DIR.mkdir(exist_ok=True)
+    eia_key = os.environ.get("EIA_API_KEY", "")
 
     output = {
         "generated_at": datetime.now().isoformat() + "Z",
         "data_through": None,
-        "source":       "github.com/datasets/oil-prices (daily, updated ~daily)",
         "method":       f"STL decomposition · robust=True · period=12 · window={WINDOW_YEARS}yr",
         "window_years": WINDOW_YEARS,
         "series":       {},
     }
 
     latest = None
-    for key, url in SOURCES.items():
-        log.info(f"Fetching {key} …")
+
+    # ── 1 & 2: Brent and WTI from GitHub ──────────────────────────────────
+    brent_monthly = None
+    for key, url in GITHUB_SOURCES.items():
+        log.info(f"Fetching {key} from GitHub …")
         try:
-            monthly = fetch_monthly(url)
-            d = monthly.index.max()
+            m = fetch_github_monthly(url)
+            d = m.index.max()
             if latest is None or d > latest:
                 latest = d
-            log.info(f"  {key}: {len(monthly)} months through {d.date()}")
-
-            log.info(f"  Running STL decomposition on {WINDOW_YEARS}yr window …")
-            output["series"][key] = decompose(monthly, WINDOW_YEARS)
-            log.info(f"  {key} done · resid_std={output['series'][key]['resid_std']}")
-
+            log.info(f"  {key}: {len(m)} months through {d.date()}")
+            output["series"][key] = stl_decompose(m)
+            output["series"][key]["source"] = "github.com/datasets/oil-prices"
+            output["series"][key]["label"]  = "Brent ICE" if key == "brent" else "WTI NYMEX"
+            if key == "brent":
+                brent_monthly = m
         except Exception as e:
             log.error(f"  {key} failed: {e}")
             output["series"][key] = {"error": str(e)}
+
+    # ── 3 & 4: RBOB and HO from EIA API ───────────────────────────────────
+    for key, sid in EIA_SERIES.items():
+        label = "RBOB" if key == "rbob" else "HO / ULSD"
+        if not eia_key:
+            log.warning(f"  {key}: EIA_API_KEY not set — skipping direct fetch")
+            output["series"][key] = {
+                "error":  "EIA_API_KEY not set",
+                "label":  label,
+                "source": "EIA API v2 (key required)",
+            }
+            continue
+        log.info(f"Fetching {key} from EIA API (series: {sid}) …")
+        try:
+            m = fetch_eia_monthly(sid, eia_key)
+            if m is None or len(m) == 0:
+                raise ValueError("Empty series returned")
+            d = m.index.max()
+            if latest is None or d > latest:
+                latest = d
+            log.info(f"  {key}: {len(m)} months through {d.date()}")
+            output["series"][key] = stl_decompose(m)
+            output["series"][key]["source"] = f"EIA API v2 ({sid})"
+            output["series"][key]["label"]  = label
+        except Exception as e:
+            log.error(f"  {key} EIA fetch failed: {e}")
+            output["series"][key] = {"error": str(e), "label": label}
+
+    # ── 5: ICE Gasoil derived from Brent ──────────────────────────────────
+    log.info("Deriving ICE Gasoil from Brent + crack seasonal …")
+    try:
+        if brent_monthly is None:
+            raise ValueError("Brent data unavailable for derivation")
+        gasoil_m = derive_gasoil_monthly(brent_monthly, GASOIL_CRACK)
+        output["series"]["gasoil"] = stl_decompose(gasoil_m)
+        output["series"]["gasoil"]["source"] = "Brent + empirical gasoil crack seasonal"
+        output["series"]["gasoil"]["label"]  = "ICE Gasoil"
+        log.info(f"  gasoil: derived from {len(gasoil_m)} months of Brent")
+    except Exception as e:
+        log.error(f"  gasoil derivation failed: {e}")
+        output["series"]["gasoil"] = {"error": str(e), "label": "ICE Gasoil"}
 
     output["data_through"] = str(latest.date()) if latest else None
 
@@ -174,19 +228,20 @@ def run():
         json.dump(output, f, indent=2)
     log.info(f"Saved → {OUT_FILE}  ({OUT_FILE.stat().st_size} bytes)")
 
-    # Summary
-    months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-    print("\n── STL Seasonal Component ($/bbl vs detrended baseline) ──────────")
-    for key in output["series"]:
-        s = output["series"][key]
+    # ── Summary ────────────────────────────────────────────────────────────
+    print(f"\n── STL Seasonal Component ($/bbl vs detrended trend) ─────────────")
+    for key, s in output["series"].items():
         if "seasonal_avg" not in s:
-            print(f"  {key}: ERROR")
+            print(f"  {key:8s}: ERROR — {s.get('error','unknown')}")
             continue
-        print(f"\n  {key.upper()} (resid_std={s['resid_std']}, n={s['n_months']} months):")
-        for m, v in zip(months, s["seasonal_avg"]):
+        label = s.get("label", key)
+        src   = "direct" if "github" in s.get("source","") or "EIA API" in s.get("source","") else "derived"
+        print(f"\n  {label} [{src}] (resid_std={s['resid_std']}, n={s['n_months']}mo):")
+        for m, v in zip(MONTHS, s["seasonal_avg"]):
             sign = "+" if v >= 0 else ""
             bar  = "█" * int(abs(v) / 0.5)
             print(f"    {m}: {sign}{v:6.2f}  {bar}")
+    print(f"\n  Data through: {output['data_through']}")
     print("───────────────────────────────────────────────────────────────────\n")
 
 
