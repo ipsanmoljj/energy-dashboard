@@ -49,6 +49,7 @@ FETCHERS=(
     "fetchers/quality_spreads_fetcher.py"
     "fetchers/wcs_fetcher.py"
     "fetchers/news_fetcher.py"
+    "fetchers/seasonality_fetcher.py"
     "crack_spread_engine.py"
     "nci_composite.py"
 )
