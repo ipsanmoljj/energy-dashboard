@@ -326,11 +326,3 @@ def root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=False)
-
-@app.get("/api/seasonality")
-async def get_seasonality():
-    p = DATA_DIR / "seasonality.json"
-    if not p.exists():
-        raise HTTPException(status_code=503, detail="seasonality.json not found — run seasonality_fetcher.py first")
-    with open(p) as f:
-        return json.load(f)
