@@ -7,15 +7,15 @@ import {
 const API = ""
 
 const TABS = [
-  { id: "overview",  label: "Overview" },
-  { id: "prices",    label: "Prices" },
-  { id: "spreads",   label: "Spreads" },
-  { id: "curve",     label: "Futures Curve" },
+  { id: "overview",     label: "Overview" },
+  { id: "prices",       label: "Prices" },
+  { id: "spreads",      label: "Spreads" },
+  { id: "curve",        label: "Futures Curve" },
   { id: "seasonality",  label: "Seasonality" },
-  { id: "inventory", label: "Inventory" },
-  { id: "macro",     label: "Macro" },
-  { id: "sentiment", label: "Sentiment" },
-  { id: "geo",       label: "Geopolitical risk" },
+  { id: "inventory",    label: "Inventory" },
+  { id: "macro",        label: "Macro" },
+  { id: "sentiment",    label: "Sentiment" },
+  { id: "geo",          label: "Geopolitical risk" },
 ]
 
 const ALERT_KEYS = [
@@ -28,35 +28,24 @@ const ALERT_KEYS = [
 const WARN_PCT = 2
 const CRIT_PCT = 4
 
-// ── CHANGE 1: computeAlerts — adds 5-week avg alongside 5-day avg ──────────
 function computeAlerts(hist, contracts) {
   if (!hist || hist.length < 4 || !contracts) return []
-
-  // Exclude today's live price from historical avg calculations
   const histForAvg = hist.slice(0, -1)
   const alerts = []
-
   for (const { key, label, color } of ALERT_KEYS) {
     const current = contracts[key]?.price_bbl ?? null
     if (current == null) continue
-
-    // 5-day avg: last 5 history rows before today
     const last5  = histForAvg.filter(h => h[key] != null).slice(-5)
     if (last5.length < 3) continue
     const avg5d  = last5.reduce((s, h) => s + h[key], 0) / last5.length
-
-    // 5-week avg: last 35 history rows before today
     const last35 = histForAvg.filter(h => h[key] != null).slice(-35)
     const avg5w  = last35.length >= 5
       ? last35.reduce((s, h) => s + h[key], 0) / last35.length
       : null
-
     const dev5d  = ((current - avg5d) / avg5d) * 100
     const dev5w  = avg5w != null ? ((current - avg5w) / avg5w) * 100 : null
     const absDev = Math.abs(dev5d)
-
     if (absDev < WARN_PCT) continue
-
     alerts.push({
       key, label, color,
       current:  Math.round(current * 100) / 100,
@@ -66,75 +55,42 @@ function computeAlerts(hist, contracts) {
       dev5w:    dev5w != null ? Math.round(dev5w * 10) / 10 : null,
       severity: absDev >= CRIT_PCT ? "critical" : "warning",
       isUp5d:   dev5d > 0,
-      // 5-week trend direction: independent of 5-day deviation
       trend5w:  dev5w != null ? (dev5w > 1 ? "up" : dev5w < -1 ? "down" : "flat") : null,
     })
   }
-
   return alerts.sort((a, b) => {
     if (a.severity !== b.severity) return a.severity === "critical" ? -1 : 1
     return Math.abs(b.dev5d) - Math.abs(a.dev5d)
   })
 }
 
-// ── CHANGE 2: AlertBanner — shows 5-day volatility + 5-week trend context ──
 function AlertBanner({ alerts }) {
   if (!alerts || alerts.length === 0) return null
   const hasCrit = alerts.some(a => a.severity === "critical")
-
   return (
-    <div style={{
-      background: "#0d1117",
-      borderBottom: `1px solid ${hasCrit ? "#ef444440" : "#f59e0b30"}`,
-      padding: "5px 20px",
-      display: "flex",
-      alignItems: "flex-start",
-      gap: 6,
-      overflowX: "auto",
-      flexShrink: 0,
-    }}>
-      {/* Left label */}
-      <span style={{
-        fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
-        color: hasCrit ? "#ef4444" : "#f59e0b",
-        whiteSpace: "nowrap", marginRight: 4, flexShrink: 0,
-        paddingTop: 3,
-      }}>
+    <div style={{ background: "#0d1117", borderBottom: `1px solid ${hasCrit ? "#ef444440" : "#f59e0b30"}`,
+      padding: "5px 20px", display: "flex", alignItems: "flex-start", gap: 6,
+      overflowX: "auto", flexShrink: 0 }}>
+      <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
+        color: hasCrit ? "#ef4444" : "#f59e0b", whiteSpace: "nowrap",
+        marginRight: 4, flexShrink: 0, paddingTop: 3 }}>
         {hasCrit ? "⚠" : "◉"} ALERTS
       </span>
       <span style={{ width: 1, minHeight: 28, background: "#1a2535", flexShrink: 0 }} />
-
-      {/* Alert chips */}
       {alerts.map(a => {
-        const isCrit  = a.severity === "critical"
-        const border  = isCrit ? "#ef444455" : "#f59e0b44"
-        const bg      = isCrit ? "#ef444410" : "#f59e0b0d"
-        const sevCol  = isCrit ? "#ef4444"   : "#f59e0b"
+        const isCrit   = a.severity === "critical"
+        const border   = isCrit ? "#ef444455" : "#f59e0b44"
+        const bg       = isCrit ? "#ef444410" : "#f59e0b0d"
+        const sevCol   = isCrit ? "#ef4444"   : "#f59e0b"
         const dirCol5d = a.isUp5d ? "#ef4444" : "#22c55e"
         const arrow5d  = a.isUp5d ? "▲" : "▼"
-
-        // 5-week trend colours: up=red (overbought vs trend), down=green (oversold vs trend)
-        const trend5wCol = a.trend5w === "up"   ? "#ef4444"
-                         : a.trend5w === "down" ? "#22c55e"
-                         : "#6b7280"
+        const trend5wCol   = a.trend5w === "up" ? "#ef4444" : a.trend5w === "down" ? "#22c55e" : "#6b7280"
         const trend5wArrow = a.trend5w === "up" ? "↑" : a.trend5w === "down" ? "↓" : "→"
-        const trend5wLabel = a.trend5w === "up"   ? "uptrend"
-                           : a.trend5w === "down" ? "downtrend"
-                           : "flat"
-
+        const trend5wLabel = a.trend5w === "up" ? "uptrend" : a.trend5w === "down" ? "downtrend" : "flat"
         return (
-          <div key={a.key} style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-            background: bg,
-            border: `0.5px solid ${border}`,
-            borderRadius: 6,
-            padding: "4px 10px",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}>
-            {/* Row 1: commodity name + current price + 5-day deviation */}
+          <div key={a.key} style={{ display: "flex", flexDirection: "column", gap: 2,
+            background: bg, border: `0.5px solid ${border}`, borderRadius: 6,
+            padding: "4px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ fontSize: 9, fontWeight: 800, color: sevCol }}>{isCrit ? "⚠" : "◉"}</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: a.color }}>{a.label}</span>
@@ -143,22 +99,14 @@ function AlertBanner({ alerts }) {
                 {arrow5d}{a.dev5d > 0 ? "+" : ""}{a.dev5d}%
               </span>
             </div>
-            {/* Row 2: 5-day context (volatility) + 5-week context (trend) */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {/* 5-day avg: volatility context */}
               <span style={{ fontSize: 9, color: "#6b7280" }}>
-                5d avg:
-                <span style={{ color: "#9ca3af", marginLeft: 3 }}>${a.avg5d}</span>
+                5d avg:<span style={{ color: "#9ca3af", marginLeft: 3 }}>${a.avg5d}</span>
               </span>
-              {/* Divider */}
-              {a.avg5w != null && (
-                <span style={{ fontSize: 9, color: "#1a2535" }}>|</span>
-              )}
-              {/* 5-week avg: trend context */}
+              {a.avg5w != null && <span style={{ fontSize: 9, color: "#1a2535" }}>|</span>}
               {a.avg5w != null && (
                 <span style={{ fontSize: 9, color: "#6b7280" }}>
-                  5w avg:
-                  <span style={{ color: "#9ca3af", marginLeft: 3 }}>${a.avg5w}</span>
+                  5w avg:<span style={{ color: "#9ca3af", marginLeft: 3 }}>${a.avg5w}</span>
                   <span style={{ color: trend5wCol, fontWeight: 700, marginLeft: 4 }}>
                     {trend5wArrow} {trend5wLabel}
                   </span>
@@ -168,13 +116,8 @@ function AlertBanner({ alerts }) {
           </div>
         )
       })}
-
-      <span style={{
-        fontSize: 9, color: "#1f2937", marginLeft: "auto",
-        flexShrink: 0, whiteSpace: "nowrap", paddingTop: 3,
-      }}>
-        updates every 30s
-      </span>
+      <span style={{ fontSize: 9, color: "#1f2937", marginLeft: "auto",
+        flexShrink: 0, whiteSpace: "nowrap", paddingTop: 3 }}>updates every 30s</span>
     </div>
   )
 }
@@ -207,11 +150,9 @@ function Badge({ label }) {
 function Row({ label, value, unit, signal, note, highlight }) {
   const col = signalCol(signal)
   return (
-    <div style={{
-      display: "flex", flexDirection: "column", gap: 2,
+    <div style={{ display: "flex", flexDirection: "column", gap: 2,
       padding: "7px 0", borderBottom: "1px solid #0f1e30",
-      background: highlight ? "#0d2a1a" : "transparent",
-    }}>
+      background: highlight ? "#0d2a1a" : "transparent" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <span style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em" }}>
           {label}
@@ -286,7 +227,6 @@ function SeriesChart({ title, data, color, unit="$/bbl", currentPrice, currentSi
   const hasData   = data && data.length > 0
   const hasBand   = hasData && data[0]?.band != null
   const latestVal = hasData ? data[data.length - 1]?.value : null
-
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null
     const val = payload.find(p => p.name === "value")
@@ -297,7 +237,6 @@ function SeriesChart({ title, data, color, unit="$/bbl", currentPrice, currentSi
       </div>
     )
   }
-
   return (
     <Card style={{ marginBottom: 0 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -312,9 +251,7 @@ function SeriesChart({ title, data, color, unit="$/bbl", currentPrice, currentSi
       </div>
       {!hasData ? (
         <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center",
-          color: "#1f2937", fontSize: 10, fontFamily: "monospace" }}>
-          NO HISTORY YET — BUILDING DATA...
-        </div>
+          color: "#1f2937", fontSize: 10, fontFamily: "monospace" }}>NO HISTORY YET — BUILDING DATA...</div>
       ) : (
         <ResponsiveContainer width="100%" height={140}>
           <ComposedChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -371,107 +308,61 @@ function CompositeGauge({ score, label, reasons=[] }) {
   )
 }
 
-// ── CHANGE 3: DivergenceFlag component — shown in TabOverview ─────────────
 function DivergenceFlag({ divergence, momentum }) {
   if (!momentum) return null
-
-  const { avg_5w, avg_5d, dev_from_5w_pct, dev_from_5d_pct, trend_direction, today_brent, label: momLabel } = momentum
-
-  // Always show momentum context row, even without divergence
-  const trendCol = trend_direction === "UP"   ? "#22c55e"
-                 : trend_direction === "DOWN" ? "#ef4444"
-                 : "#6b7280"
+  const { avg_5w, avg_5d, dev_from_5w_pct, dev_from_5d_pct, trend_direction, label: momLabel } = momentum
+  const trendCol   = trend_direction === "UP" ? "#22c55e" : trend_direction === "DOWN" ? "#ef4444" : "#6b7280"
   const trendArrow = trend_direction === "UP" ? "↑" : trend_direction === "DOWN" ? "↓" : "→"
-
-  const dev5wCol = dev_from_5w_pct > 0 ? "#22c55e" : dev_from_5w_pct < 0 ? "#ef4444" : "#6b7280"
-  const dev5dCol = dev_from_5d_pct > 0 ? "#22c55e" : dev_from_5d_pct < 0 ? "#ef4444" : "#6b7280"
-
+  const dev5wCol   = dev_from_5w_pct > 0 ? "#22c55e" : dev_from_5w_pct < 0 ? "#ef4444" : "#6b7280"
+  const dev5dCol   = dev_from_5d_pct > 0 ? "#22c55e" : dev_from_5d_pct < 0 ? "#ef4444" : "#6b7280"
   return (
     <div style={{ marginTop: 12 }}>
-      {/* Brent momentum context — always visible */}
-      <div style={{
-        background: "#0a1628",
-        border: "1px solid #1a2535",
-        borderRadius: 8,
-        padding: "10px 12px",
-        marginBottom: divergence ? 8 : 0,
-      }}>
+      <div style={{ background: "#0a1628", border: "1px solid #1a2535", borderRadius: 8,
+        padding: "10px 12px", marginBottom: divergence ? 8 : 0 }}>
         <div style={{ fontSize: 9, fontWeight: 700, color: "#4b5563",
-          textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
-          Brent Price Context
-        </div>
+          textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Brent Price Context</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-          {/* 5-day */}
           <div>
             <div style={{ fontSize: 9, color: "#374151", marginBottom: 3 }}>vs 5-day avg</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af" }}>
-              ${avg_5d != null ? avg_5d.toFixed(2) : "—"}
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: dev5dCol }}>
-              {dev_from_5d_pct != null ? (dev_from_5d_pct > 0 ? "+" : "") + dev_from_5d_pct.toFixed(1) + "%" : "—"}
-            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af" }}>${avg_5d != null ? avg_5d.toFixed(2) : "—"}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: dev5dCol }}>{dev_from_5d_pct != null ? (dev_from_5d_pct > 0 ? "+" : "") + dev_from_5d_pct.toFixed(1) + "%" : "—"}</div>
             <div style={{ fontSize: 9, color: "#374151", marginTop: 2 }}>volatility signal</div>
           </div>
-          {/* 5-week */}
           <div>
             <div style={{ fontSize: 9, color: "#374151", marginBottom: 3 }}>vs 5-week avg</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af" }}>
-              ${avg_5w != null ? avg_5w.toFixed(2) : "—"}
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: dev5wCol }}>
-              {dev_from_5w_pct != null ? (dev_from_5w_pct > 0 ? "+" : "") + dev_from_5w_pct.toFixed(1) + "%" : "—"}
-            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af" }}>${avg_5w != null ? avg_5w.toFixed(2) : "—"}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: dev5wCol }}>{dev_from_5w_pct != null ? (dev_from_5w_pct > 0 ? "+" : "") + dev_from_5w_pct.toFixed(1) + "%" : "—"}</div>
             <div style={{ fontSize: 9, color: "#374151", marginTop: 2 }}>short-term trend</div>
           </div>
-          {/* Trend direction */}
           <div>
             <div style={{ fontSize: 9, color: "#374151", marginBottom: 3 }}>trend direction</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: trendCol, lineHeight: 1 }}>
-              {trendArrow}
-            </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: trendCol, marginTop: 2 }}>
-              {momLabel || trend_direction || "—"}
-            </div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: trendCol, lineHeight: 1 }}>{trendArrow}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: trendCol, marginTop: 2 }}>{momLabel || trend_direction || "—"}</div>
           </div>
         </div>
       </div>
-
-      {/* Divergence warning — only shown when composite and price disagree */}
       {divergence && (
-        <div style={{
-          background: divergence.severity === "STRONG" ? "#f9731610" : "#f59e0b0d",
+        <div style={{ background: divergence.severity === "STRONG" ? "#f9731610" : "#f59e0b0d",
           border: `1px solid ${divergence.severity === "STRONG" ? "#f9731640" : "#f59e0b30"}`,
-          borderRadius: 8,
-          padding: "10px 12px",
-        }}>
+          borderRadius: 8, padding: "10px 12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 800,
-              color: divergence.severity === "STRONG" ? "#f97316" : "#f59e0b" }}>
-              ⚡ DIVERGENCE
-            </span>
-            <span style={{ fontSize: 9, fontWeight: 700,
-              color: divergence.severity === "STRONG" ? "#f97316" : "#f59e0b",
-              background: divergence.severity === "STRONG" ? "#f9731620" : "#f59e0b20",
-              borderRadius: 3, padding: "1px 6px" }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: divergence.severity === "STRONG" ? "#f97316" : "#f59e0b" }}>⚡ DIVERGENCE</span>
+            <span style={{ fontSize: 9, fontWeight: 700, color: divergence.severity === "STRONG" ? "#f97316" : "#f59e0b",
+              background: divergence.severity === "STRONG" ? "#f9731620" : "#f59e0b20", borderRadius: 3, padding: "1px 6px" }}>
               {divergence.severity}
             </span>
           </div>
-          <div style={{ fontSize: 11, color: "#9ca3af", lineHeight: 1.5 }}>
-            {divergence.message}
-          </div>
+          <div style={{ fontSize: 11, color: "#9ca3af", lineHeight: 1.5 }}>{divergence.message}</div>
           <div style={{ fontSize: 9, color: "#374151", marginTop: 6, fontStyle: "italic" }}>
             {divergence.type === "BULL_FUNDAMENTAL_BEAR_PRICE"
-              ? "Fundamentals leading price — wait for price to confirm, or watch for fundamental deterioration."
-              : "Price leading fundamentals — rally may be short-lived if fundamentals don't improve."
-            }
+              ? "Fundamentals leading price — wait for price to confirm."
+              : "Price leading fundamentals — rally may be short-lived."}
           </div>
         </div>
       )}
     </div>
   )
 }
-
-// ── Tabs ───────────────────────────────────────────────────────────────────
 
 function TabOverview({ d }) {
   const comp       = d?.composite?.composite     || {}
@@ -481,16 +372,11 @@ function TabOverview({ d }) {
   const invComp    = d?.inv_signals?.composite   || {}
   const crackComp  = d?.crack_signals?.composite || {}
   const invSigs    = d?.inv_signals?.signals     || {}
-  const crackSigs  = d?.crack_signals?.signals   || {}
-
-  // Momentum + divergence data from composite output
   const momentum   = comp.momentum   || null
   const divergence = comp.divergence || null
-
   const layers = [
     { label: "Inventory",     score: invComp.score != null ? invComp.score / 10 : (eia?.cushing_stocks?.vs_5yr_avg < 0 ? 0.5 : -0.5), label2: invComp.overall_signal || "NO_DATA" },
-    { label: "Crack",         score: crackComp.score != null ? crackComp.score / 10 : 0, label2: crackSigs.curve_shape?.structure || crackComp.overall_signal || "NO_DATA" },
-    // CHANGE 3a: momentum layer row in signal layers panel
+    { label: "Crack",         score: crackComp.score != null ? crackComp.score / 10 : 0, label2: crackComp.overall_signal || "NO_DATA" },
     { label: "Price Momentum",score: layers_raw.momentum?.available ? (layers_raw.momentum.score / 10) : 0, label2: layers_raw.momentum?.label || "NO_DATA" },
     { label: "Macro",         score: layers_raw.macro?.available ? (layers_raw.macro.score / 10) : 0, label2: layers_raw.macro?.label },
     { label: "Demand/Weather",score: layers_raw.demand?.available ? (layers_raw.demand.score / 10) : 0, label2: layers_raw.demand?.label },
@@ -499,28 +385,22 @@ function TabOverview({ d }) {
     { label: "News/Sentiment",score: layers_raw.news?.available ? (layers_raw.news.score / 10) : 0, label2: layers_raw.news?.label },
     { label: "Rig Count",     score: d?.rig_count?.signal?.direction === "bullish" ? 0.5 : d?.rig_count?.signal?.direction === "bearish" ? -0.5 : 0, label2: `${d?.rig_count?.signal?.label || "—"} ${d?.rig_count?.latest?.oil_rigs ? `(${d.rig_count.latest.oil_rigs})` : ""}` },
   ]
-
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-      {/* CHANGE 3b: Composite gauge card now includes DivergenceFlag below the gauge */}
       <Card title="Composite Index">
         <CompositeGauge score={comp.score} label={comp.label} reasons={comp.reasons || []} />
       </Card>
-
       <Card title="Signal Layers">
         {layers.map((l,i) => {
           const col = l.score > 0 ? "#22c55e" : l.score < 0 ? "#ef4444" : "#374151"
-          // Highlight momentum row if it's the bearish outlier vs a bullish composite
           const isMomentum = l.label === "Price Momentum"
           const momBearishFlag = isMomentum && l.score < -0.2 && (comp.score > 3)
           return (
-            <div key={i} style={{
-              marginBottom: 10,
+            <div key={i} style={{ marginBottom: 10,
               padding: momBearishFlag ? "4px 6px" : 0,
               background: momBearishFlag ? "#1a0a0a" : "transparent",
               borderRadius: momBearishFlag ? 4 : 0,
-              border: momBearishFlag ? "1px solid #ef444430" : "none",
-            }}>
+              border: momBearishFlag ? "1px solid #ef444430" : "none" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
                 <span style={{ color: "#9ca3af" }}>
                   {l.label}
@@ -536,17 +416,15 @@ function TabOverview({ d }) {
           )
         })}
       </Card>
-
       <Card title="Live Prices" style={{ gridColumn: "1 / -1" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 10 }}>
-          <PriceCard label="Brent ICE"    price={fut.brent?.price_bbl}       unit="$/bbl" change={fut.brent?.change_pct}       color="#3b82f6" error={!!fut.brent?.error} />
+          <PriceCard label="Brent ICE"   price={fut.brent?.price_bbl}       unit="$/bbl" change={fut.brent?.change_pct}       color="#3b82f6" error={!!fut.brent?.error} />
           <PriceCard label="WTI NYMEX"   price={fut.wti?.price_bbl}         unit="$/bbl" change={fut.wti?.change_pct}         color="#60a5fa" error={!!fut.wti?.error} />
           <PriceCard label="RBOB"        price={fut.rbob?.price_bbl}        unit="$/bbl" change={fut.rbob?.change_pct}        color="#f59e0b" error={!!fut.rbob?.error} />
           <PriceCard label="ULSD / HO"   price={fut.heating_oil?.price_bbl} unit="$/bbl" change={fut.heating_oil?.change_pct} color="#f97316" error={!!fut.heating_oil?.error} />
           <PriceCard label="Dubai/Oman"  price={fut.dubai?.price_bbl}       unit="$/bbl" change={fut.dubai?.change_pct}       color="#a78bfa" error={!!fut.dubai?.error} />
         </div>
       </Card>
-
       <Card title="EIA Snapshot" style={{ gridColumn: "1 / -1" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 0 }}>
           <Row label="Cushing Stocks"   value={fmt(eia.cushing_stocks?.value,1)}    unit="mmbbls" signal={eia.cushing_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR" : "ABOVE 5YR"}   note={`WoW: ${fmt(eia.cushing_stocks?.wow,1)}`} />
@@ -561,102 +439,50 @@ function TabOverview({ d }) {
   )
 }
 
-
-// ── PriceMomentumBar — sits below each price chart in TabPrices ───────────
-// Shows: current price vs 5-day avg (volatility) and vs 5-week avg (trend)
-// history = price_history.json array; priceKey = "brent" | "wti" etc.
-// currentPrice = live price from futures endpoint (may differ from last history row)
 function PriceMomentumBar({ history, priceKey, currentPrice, color }) {
   if (!history || history.length < 5 || currentPrice == null) return null
-
-  // Exclude today's live snapshot from avg calculations
   const histForAvg = history.slice(0, -1).filter(h => h[priceKey] != null)
-
   const last5  = histForAvg.slice(-5)
   const last35 = histForAvg.slice(-35)
-
   if (last5.length < 3) return null
-
   const avg5d = last5.reduce((s, h) => s + h[priceKey], 0) / last5.length
-  const avg5w = last35.length >= 5
-    ? last35.reduce((s, h) => s + h[priceKey], 0) / last35.length
-    : null
-
+  const avg5w = last35.length >= 5 ? last35.reduce((s, h) => s + h[priceKey], 0) / last35.length : null
   const dev5d = ((currentPrice - avg5d) / avg5d) * 100
   const dev5w = avg5w != null ? ((currentPrice - avg5w) / avg5w) * 100 : null
-
-  const devCol = v => v == null ? "#6b7280" : v > 0 ? "#22c55e" : v < 0 ? "#ef4444" : "#6b7280"
+  const devCol   = v => v == null ? "#6b7280" : v > 0 ? "#22c55e" : v < 0 ? "#ef4444" : "#6b7280"
   const devArrow = v => v == null ? "→" : v > 0.5 ? "▲" : v < -0.5 ? "▼" : "→"
-
-  // Trend label from 5-week deviation
-  const trendLabel = dev5w == null ? null
-    : dev5w >  4  ? "UPTREND"
-    : dev5w >  1  ? "mild uptrend"
-    : dev5w > -1  ? "flat"
-    : dev5w > -4  ? "mild downtrend"
-    : "DOWNTREND"
-
-  const trendCol = dev5w == null ? "#6b7280"
-    : dev5w >  1  ? "#22c55e"
-    : dev5w < -1  ? "#ef4444"
-    : "#6b7280"
-
+  const trendLabel = dev5w == null ? null : dev5w > 4 ? "UPTREND" : dev5w > 1 ? "mild uptrend" : dev5w > -1 ? "flat" : dev5w > -4 ? "mild downtrend" : "DOWNTREND"
+  const trendCol   = dev5w == null ? "#6b7280" : dev5w > 1 ? "#22c55e" : dev5w < -1 ? "#ef4444" : "#6b7280"
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: avg5w != null ? "1fr 1fr 1fr" : "1fr 1fr",
-      gap: 0,
-      borderTop: `1px solid ${color}20`,
-      marginTop: 4,
-    }}>
-      {/* Live price */}
+    <div style={{ display: "grid", gridTemplateColumns: avg5w != null ? "1fr 1fr 1fr" : "1fr 1fr",
+      gap: 0, borderTop: `1px solid ${color}20`, marginTop: 4 }}>
       <div style={{ padding: "6px 10px", borderRight: "1px solid #0f1e30" }}>
-        <div style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase",
-          letterSpacing: "0.07em", marginBottom: 2 }}>Live</div>
-        <div style={{ fontSize: 13, fontWeight: 800, color, fontFamily: "monospace" }}>
-          ${currentPrice.toFixed(2)}
-        </div>
+        <div style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Live</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color, fontFamily: "monospace" }}>${currentPrice.toFixed(2)}</div>
       </div>
-
-      {/* vs 5-day avg — volatility context */}
       <div style={{ padding: "6px 10px", borderRight: avg5w != null ? "1px solid #0f1e30" : "none" }}>
-        <div style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase",
-          letterSpacing: "0.07em", marginBottom: 2 }}>
-          vs 5-day avg
-          <span style={{ color: "#374151", fontWeight: 400, marginLeft: 4, textTransform: "none" }}>
-            volatility
-          </span>
+        <div style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>
+          vs 5-day avg <span style={{ color: "#374151", fontWeight: 400, textTransform: "none" }}>volatility</span>
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-          <span style={{ fontSize: 11, color: "#6b7280", fontFamily: "monospace" }}>
-            ${avg5d.toFixed(2)}
-          </span>
+          <span style={{ fontSize: 11, color: "#6b7280", fontFamily: "monospace" }}>${avg5d.toFixed(2)}</span>
           <span style={{ fontSize: 12, fontWeight: 800, color: devCol(dev5d) }}>
             {devArrow(dev5d)}{dev5d > 0 ? "+" : ""}{dev5d.toFixed(1)}%
           </span>
         </div>
       </div>
-
-      {/* vs 5-week avg — trend context */}
       {avg5w != null && (
         <div style={{ padding: "6px 10px" }}>
-          <div style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase",
-            letterSpacing: "0.07em", marginBottom: 2 }}>
-            vs 5-week avg
-            <span style={{ color: "#374151", fontWeight: 400, marginLeft: 4, textTransform: "none" }}>
-              trend
-            </span>
+          <div style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>
+            vs 5-week avg <span style={{ color: "#374151", fontWeight: 400, textTransform: "none" }}>trend</span>
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-            <span style={{ fontSize: 11, color: "#6b7280", fontFamily: "monospace" }}>
-              ${avg5w.toFixed(2)}
-            </span>
+            <span style={{ fontSize: 11, color: "#6b7280", fontFamily: "monospace" }}>${avg5w.toFixed(2)}</span>
             <span style={{ fontSize: 12, fontWeight: 800, color: devCol(dev5w) }}>
               {devArrow(dev5w)}{dev5w > 0 ? "+" : ""}{dev5w.toFixed(1)}%
             </span>
             {trendLabel && (
-              <span style={{ fontSize: 9, fontWeight: 700, color: trendCol,
-                background: trendCol + "20", borderRadius: 3, padding: "1px 5px" }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: trendCol, background: trendCol + "20", borderRadius: 3, padding: "1px 5px" }}>
                 {trendLabel}
               </span>
             )}
@@ -670,8 +496,6 @@ function PriceMomentumBar({ history, priceKey, currentPrice, color }) {
 function TabPrices({ d, history }) {
   const fut = d?.futures?.contracts || {}
   const der = d?.crack?.spreads     || {}
-
-  // Each entry: chart config + price key in history + live price source
   const PRICE_CHARTS = [
     { title: "Brent ICE",          histKey: "brent",       color: "#3b82f6", price: fut.brent?.price_bbl },
     { title: "WTI NYMEX",          histKey: "wti",         color: "#60a5fa", price: fut.wti?.price_bbl },
@@ -679,27 +503,14 @@ function TabPrices({ d, history }) {
     { title: "ULSD / Heating Oil", histKey: "heating_oil", color: "#f97316", price: fut.heating_oil?.price_bbl },
     { title: "Dubai / Oman",       histKey: "dubai",       color: "#a78bfa", price: fut.dubai?.price_bbl },
   ]
-
   return (
     <>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
         {PRICE_CHARTS.map(({ title, histKey, color, price }) => (
           <div key={histKey} style={{ display: "flex", flexDirection: "column" }}>
-            <SeriesChart
-              title={title}
-              data={prepChartData(history, histKey)}
-              color={color}
-              currentPrice={price}
-            />
-            {/* Price momentum context — 5-day volatility + 5-week trend */}
-            <div style={{ background: "#0d1117", border: "1px solid #1a2535",
-              borderTop: "none", borderRadius: "0 0 10px 10px", overflow: "hidden" }}>
-              <PriceMomentumBar
-                history={history}
-                priceKey={histKey}
-                currentPrice={price}
-                color={color}
-              />
+            <SeriesChart title={title} data={prepChartData(history, histKey)} color={color} currentPrice={price} />
+            <div style={{ background: "#0d1117", border: "1px solid #1a2535", borderTop: "none", borderRadius: "0 0 10px 10px", overflow: "hidden" }}>
+              <PriceMomentumBar history={history} priceKey={histKey} currentPrice={price} color={color} />
             </div>
           </div>
         ))}
@@ -716,41 +527,28 @@ function TabPrices({ d, history }) {
 }
 
 function TabSpreads({ d, history }) {
-  const der     = d?.crack?.spreads   || {}
-  const qs      = d?.quality_spreads  || {}
-  const qsHist  = d?.qs_history       || []
-  const qsList  = qs.spreads_list     || []
-
+  const der    = d?.crack?.spreads   || {}
+  const qs     = d?.quality_spreads  || {}
+  const qsHist = d?.qs_history       || []
+  const qsList = qs.spreads_list     || []
   const chartable    = qsList.filter(s => s.chartable)
   const nonchartable = qsList.filter(s => !s.chartable)
   const maxAbs = nonchartable.length > 0 ? Math.max(...nonchartable.map(s => Math.abs(s.value || 0)), 1) : 30
-
   const catLabel = c => c === "light_heavy" ? "Light-Heavy" : c === "sweet_sour" ? "Sweet-Sour" : c === "benchmark" ? "Benchmark" : "Product"
   const catColor = c => c === "light_heavy" ? "#a78bfa" : c === "sweet_sour" ? "#f59e0b" : c === "benchmark" ? "#3b82f6" : "#22c55e"
-
-  const spreadColors = {
-    brent_wti:      "#3b82f6",
-    brent_urals:    "#f59e0b",
-    wti_wcs:        "#a78bfa",
-    naphtha_gasoil: "#22c55e",
-  }
-
+  const spreadColors = { brent_wti: "#3b82f6", brent_urals: "#f59e0b", wti_wcs: "#a78bfa", naphtha_gasoil: "#22c55e" }
   return (
     <>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em",
-        textTransform: "uppercase", marginBottom: 8 }}>Crack Spreads — Historical</div>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Crack Spreads — Historical</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         <SeriesChart title="3-2-1 Crack Spread" data={prepChartData(history, "crack_321")}      color="#22c55e" currentPrice={der.crack_321?.value_bbl}     currentSignal={der.crack_321?.signal} />
         <SeriesChart title="Gasoline Crack"      data={prepChartData(history, "gasoline_crack")} color="#f59e0b" currentPrice={der.gasoline_crack?.value_bbl} currentSignal={der.gasoline_crack?.signal} />
         <SeriesChart title="HO – RBOB Spread"   data={prepChartData(history, "ho_rbob")}        color="#f97316" currentPrice={der.ho_rbob_spread?.value_bbl} currentSignal={der.ho_rbob_spread?.signal} />
       </div>
-
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em",
-        textTransform: "uppercase", marginBottom: 8 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
         Quality & Grade Spreads — Historical
         <span style={{ fontSize: 9, color: "#374151", fontWeight: 400, marginLeft: 8, textTransform: "none" }}>
-          Daily history accumulating from {qsHist[0]?.date || "today"}
-          {qsHist.length > 0 ? ` · ${qsHist.length} days` : ""}
+          Daily history accumulating from {qsHist[0]?.date || "today"}{qsHist.length > 0 ? ` · ${qsHist.length} days` : ""}
         </span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
@@ -760,7 +558,6 @@ function TabSpreads({ d, history }) {
           <SeriesChart key={s.id} title={s.label} data={prepChartData(qsHist, s.id)} color={spreadColors[s.id] || "#6b7280"} unit="$/bbl" currentPrice={s.value} currentSignal={s.signal} />
         ))}
       </div>
-
       {nonchartable.length > 0 && (
         <Card title="Additional Spreads — History Building (Paid Data Needed for Charts)" style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 9, color: "#374151", fontStyle: "italic", marginBottom: 10 }}>
@@ -797,21 +594,20 @@ function TabSpreads({ d, history }) {
           </div>
         </Card>
       )}
-
       <Card title="Signal Reference">
         {[
-          ["Brent-WTI > $8",         "US export bottleneck or North Sea disruption"],
-          ["Brent-WTI < $2",         "US exports flooding Atlantic basin"],
-          ["Brent-Urals > $12",      "Russia sanctions fully effective — wide discount"],
-          ["Brent-Urals < $3",       "Russian discount compressed — sanctions leaking"],
-          ["WTI-WCS > $20",          "Alberta pipeline constraints severe"],
-          ["WTI-WCS < $10",          "Trans Mountain relieving congestion"],
-          ["Naphtha-ULSD < -$15",    "Diesel tight, naphtha/petrochem demand weak"],
-          ["Naphtha-ULSD > $0",      "Naphtha premium — petrochemical demand strong"],
-          ["3-2-1 Crack > $20",      "Product demand tight — crude demand bullish"],
-          ["3-2-1 Crack < $10",      "Margins compressed — refinery runs may fall"],
-          ["ULSD Crack > $25",       "US diesel/heating oil tightness (EIA ULSD proxy)"],
-          ["Brent-Maya > $20",       "Complex refinery upgrading premium elevated"],
+          ["Brent-WTI > $8","US export bottleneck or North Sea disruption"],
+          ["Brent-WTI < $2","US exports flooding Atlantic basin"],
+          ["Brent-Urals > $12","Russia sanctions fully effective — wide discount"],
+          ["Brent-Urals < $3","Russian discount compressed — sanctions leaking"],
+          ["WTI-WCS > $20","Alberta pipeline constraints severe"],
+          ["WTI-WCS < $10","Trans Mountain relieving congestion"],
+          ["Naphtha-ULSD < -$15","Diesel tight, naphtha/petrochem demand weak"],
+          ["Naphtha-ULSD > $0","Naphtha premium — petrochemical demand strong"],
+          ["3-2-1 Crack > $20","Product demand tight — crude demand bullish"],
+          ["3-2-1 Crack < $10","Margins compressed — refinery runs may fall"],
+          ["ULSD Crack > $25","US diesel/heating oil tightness (EIA ULSD proxy)"],
+          ["Brent-Maya > $20","Complex refinery upgrading premium elevated"],
         ].map(([k,v],i) => (
           <div key={i} style={{ display:"flex", gap:8, padding:"5px 0", borderBottom:"1px solid #0f1e30", fontSize:11 }}>
             <span style={{ color:"#f59e0b", fontWeight:700, minWidth:190 }}>{k}</span>
@@ -827,7 +623,6 @@ function TabInventory({ d }) {
   const eia     = d?.eia                    || {}
   const invSigs = d?.inv_signals?.signals   || {}
   const invComp = d?.inv_signals?.composite || {}
-
   return (
     <>
       {invComp.score != null && (
@@ -857,7 +652,6 @@ function TabInventory({ d }) {
           ))}
         </Card>
       )}
-
       <Card title="EIA Weekly Inventory">
         <Row label="Cushing Stocks"       value={fmt(eia.cushing_stocks?.value,1)}      unit="mmbbls" signal={eia.cushing_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"}   note={`WoW ${fmt(eia.cushing_stocks?.wow,1)}`}      highlight={eia.cushing_stocks?.vs_5yr_avg < -10} />
         <Row label="Total Crude Stocks"   value={fmt(eia.total_crude_stocks?.value,1)}  unit="mmbbls" signal={eia.total_crude_stocks?.vs_5yr_avg < 0 ? "BELOW 5YR AVG" : "ABOVE 5YR AVG"} note={`WoW ${fmt(eia.total_crude_stocks?.wow,1)}`} />
@@ -866,7 +660,6 @@ function TabInventory({ d }) {
         <Row label="Crude Production"     value={fmt(eia.crude_production?.value,2)}    unit="mbd"    note={`WoW ${fmt(eia.crude_production?.wow,3)} mbd`} />
         <Row label="Refinery Utilisation" value={fmt(eia.refinery_util?.value,1)}       unit="%"      signal={eia.refinery_util?.value > 90 ? "HIGH" : "NORMAL"} note={`WoW ${fmt(eia.refinery_util?.wow,1)}pp`} />
       </Card>
-
       <Card title="Derived Signals" style={{ marginTop: 12 }}>
         <Row label="Days of Forward Cover" value={fmt(eia.days_cover,1)}               unit="days" signal={eia.days_cover < 54 ? "TIGHT <54" : eia.days_cover > 62 ? "AMPLE >62" : "NORMAL"} />
         <Row label="Net Supply"            value={fmt(eia.net_supply_mbd,2)}           unit="mbd" />
@@ -875,63 +668,52 @@ function TabInventory({ d }) {
         <Row label="Gasoline Demand"       value={fmt(eia.gasoline_demand?.value,2)}   unit="mbd" note={`WoW ${fmt(eia.gasoline_demand?.wow,2)}`} />
         <Row label="Distillate Demand"     value={fmt(eia.distillate_demand?.value,2)} unit="mbd" note={`WoW ${fmt(eia.distillate_demand?.wow,2)}`} />
       </Card>
-
       <Card title="Rig Count — Baker Hughes vs EIA DPR" style={{ marginTop: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
           <div style={{ background: "#0a0f1a", border: "1px solid #1a2535", borderRadius: 8, padding: "12px" }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Baker Hughes — Weekly (Oil-Directed)</div>
             <div style={{ fontSize: 32, fontWeight: 900, color: "#3b82f6", lineHeight: 1 }}>
-              {fmt(d?.rig_count?.latest?.oil_rigs, 0)}
-              <span style={{ fontSize: 11, color: "#374151", marginLeft: 6 }}>oil rigs</span>
+              {fmt(d?.rig_count?.latest?.oil_rigs, 0)}<span style={{ fontSize: 11, color: "#374151", marginLeft: 6 }}>oil rigs</span>
             </div>
             <div style={{ fontSize: 11, marginTop: 4, color: (d?.rig_count?.latest?.wow_oil||0) > 0 ? "#ef4444" : "#22c55e" }}>
               {(d?.rig_count?.latest?.wow_oil||0) > 0 ? "▲" : "▼"} {fmt(Math.abs(d?.rig_count?.latest?.wow_oil||0), 0)} WoW
             </div>
             <div style={{ fontSize: 10, color: "#374151", marginTop: 4 }}>{d?.rig_count?.signal?.five_week_trend}</div>
             <div style={{ marginTop: 6 }}><Badge label={d?.rig_count?.signal?.label} /></div>
-            <div style={{ fontSize: 9, color: "#1f2937", marginTop: 4 }}>Current week · oil-directed only · national</div>
           </div>
           <div style={{ background: "#0a0f1a", border: "1px solid #1a2535", borderRadius: 8, padding: "12px" }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>EIA DPR — Monthly (7 Shale Regions)</div>
             <div style={{ fontSize: 32, fontWeight: 900, color: "#a78bfa", lineHeight: 1 }}>
-              {fmt(d?.duc?.rigs?.total_rigs, 0)}
-              <span style={{ fontSize: 11, color: "#374151", marginLeft: 6 }}>total rigs</span>
+              {fmt(d?.duc?.rigs?.total_rigs, 0)}<span style={{ fontSize: 11, color: "#374151", marginLeft: 6 }}>total rigs</span>
             </div>
             <div style={{ fontSize: 10, color: "#374151", marginTop: 4 }}>
               Permian: <span style={{ color: "#e5e7eb", fontWeight: 700 }}>{fmt(d?.duc?.rigs?.by_region?.Permian?.rigs, 0)}</span> rigs
-              ({(d?.duc?.rigs?.by_region?.Permian?.mom||0) > 0 ? "+" : ""}{fmt(d?.duc?.rigs?.by_region?.Permian?.mom, 0)} MoM)
             </div>
-            <div style={{ fontSize: 10, color: "#374151", marginTop: 2 }}>Period: {d?.duc?.rigs?.by_region?.Permian?.period?.slice(0,7) || "—"}</div>
-            <div style={{ fontSize: 9, color: "#1f2937", marginTop: 4 }}>~2 month lag · oil + gas · shale regions only</div>
           </div>
         </div>
-
         {d?.duc?.rigs?.by_region && Object.keys(d.duc.rigs.by_region).length > 0 && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Rigs by Region (EIA DPR)</div>
-            {Object.entries(d.duc.rigs.by_region)
-              .sort((a,b) => (b[1].rigs||0) - (a[1].rigs||0))
-              .map(([region, data], i) => {
-                const pct    = (data.rigs||0) / (d.duc.rigs.total_rigs||1) * 100
-                const momCol = (data.mom||0) > 0 ? "#ef4444" : (data.mom||0) < 0 ? "#22c55e" : "#374151"
-                return (
-                  <div key={i} style={{ marginBottom: 5 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
-                      <span style={{ color: "#9ca3af" }}>{region}</span>
-                      <div style={{ display: "flex", gap: 12 }}>
-                        <span style={{ color: momCol, fontSize: 10 }}>{(data.mom||0) > 0 ? "▲" : (data.mom||0) < 0 ? "▼" : "—"}{Math.abs(data.mom||0)} MoM</span>
-                        <span style={{ color: "#e5e7eb", fontWeight: 700, minWidth: 35, textAlign: "right" }}>{fmt(data.rigs, 0)}</span>
-                      </div>
-                    </div>
-                    <div style={{ height: 3, background: "#0a0f1a", borderRadius: 2 }}>
-                      <div style={{ width: pct + "%", height: "100%", background: "#a78bfa", borderRadius: 2, opacity: 0.7 }} />
+            {Object.entries(d.duc.rigs.by_region).sort((a,b) => (b[1].rigs||0) - (a[1].rigs||0)).map(([region, data], i) => {
+              const pct    = (data.rigs||0) / (d.duc.rigs.total_rigs||1) * 100
+              const momCol = (data.mom||0) > 0 ? "#ef4444" : (data.mom||0) < 0 ? "#22c55e" : "#374151"
+              return (
+                <div key={i} style={{ marginBottom: 5 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
+                    <span style={{ color: "#9ca3af" }}>{region}</span>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <span style={{ color: momCol, fontSize: 10 }}>{(data.mom||0) > 0 ? "▲" : (data.mom||0) < 0 ? "▼" : "—"}{Math.abs(data.mom||0)} MoM</span>
+                      <span style={{ color: "#e5e7eb", fontWeight: 700, minWidth: 35, textAlign: "right" }}>{fmt(data.rigs, 0)}</span>
                     </div>
                   </div>
-                )
-              })}
+                  <div style={{ height: 3, background: "#0a0f1a", borderRadius: 2 }}>
+                    <div style={{ width: pct + "%", height: "100%", background: "#a78bfa", borderRadius: 2, opacity: 0.7 }} />
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
-
         <div style={{ borderTop: "1px solid #0f1e30", paddingTop: 10 }}>
           <div style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>EIA DUC Inventory (Drilled but Uncompleted)</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 8 }}>
@@ -941,33 +723,6 @@ function TabInventory({ d }) {
               {(d?.duc?.duc?.total?.duc_change||0) > 0 ? "+" : ""}{fmt(d?.duc?.duc?.total?.duc_change, 0)} MoM
             </span>
             <Badge label={d?.duc?.signal?.overall_signal} />
-          </div>
-          {d?.duc?.duc?.by_region && Object.keys(d.duc.duc.by_region).length > 0 &&
-            Object.entries(d.duc.duc.by_region)
-              .sort((a,b) => (b[1].duc_latest||0) - (a[1].duc_latest||0))
-              .map(([region, data], i) => {
-                const total  = d.duc.duc.total.duc_latest || 1
-                const pct    = (data.duc_latest||0) / total * 100
-                const chg    = data.duc_change || 0
-                const chgCol = chg > 0 ? "#ef4444" : chg < 0 ? "#22c55e" : "#374151"
-                return (
-                  <div key={i} style={{ marginBottom: 5 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
-                      <span style={{ color: "#9ca3af" }}>{region}</span>
-                      <div style={{ display: "flex", gap: 12 }}>
-                        <span style={{ color: chgCol, fontSize: 10 }}>{chg > 0 ? "+" : ""}{chg} MoM</span>
-                        <span style={{ color: "#e5e7eb", fontWeight: 700, minWidth: 45, textAlign: "right" }}>{fmt(data.duc_latest, 0)}</span>
-                      </div>
-                    </div>
-                    <div style={{ height: 3, background: "#0a0f1a", borderRadius: 2 }}>
-                      <div style={{ width: pct + "%", height: "100%", background: "#f59e0b", borderRadius: 2, opacity: 0.7 }} />
-                    </div>
-                  </div>
-                )
-              })
-          }
-          <div style={{ fontSize: 9, color: "#1f2937", marginTop: 8, fontStyle: "italic" }}>
-            Source: EIA DPR · Monthly · ~2 month lag · Peak: 8,874 (Jun 2020) · Low: 4,283 (Aug 2022)
           </div>
         </div>
       </Card>
@@ -1002,8 +757,7 @@ function TabMacro({ d }) {
           ? Object.entries(wx.locations).slice(0,6).map(([k,v]) => (
             <Row key={k} label={v.label || k} value={fmt(v.hdd_7d_forecast, 1)} unit="HDD" signal={v.demand_signal} note={`CDD: ${fmt(v.cdd_7d_forecast, 1)}`} />
           ))
-          : <div style={{ color:"#374151", fontSize:12, padding:"8px 0" }}>Weather data not loaded</div>
-        }
+          : <div style={{ color:"#374151", fontSize:12, padding:"8px 0" }}>Weather data not loaded</div>}
       </Card>
     </>
   )
@@ -1017,45 +771,30 @@ function TabSentiment({ d }) {
   const score     = news.news_score?.score ?? null
   const scoreCol  = score > 0 ? "#22c55e" : score < 0 ? "#ef4444" : "#f59e0b"
   const summary   = news.summary         || {}
-
   const fjHeadlines = fj.headlines     || []
   const fjOilOnly   = fj.oil_headlines || []
   const [fjFilter, setFjFilter] = React.useState("oil")
   const fjShown = fjFilter === "oil" ? fjOilOnly : fjHeadlines
   const sentCol = s => s === "BULLISH" ? "#22c55e" : s === "BEARISH" ? "#ef4444" : "#374151"
-
   return (
     <>
       {news.primary_releases?.length > 0 && (
         <Card title="★ Primary Source Releases (EIA / OPEC / IEA)" style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 9, color: "#374151", marginBottom: 8 }}>
-            Official releases — credibility weight 1.0 · slow decay
-          </div>
+          <div style={{ fontSize: 9, color: "#374151", marginBottom: 8 }}>Official releases — credibility weight 1.0 · slow decay</div>
           {news.primary_releases.map((r, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8,
-              fontSize: 11, padding: "6px 0", borderBottom: "1px solid #0f1e30",
-              alignItems: "flex-start" }}>
+              fontSize: 11, padding: "6px 0", borderBottom: "1px solid #0f1e30", alignItems: "flex-start" }}>
               <div style={{ flex: 1 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, color: "#4b5563",
-                  background: "#1a2535", borderRadius: 3, padding: "1px 5px", marginRight: 6 }}>
-                  {r.source}
-                </span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: "#4b5563", background: "#1a2535", borderRadius: 3, padding: "1px 5px", marginRight: 6 }}>{r.source}</span>
                 <span style={{ color: "#9ca3af" }}>{r.headline}</span>
-                {r.primary_flags?.note && (
-                  <div style={{ fontSize: 9, color: "#374151", marginTop: 2, fontStyle: "italic" }}>
-                    {r.primary_flags.note}
-                  </div>
-                )}
               </div>
-              <span style={{ color: r.final_score > 0 ? "#22c55e" : r.final_score < 0 ? "#ef4444" : "#6b7280",
-                fontWeight: 700, whiteSpace: "nowrap", fontSize: 12 }}>
+              <span style={{ color: r.final_score > 0 ? "#22c55e" : r.final_score < 0 ? "#ef4444" : "#6b7280", fontWeight: 700, whiteSpace: "nowrap", fontSize: 12 }}>
                 {r.final_score > 0 ? "+" : ""}{Number(r.final_score).toFixed(1)}
               </span>
             </div>
           ))}
         </Card>
       )}
-
       <Card title="FinancialJuice — Live Headlines" style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <div style={{ fontSize: 11, color: "#4b5563" }}>
@@ -1070,8 +809,7 @@ function TabSentiment({ d }) {
                 borderRadius: 6, padding: "3px 10px",
                 color: fjFilter === f ? "#00d98b" : "#374151",
                 fontSize: 10, fontWeight: 700, cursor: "pointer",
-                textTransform: "uppercase", letterSpacing: "0.08em",
-              }}>
+                textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 {f === "oil" ? "⚡ Oil/Energy" : "All News"}
               </button>
             ))}
@@ -1082,20 +820,18 @@ function TabSentiment({ d }) {
             <div style={{ color: "#374151", fontSize: 12, padding: "12px 0", textAlign: "center" }}>
               {fj.error ? fj.error : fjFilter === "oil" ? "No oil-relevant headlines yet" : "No headlines loaded"}
             </div>
-          ) : (
-            fjShown.map((h, i) => (
-              <a key={h.guid || i} href={h.link} target="_blank" rel="noopener noreferrer"
-                style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-                  gap: 10, padding: "7px 4px", borderBottom: "1px solid #0f1e30",
-                  textDecoration: "none", cursor: "pointer", borderRadius: 4 }}
-                onMouseEnter={e => e.currentTarget.style.background = "#0a1628"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, marginTop: 5, background: sentCol(h.sentiment) }} />
-                <span style={{ flex: 1, fontSize: 11, color: "#9ca3af", lineHeight: 1.4 }}>{h.title}</span>
-                <span style={{ fontSize: 9, color: "#1f2937", whiteSpace: "nowrap", flexShrink: 0, fontFamily: "monospace", marginTop: 2 }}>{h.time_ago}</span>
-              </a>
-            ))
-          )}
+          ) : fjShown.map((h, i) => (
+            <a key={h.guid || i} href={h.link} target="_blank" rel="noopener noreferrer"
+              style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+                gap: 10, padding: "7px 4px", borderBottom: "1px solid #0f1e30",
+                textDecoration: "none", cursor: "pointer", borderRadius: 4 }}
+              onMouseEnter={e => e.currentTarget.style.background = "#0a1628"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, marginTop: 5, background: sentCol(h.sentiment) }} />
+              <span style={{ flex: 1, fontSize: 11, color: "#9ca3af", lineHeight: 1.4 }}>{h.title}</span>
+              <span style={{ fontSize: 9, color: "#1f2937", whiteSpace: "nowrap", flexShrink: 0, fontFamily: "monospace", marginTop: 2 }}>{h.time_ago}</span>
+            </a>
+          ))}
         </div>
         <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 9, color: "#374151" }}>
           <span><span style={{ color: "#22c55e" }}>●</span> Bullish</span>
@@ -1104,7 +840,6 @@ function TabSentiment({ d }) {
           <span style={{ marginLeft: "auto" }}>Click any headline to open article →</span>
         </div>
       </Card>
-
       <Card title="RSS News Sentiment" style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 12 }}>
           <div>
@@ -1118,57 +853,45 @@ function TabSentiment({ d }) {
             <Row label="Bearish signals" value={summary.bearish_count ?? "—"} />
             <Row label="Neutral"         value={summary.neutral_count ?? "—"} />
             <Row label="Geo alerts"      value={summary.geo_alerts    ?? "—"} />
-            <Row label="Sources"         value={summary.sources_used?.join(", ") ?? "—"} />
           </div>
         </div>
         {headlines.slice(0, 5).map((h, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8,
             fontSize: 11, color: "#9ca3af", padding: "5px 0", borderBottom: "1px solid #0f1e30" }}>
             <span style={{ flex: 1 }}>{h.title || h.headline}</span>
-            <span style={{ color: h.final_score > 0 ? "#22c55e" : h.final_score < 0 ? "#ef4444" : "#6b7280",
-              fontWeight: 700, whiteSpace: "nowrap" }}>
+            <span style={{ color: h.final_score > 0 ? "#22c55e" : h.final_score < 0 ? "#ef4444" : "#6b7280", fontWeight: 700, whiteSpace: "nowrap" }}>
               {h.final_score != null ? (h.final_score > 0 ? "+" : "") + Number(h.final_score).toFixed(1) : "—"}
             </span>
           </div>
         ))}
       </Card>
-
       <Card title="CFTC Positioning — Speculative">
         <div style={{ fontSize: 10, color: "#4b5563", marginBottom: 10 }}>
           Managed Money net positioning as % of open interest · Published Friday 3:30 PM ET
         </div>
         {cftc.contracts
           ? Object.entries(cftc.contracts).slice(0, 5).map(([k, v]) => (
-            <Row key={k}
-              label={v?.label || k}
-              value={fmt(v?.net_pct_of_oi, 1)}
-              unit="% net long"
-              signal={v?.signal}
-              note={v?.mm_net_lots != null ? `${v.mm_net_lots > 0 ? "+" : ""}${v.mm_net_lots.toLocaleString()} lots` : undefined}
-            />
+            <Row key={k} label={v?.label || k} value={fmt(v?.net_pct_of_oi, 1)} unit="% net long" signal={v?.signal}
+              note={v?.mm_net_lots != null ? `${v.mm_net_lots > 0 ? "+" : ""}${v.mm_net_lots.toLocaleString()} lots` : undefined} />
           ))
-          : <div style={{ color: "#374151", fontSize: 12, padding: "8px 0" }}>CFTC data not loaded</div>
-        }
+          : <div style={{ color: "#374151", fontSize: 12, padding: "8px 0" }}>CFTC data not loaded</div>}
       </Card>
     </>
   )
 }
 
 function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurveRange }) {
-  const curve    = d?.curve  || {}
-  const curves   = curve.curves  || {}
-  const signals  = curve.signals || {}
-  const prices   = curve.front_month_prices || {}
-  const carry    = d?.fred?.derived?.storage_carry?.total_carry_per_bbl_mo || 0.77
-  const ch       = curveHistory || []
-
+  const curve   = d?.curve  || {}
+  const curves  = curve.curves  || {}
+  const signals = curve.signals || {}
+  const carry   = d?.fred?.derived?.storage_carry?.total_carry_per_bbl_mo || 0.77
+  const ch      = curveHistory || []
   const PRODUCTS = [
-    { key: "brent", label: "Brent ICE",        color: "#3b82f6" },
-    { key: "wti",   label: "WTI NYMEX",        color: "#60a5fa" },
-    { key: "rbob",  label: "RBOB Gasoline",    color: "#f59e0b" },
-    { key: "ho",    label: "ULSD / HO",        color: "#f97316" },
+    { key: "brent", label: "Brent ICE",     color: "#3b82f6" },
+    { key: "wti",   label: "WTI NYMEX",     color: "#60a5fa" },
+    { key: "rbob",  label: "RBOB Gasoline", color: "#f59e0b" },
+    { key: "ho",    label: "ULSD / HO",     color: "#f97316" },
   ]
-
   const SPREAD_OPTIONS = [
     { label: "M1-M2",  key: "m1_m2",  type: "spread", m1: 0, m2: 1  },
     { label: "M1-M3",  key: "m1_m3",  type: "spread", m1: 0, m2: 2  },
@@ -1178,88 +901,48 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
     { label: "M3 Fly", key: "m3_fly", type: "fly",    m: [2,3,4]    },
     { label: "M5 Fly", key: "m5_fly", type: "fly",    m: [4,5,6]    },
   ]
-
   const RANGES = [
-    { label: "1M",  days: 21  },
-    { label: "3M",  days: 63  },
-    { label: "6M",  days: 125 },
-    { label: "All", days: 9999},
+    { label: "1M",  days: 21   },
+    { label: "3M",  days: 63   },
+    { label: "6M",  days: 125  },
+    { label: "All", days: 9999 },
   ]
-
-  const sel      = curveSel
-  const setSel   = setCurveSel
-  const range    = curveRange
-  const setRange = setCurveRange
-
-  const getHistKey = (product, label) => {
-    const opt = SPREAD_OPTIONS.find(o => o.label === label)
-    if (!opt) return null
-    return `${product}_${opt.key}`
-  }
-
+  const getHistKey    = (product, label) => { const opt = SPREAD_OPTIONS.find(o => o.label === label); return opt ? `${product}_${opt.key}` : null }
   const getCurrentVal = (product, label) => {
-    const c   = curves[product]
-    const opt = SPREAD_OPTIONS.find(o => o.label === label)
+    const c = curves[product]; const opt = SPREAD_OPTIONS.find(o => o.label === label)
     if (!c || !opt) return null
-    if (opt.type === "spread") {
-      return c[opt.m1] && c[opt.m2] ? Math.round((c[opt.m1].price - c[opt.m2].price)*100)/100 : null
-    } else {
-      const [a,b,cc] = opt.m
-      return c[a] && c[b] && c[cc] ? Math.round((c[a].price - 2*c[b].price + c[cc].price)*1000)/1000 : null
-    }
+    if (opt.type === "spread") return c[opt.m1] && c[opt.m2] ? Math.round((c[opt.m1].price - c[opt.m2].price)*100)/100 : null
+    const [a,b,cc] = opt.m; return c[a] && c[b] && c[cc] ? Math.round((c[a].price - 2*c[b].price + c[cc].price)*1000)/1000 : null
   }
-
-  const spreadCol = v => {
-    if (v == null) return "#374151"
-    if (v >  1.0) return "#22c55e"
-    if (v >  0.2) return "#86efac"
-    if (v > -0.2) return "#6b7280"
-    if (v > -1.5) return "#fca5a5"
-    return "#ef4444"
-  }
-
-  const structureCol = s => {
-    if (!s) return "#6b7280"
-    if (s.includes("STRONG_BACK")) return "#22c55e"
-    if (s.includes("MILD_BACK"))   return "#86efac"
-    if (s === "FLAT")              return "#6b7280"
-    if (s.includes("MILD_CONT"))   return "#fca5a5"
-    return "#ef4444"
-  }
+  const spreadCol    = v => { if (v == null) return "#374151"; if (v > 1.0) return "#22c55e"; if (v > 0.2) return "#86efac"; if (v > -0.2) return "#6b7280"; if (v > -1.5) return "#fca5a5"; return "#ef4444" }
+  const structureCol = s => { if (!s) return "#6b7280"; if (s.includes("STRONG_BACK")) return "#22c55e"; if (s.includes("MILD_BACK")) return "#86efac"; if (s === "FLAT") return "#6b7280"; if (s.includes("MILD_CONT")) return "#fca5a5"; return "#ef4444" }
 
   const ProductChart = ({ product, color, label }) => {
-    const selLabel  = sel[product]
-    const rangeLabel = range[product]
-    const histKey   = getHistKey(product, selLabel)
-    const days      = RANGES.find(r => r.label === rangeLabel)?.days || 63
-    const curVal    = getCurrentVal(product, selLabel)
-    const curCol    = spreadCol(curVal)
-    const sig       = signals[product]
-    const strCol    = structureCol(sig?.structure)
-
-    const allPts    = ch.filter(r => histKey && r[histKey] != null)
-    const pts       = allPts.slice(-days)
-    const chartData = pts.map(r => ({ date: r.date?.slice(5), value: r[histKey] }))
-
-    const vals   = chartData.map(r => r.value).filter(v => v != null)
-    const minVal = vals.length ? Math.min(...vals) : -1
-    const maxVal = vals.length ? Math.max(...vals) :  1
-    const hasZero = minVal < 0 && maxVal > 0
-
+    const selLabel   = curveSel[product]
+    const rangeLabel = curveRange[product]
+    const histKey    = getHistKey(product, selLabel)
+    const days       = RANGES.find(r => r.label === rangeLabel)?.days || 63
+    const curVal     = getCurrentVal(product, selLabel)
+    const curCol     = spreadCol(curVal)
+    const sig        = signals[product]
+    const strCol     = structureCol(sig?.structure)
+    const allPts     = ch.filter(r => histKey && r[histKey] != null)
+    const pts        = allPts.slice(-days)
+    const chartData  = pts.map(r => ({ date: r.date?.slice(5), value: r[histKey] }))
+    const vals       = chartData.map(r => r.value).filter(v => v != null)
+    const minVal     = vals.length ? Math.min(...vals) : -1
+    const maxVal     = vals.length ? Math.max(...vals) :  1
+    const hasZero    = minVal < 0 && maxVal > 0
     const CustomTooltip = ({ active, payload, label: lbl }) => {
       if (!active || !payload?.length) return null
       const v = payload[0]?.value
       return (
-        <div style={{ background:"#0d1117", border:"1px solid #1a2535",
-          borderRadius:6, padding:"6px 10px", fontSize:11 }}>
+        <div style={{ background:"#0d1117", border:"1px solid #1a2535", borderRadius:6, padding:"6px 10px", fontSize:11 }}>
           <div style={{ color:"#6b7280", marginBottom:3 }}>{lbl}</div>
-          <div style={{ color, fontWeight:700 }}>
-            {selLabel}: {v >= 0 ? "+" : ""}{typeof v === "number" ? v.toFixed(3) : "—"}
-          </div>
+          <div style={{ color, fontWeight:700 }}>{selLabel}: {v >= 0 ? "+" : ""}{typeof v === "number" ? v.toFixed(3) : "—"}</div>
         </div>
       )
     }
-
     return (
       <Card style={{ marginBottom: 0 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
@@ -1267,21 +950,17 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
               <div style={{ width:8, height:8, borderRadius:"50%", background:color }}/>
               <span style={{ fontSize:12, fontWeight:700, color:"#e5e7eb" }}>{label}</span>
-              <span style={{ fontSize:10, fontWeight:700, color:strCol,
-                background:strCol+"22", borderRadius:4, padding:"1px 6px" }}>
+              <span style={{ fontSize:10, fontWeight:700, color:strCol, background:strCol+"22", borderRadius:4, padding:"1px 6px" }}>
                 {sig?.structure?.replace(/_/g," ") || "—"}
               </span>
             </div>
             <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
               {SPREAD_OPTIONS.map(o => (
-                <button key={o.label} onClick={() => setSel(prev => ({...prev, [product]: o.label}))}
-                  style={{
-                    background: sel[product]===o.label ? color+"33" : "transparent",
-                    border: `1px solid ${sel[product]===o.label ? color : "#1a2535"}`,
-                    borderRadius:4, padding:"2px 7px", fontSize:9, fontWeight:700,
-                    color: sel[product]===o.label ? color : "#4b5563",
-                    cursor:"pointer", letterSpacing:"0.05em",
-                  }}>
+                <button key={o.label} onClick={() => setCurveSel(prev => ({...prev, [product]: o.label}))} style={{
+                  background: curveSel[product]===o.label ? color+"33" : "transparent",
+                  border: `1px solid ${curveSel[product]===o.label ? color : "#1a2535"}`,
+                  borderRadius:4, padding:"2px 7px", fontSize:9, fontWeight:700,
+                  color: curveSel[product]===o.label ? color : "#4b5563", cursor:"pointer", letterSpacing:"0.05em" }}>
                   {o.label}
                 </button>
               ))}
@@ -1294,43 +973,33 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
             <div style={{ fontSize:9, color:"#374151", marginBottom:4 }}>$/bbl today</div>
             <div style={{ display:"flex", gap:3, justifyContent:"flex-end" }}>
               {RANGES.map(r => (
-                <button key={r.label} onClick={() => setRange(prev => ({...prev, [product]: r.label}))}
-                  style={{
-                    background: range[product]===r.label ? "#1a2535" : "transparent",
-                    border: `1px solid ${range[product]===r.label ? "#374151" : "#0f1e30"}`,
-                    borderRadius:4, padding:"2px 6px", fontSize:9, fontWeight:700,
-                    color: range[product]===r.label ? "#e5e7eb" : "#374151",
-                    cursor:"pointer",
-                  }}>
+                <button key={r.label} onClick={() => setCurveRange(prev => ({...prev, [product]: r.label}))} style={{
+                  background: curveRange[product]===r.label ? "#1a2535" : "transparent",
+                  border: `1px solid ${curveRange[product]===r.label ? "#374151" : "#0f1e30"}`,
+                  borderRadius:4, padding:"2px 6px", fontSize:9, fontWeight:700,
+                  color: curveRange[product]===r.label ? "#e5e7eb" : "#374151", cursor:"pointer" }}>
                   {r.label}
                 </button>
               ))}
             </div>
           </div>
         </div>
-
         {chartData.length < 2 ? (
-          <div style={{ height:160, display:"flex", alignItems:"center", justifyContent:"center",
-            color:"#1f2937", fontSize:10, fontFamily:"monospace" }}>
+          <div style={{ height:160, display:"flex", alignItems:"center", justifyContent:"center", color:"#1f2937", fontSize:10, fontFamily:"monospace" }}>
             BUILDING HISTORY — RUN curve_backfill.py
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={160}>
             <ComposedChart data={chartData} margin={{ top:4, right:4, left:-20, bottom:0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#0f1e30" />
-              <XAxis dataKey="date" tick={{ fontSize:8, fill:"#374151" }} tickLine={false}
-                interval={Math.floor(chartData.length / 5)} />
-              <YAxis tick={{ fontSize:8, fill:"#374151" }} tickLine={false}
-                domain={["auto","auto"]} width={48}
-                tickFormatter={v => (v >= 0 ? "+" : "") + v.toFixed(2)} />
+              <XAxis dataKey="date" tick={{ fontSize:8, fill:"#374151" }} tickLine={false} interval={Math.floor(chartData.length / 5)} />
+              <YAxis tick={{ fontSize:8, fill:"#374151" }} tickLine={false} domain={["auto","auto"]} width={48} tickFormatter={v => (v >= 0 ? "+" : "") + v.toFixed(2)} />
               <Tooltip content={<CustomTooltip />} />
               {hasZero && <ReferenceLine y={0} stroke="#374151" strokeDasharray="4 4" />}
-              <Line dataKey="value" stroke={color} strokeWidth={2} dot={false}
-                activeDot={{ r:3, fill:color }} name={selLabel} />
+              <Line dataKey="value" stroke={color} strokeWidth={2} dot={false} activeDot={{ r:3, fill:color }} name={selLabel} />
             </ComposedChart>
           </ResponsiveContainer>
         )}
-
         {vals.length > 1 && (() => {
           const mean = vals.reduce((a,b) => a+b, 0) / vals.length
           const sorted = [...vals].sort((a,b) => a-b)
@@ -1350,30 +1019,25 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
       </Card>
     )
   }
-
   return (
     <>
       <div style={{ fontSize:9, color:"#374151", marginBottom:12, fontStyle:"italic" }}>
-        M1 live (Stooq / Yahoo query2) · M2–M12 synthetic shape · Carry ${carry.toFixed(2)}/bbl/mo ·
-        Select spread or fly per product · Use range buttons to zoom time window
+        M1 live (Stooq / Yahoo query2) · M2–M12 synthetic shape · Carry ${carry.toFixed(2)}/bbl/mo
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-        {PRODUCTS.map(p => (
-          <ProductChart key={p.key} product={p.key} color={p.color} label={p.label} />
-        ))}
+        {PRODUCTS.map(p => <ProductChart key={p.key} product={p.key} color={p.color} label={p.label} />)}
       </div>
       <Card title="Signal Reference" style={{ marginTop:12 }}>
         {[
-          ["Spread > +1.0",       "Strong backwardation — physical urgency, prompt scarce"],
-          ["Spread +0.2 to +1.0", "Mild backwardation — market slightly undersupplied"],
-          ["Spread ±0.2",         "Flat — balanced supply/demand"],
-          ["Spread -0.2 to -1.5", "Mild contango — storage becoming economic"],
-          ["Spread < -1.5",       "Deep contango — oversupply, storage fills"],
-          ["Fly > 0",             "Hump — near-term tighter than deferred, fading"],
-          ["Fly < 0",             "Trough — deferred months pricing tighter than prompt"],
+          ["Spread > +1.0","Strong backwardation — physical urgency, prompt scarce"],
+          ["Spread +0.2 to +1.0","Mild backwardation — market slightly undersupplied"],
+          ["Spread ±0.2","Flat — balanced supply/demand"],
+          ["Spread -0.2 to -1.5","Mild contango — storage becoming economic"],
+          ["Spread < -1.5","Deep contango — oversupply, storage fills"],
+          ["Fly > 0","Hump — near-term tighter than deferred, fading"],
+          ["Fly < 0","Trough — deferred months pricing tighter than prompt"],
         ].map(([k,v],i) => (
-          <div key={i} style={{ display:"flex", gap:8, padding:"5px 0",
-            borderBottom:"1px solid #0f1e30", fontSize:11 }}>
+          <div key={i} style={{ display:"flex", gap:8, padding:"5px 0", borderBottom:"1px solid #0f1e30", fontSize:11 }}>
             <span style={{ color:"#f59e0b", fontWeight:700, minWidth:200 }}>{k}</span>
             <span style={{ color:"#6b7280" }}>{v}</span>
           </div>
@@ -1391,29 +1055,20 @@ function TabGeo({ d }) {
   const score       = agg.composite        ?? null
   const scoreCol    = score >= 8 ? "#ef4444" : score >= 6 ? "#f97316" : score >= 4 ? "#f59e0b" : "#22c55e"
   const pct         = score != null ? (score / 10) * 100 : 0
-
   const durationLabel = d => ({ days_weeks:"Days–Weeks", weeks_months:"Weeks–Months", multi_year:"Multi-Year", structural:"Structural" }[d] || d)
   const riskCol = r => ({ CRITICAL:"#ef4444", HIGH:"#f97316", MODERATE:"#f59e0b", LOW:"#22c55e", LOW_RISK:"#22c55e", MODERATE_RISK:"#f59e0b", ELEVATED_RISK:"#f97316", HIGH_RISK:"#ef4444", CRITICAL_RISK:"#ef4444" }[r] || "#6b7280")
-
   return (
     <>
       <Card title="Geopolitical Risk Score" style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16 }}>
           <div>
-            <div style={{ fontSize: 56, fontWeight: 900, color: scoreCol, lineHeight: 1 }}>
-              {score != null ? score.toFixed(1) : "—"}
-            </div>
+            <div style={{ fontSize: 56, fontWeight: 900, color: scoreCol, lineHeight: 1 }}>{score != null ? score.toFixed(1) : "—"}</div>
             <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>out of 10.0</div>
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: scoreCol,
-                background: scoreCol + "22", borderRadius: 6, padding: "3px 12px" }}>
-                {agg.signal || "—"}
-              </span>
-              <span style={{ fontSize: 12, color: "#6b7280" }}>
-                {agg.event_count || 0} active events
-              </span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: scoreCol, background: scoreCol + "22", borderRadius: 6, padding: "3px 12px" }}>{agg.signal || "—"}</span>
+              <span style={{ fontSize: 12, color: "#6b7280" }}>{agg.event_count || 0} active events</span>
             </div>
             <div style={{ height: 8, background: "#1a2535", borderRadius: 4, marginBottom: 8 }}>
               <div style={{ width: pct + "%", height: "100%", background: scoreCol, borderRadius: 4, transition: "width 0.6s" }} />
@@ -1423,41 +1078,17 @@ function TabGeo({ d }) {
             </div>
           </div>
         </div>
-
-        <div style={{ background: scoreCol + "12", border: `1px solid ${scoreCol}30`,
-          borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
-          <div style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase",
-            letterSpacing: "0.08em", marginBottom: 4 }}>Implied Price Risk Premium</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: scoreCol }}>
-            ${agg.implied_premium?.low}–${agg.implied_premium?.high}/bbl
-          </div>
-          <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>
-            Composite signal score: +{agg.composite_signal_score?.toFixed(2)} (feeds into overall composite)
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-          {[
-            { label: "Supply Weight", value: "40%" },
-            { label: "Spare Cap Weight", value: "40%" },
-            { label: "Duration Weight", value: "20%" },
-          ].map((item, i) => (
-            <div key={i} style={{ background: "#0a0f1a", borderRadius: 6, padding: "8px 10px",
-              border: "1px solid #1a2535", textAlign: "center" }}>
-              <div style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase",
-                letterSpacing: "0.08em" }}>{item.label}</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#e5e7eb" }}>{item.value}</div>
-            </div>
-          ))}
+        <div style={{ background: scoreCol + "12", border: `1px solid ${scoreCol}30`, borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Implied Price Risk Premium</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: scoreCol }}>${agg.implied_premium?.low}–${agg.implied_premium?.high}/bbl</div>
         </div>
       </Card>
-
       <Card title="Active Geopolitical Events" style={{ marginBottom: 12 }}>
         {events.length === 0
           ? <div style={{ color: "#374151", fontSize: 12, padding: "8px 0" }}>No active events</div>
           : events.map((ev, i) => {
-            const col  = riskCol(ev.signal)
-            const comp = ev.scoring?.composite ?? 0
+            const col    = riskCol(ev.signal)
+            const comp   = ev.scoring?.composite ?? 0
             const pctBar = (comp / 10) * 100
             return (
               <div key={i} style={{ padding: "12px 0", borderBottom: "1px solid #0f1e30" }}>
@@ -1465,15 +1096,9 @@ function TabGeo({ d }) {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: "#e5e7eb" }}>{ev.name}</span>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: col,
-                        background: col + "22", borderRadius: 4, padding: "1px 6px" }}>
-                        {ev.signal}
-                      </span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: col, background: col + "22", borderRadius: 4, padding: "1px 6px" }}>{ev.signal}</span>
                     </div>
-                    <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 3 }}>
-                      📍 {ev.region}
-                      {ev.chokepoint && <span style={{ color: "#f97316", marginLeft: 8 }}>⚠ {ev.chokepoint}</span>}
-                    </div>
+                    <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 3 }}>📍 {ev.region}{ev.chokepoint && <span style={{ color: "#f97316", marginLeft: 8 }}>⚠ {ev.chokepoint}</span>}</div>
                     <div style={{ fontSize: 10, color: "#374151", fontStyle: "italic" }}>{ev.notes}</div>
                   </div>
                   <div style={{ textAlign: "right", marginLeft: 16, flexShrink: 0 }}>
@@ -1484,56 +1109,24 @@ function TabGeo({ d }) {
                 <div style={{ height: 4, background: "#0a0f1a", borderRadius: 2, marginBottom: 6 }}>
                   <div style={{ width: pctBar + "%", height: "100%", background: col, borderRadius: 2 }} />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
-                  {[
-                    { label: "Supply Risk", value: ev.supply_at_risk_mbd + " mbd" },
-                    { label: "Duration",    value: durationLabel(ev.duration) },
-                    { label: "Supply pts",  value: ev.scoring?.supply_pts + " pts" },
-                    { label: "Duration pts",value: ev.scoring?.duration_pts + " pts" },
-                  ].map((item, j) => (
-                    <div key={j} style={{ background: "#0a0f1a", borderRadius: 4,
-                      padding: "5px 8px", border: "1px solid #1a2535" }}>
-                      <div style={{ fontSize: 8, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.label}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", marginTop: 1 }}>{item.value}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ fontSize: 9, color: "#1f2937", marginTop: 6 }}>
-                  Since {ev.start_date} · Implied premium: ${ev.implied_premium?.low}–${ev.implied_premium?.high}/bbl
-                </div>
               </div>
             )
-          })
-        }
+          })}
       </Card>
-
       <Card title="Global Maritime Chokepoints">
-        <div style={{ fontSize: 9, color: "#374151", marginBottom: 10, fontStyle: "italic" }}>
-          Flows in mbd · ⚠ = active threat from current events
-        </div>
         {chokepoints.map((cp, i) => {
           const col = riskCol(cp.risk_level)
           return (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12,
-              padding: "8px 0", borderBottom: "1px solid #0f1e30" }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: col,
-                flexShrink: 0, boxShadow: cp.active_threat ? `0 0 6px ${col}` : "none" }} />
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: "1px solid #0f1e30" }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: col, flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ fontSize: 12, fontWeight: 600, color: "#e5e7eb" }}>{cp.name}</span>
-                  {cp.active_threat && (
-                    <span style={{ fontSize: 9, fontWeight: 700, color: "#f97316",
-                      background: "#f9731622", borderRadius: 3, padding: "1px 5px" }}>⚠ ACTIVE THREAT</span>
-                  )}
+                  {cp.active_threat && <span style={{ fontSize: 9, fontWeight: 700, color: "#f97316", background: "#f9731622", borderRadius: 3, padding: "1px 5px" }}>⚠ ACTIVE THREAT</span>}
                 </div>
-                {cp.bypass_mbd && (
-                  <div style={{ fontSize: 9, color: "#374151" }}>Bypass: {cp.bypass_mbd} mbd</div>
-                )}
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#e5e7eb" }}>
-                  {cp.flow_mbd > 0 ? cp.flow_mbd + " mbd" : "bypass"}
-                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#e5e7eb" }}>{cp.flow_mbd > 0 ? cp.flow_mbd + " mbd" : "bypass"}</div>
                 <div style={{ fontSize: 9, fontWeight: 700, color: col }}>{cp.risk_level}</div>
               </div>
             </div>
@@ -1544,19 +1137,16 @@ function TabGeo({ d }) {
   )
 }
 
-// ── TabSeasonality v3 — STL decomposition + year-by-year lines ────────────
-// Replace the previous TabSeasonality function in App.jsx with this one.
-
+// ── TabSeasonality — STL decomposition, 4 products ────────────────────────
 function TabSeasonality() {
   const MONTHS     = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
   const MONTH_FULL = ["January","February","March","April","May","June",
                       "July","August","September","October","November","December"]
 
-  // ── State ──────────────────────────────────────────────────────────────
   const [seasonData,  setSeasonData]  = React.useState(null)
   const [loadErr,     setLoadErr]     = React.useState(null)
   const [product,     setProduct]     = React.useState("brent")
-  const [viewMode,    setViewMode]    = React.useState("detrended") // "detrended" | "raw"
+  const [viewMode,    setViewMode]    = React.useState("detrended")
   const [yearFrom,    setYearFrom]    = React.useState(2016)
   const [yearTo,      setYearTo]      = React.useState(2026)
   const [showSeasAvg, setShowSeasAvg] = React.useState(true)
@@ -1565,7 +1155,15 @@ function TabSeasonality() {
   const chartRef  = React.useRef(null)
   const chartInst = React.useRef(null)
 
-  const ALL_YEARS = Array.from({length: 11}, (_, i) => 2016 + i) // 2016–2026
+  const ALL_YEARS = Array.from({length: 11}, (_, i) => 2016 + i)
+
+  // All 4 products
+  const SERIES = [
+    { key: "brent", label: "Brent ICE",  color: "#3b82f6" },
+    { key: "wti",   label: "WTI NYMEX",  color: "#22c55e" },
+    { key: "rbob",  label: "RBOB",       color: "#f59e0b" },
+    { key: "ho",    label: "HO / ULSD",  color: "#ef4444" },
+  ]
 
   React.useEffect(() => {
     fetch("/api/seasonality")
@@ -1574,25 +1172,18 @@ function TabSeasonality() {
       .catch(e => setLoadErr(e.message))
   }, [])
 
-  // ── Colour palette ─────────────────────────────────────────────────────
-  const YEAR_COLORS = [
-    "#3b82f6","#22c55e","#f59e0b","#ef4444",
-    "#a78bfa","#06b6d4","#f97316","#e879f9",
-    "#84cc16","#fb923c","#38bdf8",
-  ]
+  const YEAR_COLORS = ["#3b82f6","#22c55e","#f59e0b","#ef4444","#a78bfa","#06b6d4","#f97316","#e879f9","#84cc16","#fb923c","#38bdf8"]
   const yearColor = (year, idx) => year === 2026 ? "#ffffff" : YEAR_COLORS[idx % YEAR_COLORS.length]
 
-  // ── Derived ────────────────────────────────────────────────────────────
   const seriesObj = React.useMemo(() => {
     if (!seasonData) return null
-    return seasonData.series?.[product] || null
+    const s = seasonData.series?.[product]
+    return s && !s.error ? s : null
   }, [seasonData, product])
 
   const yearData = React.useMemo(() => {
     if (!seriesObj) return {}
-    return viewMode === "detrended"
-      ? seriesObj.detrended_years || {}
-      : seriesObj.raw_years       || {}
+    return viewMode === "detrended" ? seriesObj.detrended_years || {} : seriesObj.raw_years || {}
   }, [seriesObj, viewMode])
 
   const selectedYears = React.useMemo(() =>
@@ -1600,64 +1191,32 @@ function TabSeasonality() {
     [yearData, yearFrom, yearTo]
   )
 
-  const seasonalAvg = seriesObj?.seasonal_avg || null // 12-value STL seasonal component
+  const seasonalAvg = seriesObj?.seasonal_avg || null
 
-  // ── Chart ──────────────────────────────────────────────────────────────
   React.useEffect(() => {
     if (!window.Chart || !chartRef.current || !seasonData) return
     if (chartInst.current) { chartInst.current.destroy(); chartInst.current = null }
-
     const datasets = []
-    const productColor = product === "brent" ? "#3b82f6" : "#22c55e"
-
+    const curProd = SERIES.find(s => s.key === product)
     selectedYears.forEach((year, idx) => {
-      const data = yearData[year]
-      if (!data) return
-      const isHigh = highlightYr === year
-      const isCurr = year === 2026
-      const col    = yearColor(year, idx)
-      datasets.push({
-        label:           String(year),
-        data:            data,
-        borderColor:     col,
-        backgroundColor: col + "11",
-        borderWidth:     isCurr ? 3 : isHigh ? 2.5 : 1.5,
-        pointRadius:     isCurr ? 4 : isHigh ? 3 : 2,
-        pointHoverRadius: 5,
-        tension:         0.35,
-        fill:            false,
-        spanGaps:        true,
-        order:           isCurr ? 0 : isHigh ? 1 : 2,
-      })
+      const data = yearData[year]; if (!data) return
+      const isHigh = highlightYr === year; const isCurr = year === 2026
+      const col = yearColor(year, idx)
+      datasets.push({ label: String(year), data, borderColor: col, backgroundColor: col + "11",
+        borderWidth: isCurr ? 3 : isHigh ? 2.5 : 1.5, pointRadius: isCurr ? 4 : isHigh ? 3 : 2,
+        pointHoverRadius: 5, tension: 0.35, fill: false, spanGaps: true,
+        order: isCurr ? 0 : isHigh ? 1 : 2 })
     })
-
-    // STL seasonal average overlay (dashed)
     if (showSeasAvg && seasonalAvg && viewMode === "detrended") {
-      datasets.push({
-        label:           "STL seasonal avg",
-        data:            seasonalAvg,
-        borderColor:     "#ffffff",
-        backgroundColor: "transparent",
-        borderWidth:     2.5,
-        borderDash:      [6, 4],
-        pointRadius:     0,
-        pointHoverRadius: 4,
-        tension:         0.35,
-        fill:            false,
-        order:           0,
-      })
+      datasets.push({ label: "STL seasonal avg", data: seasonalAvg, borderColor: "#ffffff",
+        backgroundColor: "transparent", borderWidth: 2.5, borderDash: [6, 4],
+        pointRadius: 0, pointHoverRadius: 4, tension: 0.35, fill: false, order: 0 })
     }
-
-    const yLabel = viewMode === "detrended"
-      ? "$/bbl vs detrended baseline"
-      : "$/bbl (raw monthly avg)"
-
     chartInst.current = new window.Chart(chartRef.current, {
       type: "line",
       data: { labels: MONTHS, datasets },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -1665,11 +1224,9 @@ function TabSeasonality() {
             callbacks: {
               title: items => MONTH_FULL[items[0]?.dataIndex] || "",
               label: ctx => {
-                const v = ctx.parsed.y
-                if (v == null) return null
+                const v = ctx.parsed.y; if (v == null) return null
                 const sign = v >= 0 ? "+" : ""
-                const unit = viewMode === "detrended" ? `${sign}$${v.toFixed(2)}` : `$${v.toFixed(2)}`
-                return ` ${ctx.dataset.label}: ${unit}/bbl`
+                return ` ${ctx.dataset.label}: ${viewMode === "detrended" ? `${sign}$${v.toFixed(2)}` : `$${v.toFixed(2)}`}/bbl`
               }
             },
             backgroundColor: "#0d1117", borderColor: "#1a2535", borderWidth: 1,
@@ -1678,106 +1235,93 @@ function TabSeasonality() {
         },
         scales: {
           x: { grid: { color: "#0f1e30" }, ticks: { color: "#4b5563", font: { size: 11 } } },
-          y: {
-            grid: { color: "#0f1e30" },
-            ticks: {
-              color: "#4b5563", font: { size: 11 },
-              callback: v => viewMode === "detrended"
-                ? (v >= 0 ? "+" : "") + "$" + v
-                : "$" + v
-            }
-          }
+          y: { grid: { color: "#0f1e30" }, ticks: { color: "#4b5563", font: { size: 11 },
+            callback: v => viewMode === "detrended" ? (v >= 0 ? "+" : "") + "$" + v : "$" + v } }
         },
-        interaction: { mode: "index", intersect: false },
-        animation: { duration: 200 },
+        interaction: { mode: "index", intersect: false }, animation: { duration: 200 },
       }
     })
   }, [seasonData, product, selectedYears, highlightYr, showSeasAvg, viewMode])
 
-  // ── Month detail ───────────────────────────────────────────────────────
   const monthDetail = React.useMemo(() => {
     if (detailMonth == null || !yearData) return []
-    return selectedYears
-      .map(y => ({ year: y, value: yearData[y]?.[detailMonth] ?? null }))
-      .filter(r => r.value != null)
-      .sort((a,b) => a.year - b.year)
+    return selectedYears.map(y => ({ year: y, value: yearData[y]?.[detailMonth] ?? null }))
+      .filter(r => r.value != null).sort((a,b) => a.year - b.year)
   }, [detailMonth, selectedYears, yearData])
 
-  const productColor = product === "brent" ? "#3b82f6" : "#22c55e"
-  const productLabel = product === "brent" ? "Brent ICE"  : "WTI NYMEX"
+  const curSeries    = SERIES.find(s => s.key === product)
+  const productColor = curSeries?.color || "#3b82f6"
+  const productLabel = curSeries?.label || product
+
+  // Check if a product has data or error
+  const hasData = key => {
+    const s = seasonData?.series?.[key]
+    return s && !s.error && s.seasonal_avg
+  }
 
   function yearStats(year) {
     const data = yearData[year]?.filter(v => v != null)
     if (!data?.length) return null
-    return {
-      min:  Math.min(...data).toFixed(2),
-      max:  Math.max(...data).toFixed(2),
-      mean: (data.reduce((a,b)=>a+b,0)/data.length).toFixed(2),
-    }
+    return { min: Math.min(...data).toFixed(2), max: Math.max(...data).toFixed(2),
+      mean: (data.reduce((a,b)=>a+b,0)/data.length).toFixed(2) }
   }
 
   return (
     <>
-      {/* ── Method banner ─────────────────────────────────────────────── */}
+      {/* Method banner */}
       <div style={{ background: "#0a0f1a", border: "1px solid #1a2535", borderRadius: 8,
         padding: "9px 14px", marginBottom: 12, fontSize: 10, color: "#4b5563",
         display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
         {seasonData ? (
           <>
             <span style={{ color: "#22c55e", fontWeight: 700 }}>✓ STL decomposition</span>
-            <span>·</span>
-            <span>robust=True · period=12 · 10yr window</span>
-            <span>·</span>
+            <span>· robust=True · period=12 · 10yr window ·</span>
             <span>through <span style={{ color: "#9ca3af" }}>{seasonData.data_through}</span></span>
-            <span>·</span>
-            <span>source: <span style={{ color: "#9ca3af" }}>github/datasets/oil-prices</span></span>
-            {seriesObj?.resid_std && (
-              <>
-                <span>·</span>
-                <span>resid σ = <span style={{ color: "#f59e0b" }}>${seriesObj.resid_std}/bbl</span></span>
-              </>
-            )}
+            <span>· Brent/WTI: <span style={{ color: "#22c55e" }}>github/datasets (direct)</span></span>
+            <span>· RBOB/HO: <span style={{ color: "#22c55e" }}>EIA API (direct)</span></span>
+            {seriesObj?.resid_std && <span>· resid σ = <span style={{ color: "#f59e0b" }}>${seriesObj.resid_std}/bbl</span></span>}
           </>
         ) : (
           <span style={{ color: loadErr ? "#f59e0b" : "#374151", fontWeight: 700 }}>
-            {loadErr
-              ? "⚠ Run: python backend/fetchers/seasonality_fetcher.py"
-              : "Loading…"}
+            {loadErr ? "⚠ Run: python backend/fetchers/seasonality_fetcher.py" : "Loading…"}
           </span>
         )}
       </div>
 
-      {/* ── Controls ──────────────────────────────────────────────────── */}
+      {/* Controls */}
       <div style={{ background: "#0a0f1a", border: "1px solid #1a2535", borderRadius: 8,
         padding: "10px 14px", marginBottom: 12 }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
 
-          {/* Product */}
+          {/* Product toggles — all 4 */}
           <div style={{ display: "flex", gap: 4 }}>
-            {[["brent","Brent ICE","#3b82f6"],["wti","WTI NYMEX","#22c55e"]].map(([p,label,col]) => (
-              <button key={p} onClick={() => setProduct(p)} style={{
-                padding: "5px 14px", borderRadius: 6, fontSize: 12, cursor: "pointer",
-                fontWeight: product === p ? 700 : 400,
-                background: product === p ? col + "22" : "transparent",
-                border: `1px solid ${product === p ? col : "#1a2535"}`,
-                color:  product === p ? col : "#4b5563",
-              }}>{label}</button>
-            ))}
+            {SERIES.map(s => {
+              const available = !seasonData || hasData(s.key)
+              return (
+                <button key={s.key} onClick={() => available && setProduct(s.key)}
+                  title={!available ? "Data unavailable — check EIA_API_KEY" : ""}
+                  style={{
+                    padding: "5px 14px", borderRadius: 6, fontSize: 12,
+                    cursor: available ? "pointer" : "not-allowed",
+                    fontWeight: product === s.key ? 700 : 400,
+                    opacity: available ? 1 : 0.4,
+                    background: product === s.key ? s.color + "22" : "transparent",
+                    border: `1px solid ${product === s.key ? s.color : "#1a2535"}`,
+                    color:  product === s.key ? s.color : "#4b5563",
+                  }}>{s.label}</button>
+              )
+            })}
           </div>
 
           {/* View mode */}
           <div style={{ display: "flex", gap: 4 }}>
-            {[
-              ["detrended", "Detrended (STL)", "STL trend removed — comparable across years"],
-              ["raw",       "Raw prices",      "Actual monthly average $/bbl"],
-            ].map(([m, label, tip]) => (
-              <button key={m} onClick={() => setViewMode(m)} title={tip} style={{
+            {[["detrended","Detrended (STL)"],["raw","Raw prices"]].map(([m, label]) => (
+              <button key={m} onClick={() => setViewMode(m)} style={{
                 padding: "5px 12px", borderRadius: 6, fontSize: 11, cursor: "pointer",
                 fontWeight: viewMode === m ? 700 : 400,
                 background: viewMode === m ? "#1a2535" : "transparent",
                 border: `1px solid ${viewMode === m ? "#374151" : "#1a2535"}`,
-                color:  viewMode === m ? "#e5e7eb" : "#4b5563",
-              }}>{label}</button>
+                color: viewMode === m ? "#e5e7eb" : "#4b5563" }}>{label}</button>
             ))}
           </div>
 
@@ -1785,14 +1329,12 @@ function TabSeasonality() {
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#4b5563" }}>
             <span>From</span>
             <select value={yearFrom} onChange={e => setYearFrom(Number(e.target.value))}
-              style={{ background: "#0d1117", border: "1px solid #1a2535", borderRadius: 5,
-                color: "#e5e7eb", fontSize: 12, padding: "3px 6px", cursor: "pointer" }}>
+              style={{ background: "#0d1117", border: "1px solid #1a2535", borderRadius: 5, color: "#e5e7eb", fontSize: 12, padding: "3px 6px", cursor: "pointer" }}>
               {ALL_YEARS.filter(y => y <= yearTo).map(y => <option key={y} value={y}>{y}</option>)}
             </select>
             <span>to</span>
             <select value={yearTo} onChange={e => setYearTo(Number(e.target.value))}
-              style={{ background: "#0d1117", border: "1px solid #1a2535", borderRadius: 5,
-                color: "#e5e7eb", fontSize: 12, padding: "3px 6px", cursor: "pointer" }}>
+              style={{ background: "#0d1117", border: "1px solid #1a2535", borderRadius: 5, color: "#e5e7eb", fontSize: 12, padding: "3px 6px", cursor: "pointer" }}>
               {ALL_YEARS.filter(y => y >= yearFrom).map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
@@ -1803,115 +1345,92 @@ function TabSeasonality() {
               <button key={l} onClick={() => { setYearFrom(f); setYearTo(t) }} style={{
                 padding: "3px 10px", borderRadius: 5, fontSize: 11, cursor: "pointer",
                 background: yearFrom===f && yearTo===t ? "#1a2535" : "transparent",
-                border: "1px solid #1a2535", color: "#6b7280",
-              }}>{l}</button>
+                border: "1px solid #1a2535", color: "#6b7280" }}>{l}</button>
             ))}
           </div>
 
-          {/* STL avg toggle — only relevant in detrended mode */}
           {viewMode === "detrended" && (
             <button onClick={() => setShowSeasAvg(v => !v)} style={{
               padding: "3px 10px", borderRadius: 5, fontSize: 11, cursor: "pointer",
               background: showSeasAvg ? "#ffffff18" : "transparent",
               border: `1px solid ${showSeasAvg ? "#ffffff44" : "#1a2535"}`,
-              color: showSeasAvg ? "#ffffff" : "#4b5563",
-            }}>
+              color: showSeasAvg ? "#ffffff" : "#4b5563" }}>
               STL seasonal avg
             </button>
           )}
         </div>
       </div>
 
-      {/* ── Chart ─────────────────────────────────────────────────────── */}
+      {/* Chart */}
       <Card style={{ marginBottom: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between",
-          alignItems: "flex-start", marginBottom: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
           <div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: productColor }}>
-              {productLabel}
-            </span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: productColor }}>{productLabel}</span>
             <span style={{ fontSize: 11, color: "#374151", marginLeft: 8 }}>
-              {viewMode === "detrended"
-                ? "$/bbl above/below STL trend — years directly comparable"
-                : "raw monthly average $/bbl"}
+              {viewMode === "detrended" ? "$/bbl above/below STL trend — years directly comparable" : "raw monthly average $/bbl"}
             </span>
           </div>
-          <div style={{ fontSize: 10, color: "#374151" }}>
-            Click month label to see year-by-year breakdown ↓
-          </div>
+          <div style={{ fontSize: 10, color: "#374151" }}>Click month label to see year-by-year breakdown ↓</div>
         </div>
 
         {!seasonData ? (
-          <div style={{ height: 300, display: "flex", alignItems: "center",
-            justifyContent: "center", color: "#1f2937", fontSize: 11, fontFamily: "monospace" }}>
+          <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#1f2937", fontSize: 11, fontFamily: "monospace" }}>
             {loadErr ? "⚠ SEASONALITY DATA NOT FOUND — run seasonality_fetcher.py" : "LOADING…"}
+          </div>
+        ) : !seriesObj ? (
+          <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#f59e0b", fontSize: 11, fontFamily: "monospace" }}>
+            ⚠ {productLabel} DATA UNAVAILABLE — check EIA_API_KEY in environment
           </div>
         ) : (
           <div style={{ position: "relative", width: "100%", height: 300 }}>
-            <canvas ref={chartRef} role="img"
-              aria-label={`Seasonal ${productLabel} price chart by year`} />
+            <canvas ref={chartRef} role="img" aria-label={`Seasonal ${productLabel} price chart by year`} />
           </div>
         )}
 
-        {/* Zero reference line note (detrended only) */}
-        {viewMode === "detrended" && seasonData && (
+        {viewMode === "detrended" && seriesObj && (
           <div style={{ fontSize: 9, color: "#374151", marginTop: 6, fontStyle: "italic" }}>
-            Zero = trend baseline. Positive = above trend, negative = below trend.
-            Dashed white = STL seasonal average (pure seasonal pattern).
+            Zero = trend baseline. Positive = above trend, negative = below trend. Dashed white = STL seasonal average.
           </div>
         )}
 
-        {/* Month click strip */}
-        {seasonData && (
+        {seasonData && seriesObj && (
           <div style={{ display: "flex", gap: 2, marginTop: 8 }}>
             {MONTHS.map((m, mi) => (
-              <button key={m} onClick={() => setDetailMonth(detailMonth === mi ? null : mi)}
-                style={{
-                  flex: 1, padding: "4px 0", fontSize: 10, cursor: "pointer",
-                  borderRadius: 4,
-                  background: detailMonth === mi ? productColor + "33" : "transparent",
-                  border: `1px solid ${detailMonth === mi ? productColor : "#1a2535"}`,
-                  color: detailMonth === mi ? productColor : "#374151",
-                  fontWeight: detailMonth === mi ? 700 : 400,
-                }}>{m}</button>
+              <button key={m} onClick={() => setDetailMonth(detailMonth === mi ? null : mi)} style={{
+                flex: 1, padding: "4px 0", fontSize: 10, cursor: "pointer", borderRadius: 4,
+                background: detailMonth === mi ? productColor + "33" : "transparent",
+                border: `1px solid ${detailMonth === mi ? productColor : "#1a2535"}`,
+                color: detailMonth === mi ? productColor : "#374151",
+                fontWeight: detailMonth === mi ? 700 : 400 }}>{m}</button>
             ))}
           </div>
         )}
       </Card>
 
-      {/* ── STL seasonal pattern bar chart ────────────────────────────── */}
+      {/* STL seasonal bar chart */}
       {seasonalAvg && viewMode === "detrended" && (
         <Card title="STL Seasonal Component — $/bbl vs detrended trend" style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 9, color: "#374151", marginBottom: 10, fontStyle: "italic" }}>
-            Pure seasonal signal extracted by STL · robust=True downweights 2020/2022 outliers ·
-            positive = month typically above trend · negative = below trend
+            Pure seasonal signal · robust=True downweights 2020/2022 outliers · positive = typically above trend
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {(() => {
               const maxAbs = Math.max(...seasonalAvg.map(Math.abs), 1)
               return MONTHS.map((m, mi) => {
-                const v    = seasonalAvg[mi]
-                const pct  = (Math.abs(v) / maxAbs) * 100
-                const isPos = v >= 0
-                const col  = isPos ? "#22c55e" : "#ef4444"
-                const sign = isPos ? "+" : ""
+                const v = seasonalAvg[mi]; const pct = (Math.abs(v) / maxAbs) * 100
+                const isPos = v >= 0; const col = isPos ? "#22c55e" : "#ef4444"
                 return (
                   <div key={m} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 11, color: "#6b7280", minWidth: 28 }}>{m}</span>
-                    <div style={{ flex: 1, height: 14, background: "#0a0f1a",
-                      borderRadius: 3, position: "relative", overflow: "hidden" }}>
-                      <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0,
-                        width: 1, background: "#1a2535", zIndex: 1 }} />
-                      <div style={{
-                        position: "absolute", top: 1, bottom: 1,
-                        width: (pct / 2) + "%",
-                        background: col, borderRadius: 2, opacity: 0.85,
-                        ...(isPos ? { left: "50%" } : { right: "50%" }),
-                      }} />
+                    <div style={{ flex: 1, height: 14, background: "#0a0f1a", borderRadius: 3, position: "relative", overflow: "hidden" }}>
+                      <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "#1a2535", zIndex: 1 }} />
+                      <div style={{ position: "absolute", top: 1, bottom: 1, width: (pct / 2) + "%",
+                        background: col, borderRadius: 2, opacity: 0.85, ...(isPos ? { left: "50%" } : { right: "50%" }) }} />
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: col,
-                      minWidth: 52, textAlign: "right", fontFamily: "monospace" }}>
-                      {sign}${Math.abs(v).toFixed(2)}
+                    <span style={{ fontSize: 11, fontWeight: 700, color: col, minWidth: 52, textAlign: "right", fontFamily: "monospace" }}>
+                      {isPos ? "+" : ""}${Math.abs(v).toFixed(2)}
                     </span>
                   </div>
                 )
@@ -1921,51 +1440,35 @@ function TabSeasonality() {
         </Card>
       )}
 
-      {/* ── Month detail panel ────────────────────────────────────────── */}
+      {/* Month detail */}
       {detailMonth != null && monthDetail.length > 0 && (
-        <Card title={`${MONTH_FULL[detailMonth]} — ${productLabel} by Year`}
-          style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 9, color: "#374151", marginBottom: 10 }}>
-            {viewMode === "detrended"
-              ? "$/bbl above/below STL trend for this month · bars show relative magnitude"
-              : "Raw monthly average $/bbl · bars show relative level"}
-          </div>
+        <Card title={`${MONTH_FULL[detailMonth]} — ${productLabel} by Year`} style={{ marginBottom: 12 }}>
           {(() => {
             const vals  = monthDetail.map(r => r.value)
-            const maxV  = Math.max(...vals)
-            const minV  = Math.min(...vals)
-            const range = maxV - minV || 1
+            const maxV  = Math.max(...vals); const minV = Math.min(...vals); const range = maxV - minV || 1
             return (
               <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                 {monthDetail.map((r, i) => {
                   const pct    = ((r.value - minV) / range) * 100
-                  const isMax  = r.value === maxV
-                  const isMin  = r.value === minV
-                  const isCurr = r.year === 2026
+                  const isMax  = r.value === maxV; const isMin = r.value === minV; const isCurr = r.year === 2026
                   const col    = isMax ? "#ef4444" : isMin ? "#22c55e" : productColor
                   return (
                     <div key={r.year} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 11, fontWeight: isCurr ? 700 : 400,
-                        color: isCurr ? "#ffffff" : "#6b7280",
-                        minWidth: 36, textAlign: "right", fontFamily: "monospace" }}>
+                        color: isCurr ? "#ffffff" : "#6b7280", minWidth: 36, textAlign: "right", fontFamily: "monospace" }}>
                         {r.year}
                       </span>
-                      <div style={{ flex: 1, height: 12, background: "#0a0f1a",
-                        borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ width: Math.max(pct, 2) + "%", height: "100%",
-                          background: col, borderRadius: 3, opacity: 0.85 }} />
+                      <div style={{ flex: 1, height: 12, background: "#0a0f1a", borderRadius: 3, overflow: "hidden" }}>
+                        <div style={{ width: Math.max(pct, 2) + "%", height: "100%", background: col, borderRadius: 3, opacity: 0.85 }} />
                       </div>
                       <span style={{ fontSize: 12, fontWeight: isMax||isMin||isCurr ? 700 : 400,
                         color: isMax ? "#ef4444" : isMin ? "#22c55e" : isCurr ? "#ffffff" : "#9ca3af",
                         minWidth: 60, textAlign: "right", fontFamily: "monospace" }}>
-                        {viewMode === "detrended"
-                          ? (r.value >= 0 ? "+" : "") + "$" + r.value.toFixed(2)
-                          : "$" + r.value.toFixed(2)}
+                        {viewMode === "detrended" ? (r.value >= 0 ? "+" : "") + "$" + r.value.toFixed(2) : "$" + r.value.toFixed(2)}
                       </span>
                       {(isMax || isMin || isCurr) && (
-                        <span style={{ fontSize: 9, fontWeight: 700,
-                          color: isMax ? "#ef4444" : isMin ? "#22c55e" : "#ffffff",
-                          minWidth: 36 }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, minWidth: 36,
+                          color: isMax ? "#ef4444" : isMin ? "#22c55e" : "#ffffff" }}>
                           {isMax ? "PEAK" : isMin ? "LOW" : "NOW"}
                         </span>
                       )}
@@ -1978,81 +1481,46 @@ function TabSeasonality() {
         </Card>
       )}
 
-      {/* ── Year legend ───────────────────────────────────────────────── */}
-      {seasonData && (
+      {/* Year legend */}
+      {seasonData && seriesObj && (
         <Card title="Year Overview" style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 9, color: "#374151", marginBottom: 8 }}>
-            Hover to highlight year on chart ·
-            {viewMode === "detrended"
-              ? " values are $/bbl vs STL trend (detrended)"
-              : " values are raw monthly avg $/bbl"}
-          </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px,1fr))", gap: 6 }}>
             {[...selectedYears].reverse().map((year, idx) => {
               const stats  = yearStats(year)
               const col    = yearColor(year, selectedYears.length - 1 - idx)
               const isHigh = highlightYr === year
               return (
-                <div key={year}
-                  onMouseEnter={() => setHighlightYr(year)}
-                  onMouseLeave={() => setHighlightYr(null)}
-                  style={{
-                    background: isHigh ? col + "18" : "#0a0f1a",
-                    border: `1px solid ${isHigh ? col : "#1a2535"}`,
-                    borderRadius: 6, padding: "8px 10px", cursor: "pointer",
-                    transition: "all 0.12s",
-                  }}>
+                <div key={year} onMouseEnter={() => setHighlightYr(year)} onMouseLeave={() => setHighlightYr(null)}
+                  style={{ background: isHigh ? col + "18" : "#0a0f1a", border: `1px solid ${isHigh ? col : "#1a2535"}`,
+                    borderRadius: 6, padding: "8px 10px", cursor: "pointer", transition: "all 0.12s" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: col }}>
-                      {year}
-                      {year === 2026 && (
-                        <span style={{ fontSize: 9, color: "#374151", marginLeft: 4, fontWeight: 400 }}>YTD</span>
-                      )}
+                      {year}{year === 2026 && <span style={{ fontSize: 9, color: "#374151", marginLeft: 4, fontWeight: 400 }}>YTD</span>}
                     </span>
-                    {stats && (
-                      <span style={{ fontSize: 10, color: "#6b7280", fontFamily: "monospace" }}>
-                        avg {viewMode === "detrended"
-                          ? (parseFloat(stats.mean) >= 0 ? "+" : "") + "$" + stats.mean
-                          : "$" + stats.mean}
-                      </span>
-                    )}
+                    {stats && <span style={{ fontSize: 10, color: "#6b7280", fontFamily: "monospace" }}>avg ${stats.mean}</span>}
                   </div>
-                  {stats && (
-                    <div style={{ fontSize: 9, color: "#374151", marginTop: 2 }}>
-                      {viewMode === "detrended"
-                        ? `${parseFloat(stats.min) >= 0 ? "+" : ""}$${stats.min} → ${parseFloat(stats.max) >= 0 ? "+" : ""}$${stats.max}`
-                        : `$${stats.min} – $${stats.max}`}
-                    </div>
-                  )}
+                  {stats && <div style={{ fontSize: 9, color: "#374151", marginTop: 2 }}>${stats.min} – ${stats.max}</div>}
                 </div>
               )
             })}
-            {showSeasAvg && seasonalAvg && viewMode === "detrended" && (
-              <div style={{ background: "#0a0f1a", border: "1px dashed #374151",
-                borderRadius: 6, padding: "8px 10px" }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#ffffff" }}>STL avg</span>
-                <div style={{ fontSize: 9, color: "#374151", marginTop: 2 }}>
-                  dashed white · pure seasonal signal
-                </div>
-              </div>
-            )}
           </div>
         </Card>
       )}
 
-      {/* ── Seasonal reference ────────────────────────────────────────── */}
+      {/* Seasonal reference */}
       <Card title="Seasonal Reference — OilMacroTrading Framework">
         {[
-          ["Mar–May",  "bull", "Brent/WTI typically +$4–10 above trend. Driving season build + post-turnaround demand ramp."],
-          ["Jun–Aug",  "bull", "Peak US driving + EM power gen. Curve often backwardated. Physical urgency."],
-          ["Sep–Oct",  "bear", "Autumn maintenance. Post-Labour Day gasoline weakness. Crude -$1–2 below trend."],
-          ["Nov–Dec",  "bear", "Year-end positioning, industrial slowdown. Typically -$3–5 below trend."],
-          ["Jan–Feb",  "neut", "Heating demand supports distillates. Crude near seasonal trough before Feb/Mar turn."],
+          ["Mar–May",  "bull", "Crude +$4–10 above trend. Driving season build + post-turnaround demand ramp."],
+          ["Feb–May",  "bull", "RBOB crack seasonal peak — most reliable seasonal trade. Long RB vs CL."],
+          ["Jun–Aug",  "bull", "Peak US driving + EM power gen. Curve often backwardated."],
+          ["Oct–Nov",  "bull", "HO/Gasoil crack peak — European heating season. Long HO crack."],
+          ["Sep–Oct",  "bear", "Autumn maintenance. Post-Labour Day gasoline weakness."],
+          ["Nov–Dec",  "bear", "Year-end softening. Crude -$3–5 below trend. Low liquidity."],
+          ["Jan–Feb",  "neut", "Heating demand supports distillates. Crude near seasonal trough."],
         ].map(([window, dir, note], i) => {
           const col = dir === "bull" ? "#22c55e" : dir === "bear" ? "#ef4444" : "#f59e0b"
           return (
-            <div key={i} style={{ display: "flex", gap: 10, padding: "6px 0",
-              borderBottom: "1px solid #0f1e30", fontSize: 11, alignItems: "flex-start" }}>
+            <div key={i} style={{ display: "flex", gap: 10, padding: "6px 0", borderBottom: "1px solid #0f1e30", fontSize: 11, alignItems: "flex-start" }}>
               <span style={{ color: "#f59e0b", fontWeight: 700, minWidth: 70, flexShrink: 0 }}>{window}</span>
               <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
                 color: col, background: col + "22", minWidth: 52, textAlign: "center", flexShrink: 0 }}>
@@ -2066,7 +1534,6 @@ function TabSeasonality() {
     </>
   )
 }
-
 
 function CountdownDisplay({ initialSeconds = 30 }) {
   const [sec, setSec] = React.useState(initialSeconds)
@@ -2200,14 +1667,14 @@ export default function App() {
           </div>
         ) : (
           <>
-            {activeTab === "overview"  && <TabOverview  d={data} />}
-            {activeTab === "prices"    && <TabPrices    d={data} history={history} />}
-            {activeTab === "spreads"   && <TabSpreads   d={data} history={history} />}
-            {activeTab === "inventory" && <TabInventory d={data} />}
-            {activeTab === "macro"     && <TabMacro     d={data} />}
-            {activeTab === "sentiment" && <TabSentiment d={data} />}
-            {activeTab === "geo"       && <TabGeo       d={data} />}
-            {activeTab === "curve"     && <TabCurve     d={data} curveHistory={curveHistory} curveSel={curveSel} setCurveSel={setCurveSel} curveRange={curveRange} setCurveRange={setCurveRange} />}
+            {activeTab === "overview"    && <TabOverview  d={data} />}
+            {activeTab === "prices"      && <TabPrices    d={data} history={history} />}
+            {activeTab === "spreads"     && <TabSpreads   d={data} history={history} />}
+            {activeTab === "inventory"   && <TabInventory d={data} />}
+            {activeTab === "macro"       && <TabMacro     d={data} />}
+            {activeTab === "sentiment"   && <TabSentiment d={data} />}
+            {activeTab === "geo"         && <TabGeo       d={data} />}
+            {activeTab === "curve"       && <TabCurve     d={data} curveHistory={curveHistory} curveSel={curveSel} setCurveSel={setCurveSel} curveRange={curveRange} setCurveRange={setCurveRange} />}
             {activeTab === "seasonality" && <TabSeasonality />}
           </>
         )}
