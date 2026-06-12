@@ -11,6 +11,7 @@ const TABS = [
   { id: "prices",    label: "Prices" },
   { id: "spreads",   label: "Spreads" },
   { id: "curve",     label: "Futures Curve" },
+  { id: "seasonality",  label: "Seasonality" },
   { id: "inventory", label: "Inventory" },
   { id: "macro",     label: "Macro" },
   { id: "sentiment", label: "Sentiment" },
@@ -1970,6 +1971,7 @@ export default function App() {
             {activeTab === "sentiment" && <TabSentiment d={data} />}
             {activeTab === "geo"       && <TabGeo       d={data} />}
             {activeTab === "curve"     && <TabCurve     d={data} curveHistory={curveHistory} curveSel={curveSel} setCurveSel={setCurveSel} curveRange={curveRange} setCurveRange={setCurveRange} />}
+            {activeTab === "seasonality" && <TabSeasonality />}
           </>
         )}
       </div>
