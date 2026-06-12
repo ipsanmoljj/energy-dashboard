@@ -4,8 +4,8 @@ seasonality_fetcher.py  —  v4  (5 products, STL decomposition)
 Products and sources:
   Brent   — github.com/datasets/oil-prices/brent-daily.csv     (free, no key)
   WTI     — github.com/datasets/oil-prices/wti-daily.csv       (free, no key)
-  RBOB    — EIA API v2: EER_EPMRR_PF4_Y05LA_DPG  $/gal NY Harbor (EIA_API_KEY)
-  HO/ULSD — EIA API v2: EER_EPD2F_PF4_Y35NY_DPG $/gal NY Harbor (EIA_API_KEY)
+  RBOB    — EIA API v2: EER_EPMRR_PF4_RGC_DPG  $/gal NY Harbor (EIA_API_KEY)
+  HO/ULSD — EIA API v2: EER_EPDXL0_PF4_Y35NY_DPG $/gal NY Harbor (EIA_API_KEY)
   Gasoil  — derived: Brent monthly avg + empirical gasoil crack seasonal ($/bbl)
 
 All products run through STL decomposition (robust=True, period=12, 10yr window).
@@ -72,7 +72,7 @@ def fetch_eia_monthly(series_id: str, api_key: str) -> pd.Series:
         f"&data[0]=value"
         f"&facets[series][]={series_id}"
         f"&sort[0][column]=period"
-        f"&sort[0][direction]=asc"
+        f"&sort[0][direction]=desc"
         f"&length=5000"
     )
     r = requests.get(url, timeout=TIMEOUT, headers=HEADERS)
