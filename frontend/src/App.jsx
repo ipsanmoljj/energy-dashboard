@@ -1544,68 +1544,115 @@ function TabGeo({ d }) {
   )
 }
 
-// ── TabSeasonality — drop this component into App.jsx ─────────────────────
-// Paste this function anywhere before the App() export, then:
-//   1. Add { id: "seasonality", label: "Seasonality" } to the TABS array
-//   2. Add {activeTab === "seasonality" && <TabSeasonality />} to the render block
+// ── TabSeasonality v3 — STL decomposition + year-by-year lines ────────────
+// Replace the previous TabSeasonality function in App.jsx with this one.
 
 function TabSeasonality() {
-  const [activeSeries, setActiveSeries] = React.useState({
-    brent: true, wti: true, rbob: true, ho: true, gasoil: true
-  })
-  const [mode, setMode] = React.useState("index") // "index" | "zscore"
-  const chartRef = React.useRef(null)
-  const chartInstanceRef = React.useRef(null)
+  const MONTHS     = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+  const MONTH_FULL = ["January","February","March","April","May","June",
+                      "July","August","September","October","November","December"]
 
-  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+  // ── State ──────────────────────────────────────────────────────────────
+  const [seasonData,  setSeasonData]  = React.useState(null)
+  const [loadErr,     setLoadErr]     = React.useState(null)
+  const [product,     setProduct]     = React.useState("brent")
+  const [viewMode,    setViewMode]    = React.useState("detrended") // "detrended" | "raw"
+  const [yearFrom,    setYearFrom]    = React.useState(2016)
+  const [yearTo,      setYearTo]      = React.useState(2026)
+  const [showSeasAvg, setShowSeasAvg] = React.useState(true)
+  const [highlightYr, setHighlightYr] = React.useState(null)
+  const [detailMonth, setDetailMonth] = React.useState(null)
+  const chartRef  = React.useRef(null)
+  const chartInst = React.useRef(null)
 
-  // Representative seasonal indices (100 = Jan baseline)
-  // Replace RAW values with API-derived monthly averages once you have
-  // enough history in price_history.json (5yr rolling preferred per book)
-  const RAW = {
-    brent:  [100, 99, 101, 103, 105, 106, 107, 108, 106, 103, 101,  99],
-    wti:    [100, 99, 101, 103, 105, 106, 107, 108, 105, 102, 100,  98],
-    rbob:   [ 97,100, 107, 114, 116, 115, 113, 109, 103,  98,  94,  92],
-    ho:     [105,103,  99,  96,  94,  93,  94,  97, 102, 108, 111, 110],
-    gasoil: [106,104, 100,  97,  95,  94,  95,  98, 103, 109, 112, 111],
-  }
-
-  const SERIES = [
-    { key: "brent",  label: "Brent ICE",   color: "#3b82f6", dash: []     },
-    { key: "wti",    label: "WTI NYMEX",   color: "#22c55e", dash: [6,3]  },
-    { key: "rbob",   label: "RBOB",        color: "#f59e0b", dash: [4,2]  },
-    { key: "ho",     label: "HO / ULSD",   color: "#ef4444", dash: [8,4]  },
-    { key: "gasoil", label: "ICE Gasoil",  color: "#a78bfa", dash: [2,2]  },
-  ]
-
-  function toZScore(arr) {
-    const mean = arr.reduce((a,b) => a+b, 0) / arr.length
-    const std  = Math.sqrt(arr.map(v => (v-mean)**2).reduce((a,b) => a+b, 0) / arr.length)
-    return arr.map(v => parseFloat(((v-mean)/std).toFixed(2)))
-  }
-
-  function getDisplay(key) {
-    return mode === "index" ? RAW[key] : toZScore(RAW[key])
-  }
+  const ALL_YEARS = Array.from({length: 11}, (_, i) => 2016 + i) // 2016–2026
 
   React.useEffect(() => {
-    if (!window.Chart || !chartRef.current) return
-    if (chartInstanceRef.current) { chartInstanceRef.current.destroy() }
+    fetch("/api/seasonality")
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+      .then(d => setSeasonData(d))
+      .catch(e => setLoadErr(e.message))
+  }, [])
 
-    const datasets = SERIES.filter(s => activeSeries[s.key]).map(s => ({
-      label: s.label,
-      data:  getDisplay(s.key),
-      borderColor:     s.color,
-      backgroundColor: s.color + "18",
-      borderWidth: 2,
-      pointRadius: 3,
-      pointHoverRadius: 5,
-      borderDash: s.dash,
-      tension: 0.4,
-      fill: false,
-    }))
+  // ── Colour palette ─────────────────────────────────────────────────────
+  const YEAR_COLORS = [
+    "#3b82f6","#22c55e","#f59e0b","#ef4444",
+    "#a78bfa","#06b6d4","#f97316","#e879f9",
+    "#84cc16","#fb923c","#38bdf8",
+  ]
+  const yearColor = (year, idx) => year === 2026 ? "#ffffff" : YEAR_COLORS[idx % YEAR_COLORS.length]
 
-    chartInstanceRef.current = new window.Chart(chartRef.current, {
+  // ── Derived ────────────────────────────────────────────────────────────
+  const seriesObj = React.useMemo(() => {
+    if (!seasonData) return null
+    return seasonData.series?.[product] || null
+  }, [seasonData, product])
+
+  const yearData = React.useMemo(() => {
+    if (!seriesObj) return {}
+    return viewMode === "detrended"
+      ? seriesObj.detrended_years || {}
+      : seriesObj.raw_years       || {}
+  }, [seriesObj, viewMode])
+
+  const selectedYears = React.useMemo(() =>
+    ALL_YEARS.filter(y => y >= yearFrom && y <= yearTo && yearData[y]),
+    [yearData, yearFrom, yearTo]
+  )
+
+  const seasonalAvg = seriesObj?.seasonal_avg || null // 12-value STL seasonal component
+
+  // ── Chart ──────────────────────────────────────────────────────────────
+  React.useEffect(() => {
+    if (!window.Chart || !chartRef.current || !seasonData) return
+    if (chartInst.current) { chartInst.current.destroy(); chartInst.current = null }
+
+    const datasets = []
+    const productColor = product === "brent" ? "#3b82f6" : "#22c55e"
+
+    selectedYears.forEach((year, idx) => {
+      const data = yearData[year]
+      if (!data) return
+      const isHigh = highlightYr === year
+      const isCurr = year === 2026
+      const col    = yearColor(year, idx)
+      datasets.push({
+        label:           String(year),
+        data:            data,
+        borderColor:     col,
+        backgroundColor: col + "11",
+        borderWidth:     isCurr ? 3 : isHigh ? 2.5 : 1.5,
+        pointRadius:     isCurr ? 4 : isHigh ? 3 : 2,
+        pointHoverRadius: 5,
+        tension:         0.35,
+        fill:            false,
+        spanGaps:        true,
+        order:           isCurr ? 0 : isHigh ? 1 : 2,
+      })
+    })
+
+    // STL seasonal average overlay (dashed)
+    if (showSeasAvg && seasonalAvg && viewMode === "detrended") {
+      datasets.push({
+        label:           "STL seasonal avg",
+        data:            seasonalAvg,
+        borderColor:     "#ffffff",
+        backgroundColor: "transparent",
+        borderWidth:     2.5,
+        borderDash:      [6, 4],
+        pointRadius:     0,
+        pointHoverRadius: 4,
+        tension:         0.35,
+        fill:            false,
+        order:           0,
+      })
+    }
+
+    const yLabel = viewMode === "detrended"
+      ? "$/bbl vs detrended baseline"
+      : "$/bbl (raw monthly avg)"
+
+    chartInst.current = new window.Chart(chartRef.current, {
       type: "line",
       data: { labels: MONTHS, datasets },
       options: {
@@ -1614,222 +1661,412 @@ function TabSeasonality() {
         plugins: {
           legend: { display: false },
           tooltip: {
+            mode: "index", intersect: false,
             callbacks: {
+              title: items => MONTH_FULL[items[0]?.dataIndex] || "",
               label: ctx => {
                 const v = ctx.parsed.y
-                return ` ${ctx.dataset.label}: ${mode === "index" ? v.toFixed(1) : v.toFixed(2) + "σ"}`
+                if (v == null) return null
+                const sign = v >= 0 ? "+" : ""
+                const unit = viewMode === "detrended" ? `${sign}$${v.toFixed(2)}` : `$${v.toFixed(2)}`
+                return ` ${ctx.dataset.label}: ${unit}/bbl`
               }
-            }
+            },
+            backgroundColor: "#0d1117", borderColor: "#1a2535", borderWidth: 1,
+            titleColor: "#9ca3af", bodyColor: "#e5e7eb", padding: 10,
           }
         },
         scales: {
-          x: {
-            grid: { color: "#0f1e30" },
-            ticks: { color: "#4b5563", font: { size: 11 } }
-          },
+          x: { grid: { color: "#0f1e30" }, ticks: { color: "#4b5563", font: { size: 11 } } },
           y: {
             grid: { color: "#0f1e30" },
             ticks: {
               color: "#4b5563", font: { size: 11 },
-              callback: v => mode === "index" ? v : v.toFixed(1) + "σ"
+              callback: v => viewMode === "detrended"
+                ? (v >= 0 ? "+" : "") + "$" + v
+                : "$" + v
             }
           }
         },
-        interaction: { mode: "index", intersect: false }
+        interaction: { mode: "index", intersect: false },
+        animation: { duration: 200 },
       }
     })
-  }, [activeSeries, mode])
+  }, [seasonData, product, selectedYears, highlightYr, showSeasAvg, viewMode])
 
-  const toggleSeries = key => setActiveSeries(prev => ({ ...prev, [key]: !prev[key] }))
+  // ── Month detail ───────────────────────────────────────────────────────
+  const monthDetail = React.useMemo(() => {
+    if (detailMonth == null || !yearData) return []
+    return selectedYears
+      .map(y => ({ year: y, value: yearData[y]?.[detailMonth] ?? null }))
+      .filter(r => r.value != null)
+      .sort((a,b) => a.year - b.year)
+  }, [detailMonth, selectedYears, yearData])
 
-  const ANNOTATIONS = [
-    { months: "Jan–Feb",  title: "Heating oil winter peak",       desc: "HO/ULSD and ICE Gasoil seasonally elevated. Cold-snap risk NE US and North Europe. Gasoline demand soft.", dir: "bull", products: ["ho","gasoil"] },
-    { months: "Mar–Apr",  title: "Spring refinery turnarounds",   desc: "Maintenance cuts crude runs and product output. Crude demand softens. Crack spreads can widen as product tightens temporarily.", dir: "neut", products: ["brent","wti"] },
-    { months: "Feb–May",  title: "RBOB crack seasonal peak",      desc: "Most reliable seasonal trade: long RBOB crack vs WTI. Refineries exit maintenance as driving season builds ahead of Memorial Day.", dir: "bull", products: ["rbob"] },
-    { months: "May–Jun",  title: "US driving season opens",       desc: "Memorial Day triggers US gasoline demand surge. Brent/WTI typically reach mid-year highs. Peak seasonal bullish window.", dir: "bull", products: ["brent","wti","rbob"] },
-    { months: "Jul–Aug",  title: "Peak driving + EM power demand",desc: "US driving season peak plus EM power gen (Middle East A/C, China industrial) adds ~1–2 mbd vs Q1. Crude at seasonal highs.", dir: "bull", products: ["brent","wti"] },
-    { months: "Sep–Oct",  title: "Autumn refinery maintenance",   desc: "Second turnaround season. Gasoline crack weakens post-Labour Day. Distillate stocks begin seasonal build for winter.", dir: "bear", products: ["rbob"] },
-    { months: "Oct–Nov",  title: "Distillate / heating demand",   desc: "European heating oil season and US ULSD demand builds. ICE Gasoil and HO cracks at annual peak. Key window: long HO crack.", dir: "bull", products: ["ho","gasoil"] },
-    { months: "Nov–Dec",  title: "Year-end softening",            desc: "Holiday slowdown reduces industrial and road demand. Chinese New Year prep begins in Dec. Crude often drifts lower into year-end.", dir: "bear", products: ["brent","wti"] },
-  ]
+  const productColor = product === "brent" ? "#3b82f6" : "#22c55e"
+  const productLabel = product === "brent" ? "Brent ICE"  : "WTI NYMEX"
 
-  const QUARTERS = [
-    {
-      q: "Q1 — Jan to Mar",
-      rows: [
-        { label: "Crude (Brent/WTI)", signal: "Neutral → soft",         dir: "neut", note: "Heating demand offset by refinery maintenance beginning late-Mar" },
-        { label: "RBOB",              signal: "Rising",                  dir: "bull", note: "Pre-season builds; crack begins seasonal rally from Feb" },
-        { label: "HO / ICE Gasoil",  signal: "Elevated then declining", dir: "bear", note: "Peak Jan–Feb; cracks compress as heating season ends" },
-      ]
-    },
-    {
-      q: "Q2 — Apr to Jun",
-      rows: [
-        { label: "Crude (Brent/WTI)", signal: "Rising",        dir: "bull", note: "Demand ramp post-turnaround; driving season opens Memorial Day" },
-        { label: "RBOB",              signal: "Peak window",   dir: "bull", note: "Strongest seasonal period — Memorial Day + tight summer RVP spec" },
-        { label: "HO / ICE Gasoil",  signal: "Seasonal low",  dir: "bear", note: "Heating off-season; cracks at annual trough" },
-      ]
-    },
-    {
-      q: "Q3 — Jul to Sep",
-      rows: [
-        { label: "Crude (Brent/WTI)", signal: "Peak then falling",      dir: "bull", note: "Jul-Aug seasonal peak; softens Sep as autumn maintenance begins" },
-        { label: "RBOB",              signal: "Declining from peak",     dir: "bear", note: "Post-Labour Day demand drop; summer blend spec ends" },
-        { label: "HO / ICE Gasoil",  signal: "Bottoming → recovering", dir: "neut", note: "Pre-winter builds begin; Sep/Oct stock levels signal winter tightness" },
-      ]
-    },
-    {
-      q: "Q4 — Oct to Dec",
-      rows: [
-        { label: "Crude (Brent/WTI)", signal: "Volatile, year-end soft", dir: "neut", note: "Oct OPEC risk; holiday demand softness; year-end positioning" },
-        { label: "RBOB",              signal: "Seasonal low",            dir: "bear", note: "Off-season; winter blend cheaper; demand at annual trough" },
-        { label: "HO / ICE Gasoil",  signal: "Peak",                    dir: "bull", note: "European heating season; winter logistics diesel; strongest crack window" },
-      ]
-    },
-  ]
-
-  const dirColor = d => d === "bull" ? "#22c55e" : d === "bear" ? "#ef4444" : "#f59e0b"
-  const dirLabel = d => d === "bull" ? "Bullish" : d === "bear" ? "Bearish" : "Neutral"
-  const seriesLabel = key => SERIES.find(s => s.key === key)?.label || key
-  const seriesColor = key => SERIES.find(s => s.key === key)?.color || "#6b7280"
+  function yearStats(year) {
+    const data = yearData[year]?.filter(v => v != null)
+    if (!data?.length) return null
+    return {
+      min:  Math.min(...data).toFixed(2),
+      max:  Math.max(...data).toFixed(2),
+      mean: (data.reduce((a,b)=>a+b,0)/data.length).toFixed(2),
+    }
+  }
 
   return (
     <>
-      {/* ── Chart ── */}
-      <Card title="Seasonal Price Index (Jan = 100)" style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 9, color: "#374151", fontStyle: "italic", marginBottom: 10 }}>
-          Representative seasonal patterns derived from multi-year historical averages.
-          Index mode: Jan = 100. Z-score mode: deviation in standard deviations from annual mean.
-          Replace RAW values in TabSeasonality with live 5-yr history once price_history.json has sufficient depth.
-        </div>
+      {/* ── Method banner ─────────────────────────────────────────────── */}
+      <div style={{ background: "#0a0f1a", border: "1px solid #1a2535", borderRadius: 8,
+        padding: "9px 14px", marginBottom: 12, fontSize: 10, color: "#4b5563",
+        display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+        {seasonData ? (
+          <>
+            <span style={{ color: "#22c55e", fontWeight: 700 }}>✓ STL decomposition</span>
+            <span>·</span>
+            <span>robust=True · period=12 · 10yr window</span>
+            <span>·</span>
+            <span>through <span style={{ color: "#9ca3af" }}>{seasonData.data_through}</span></span>
+            <span>·</span>
+            <span>source: <span style={{ color: "#9ca3af" }}>github/datasets/oil-prices</span></span>
+            {seriesObj?.resid_std && (
+              <>
+                <span>·</span>
+                <span>resid σ = <span style={{ color: "#f59e0b" }}>${seriesObj.resid_std}/bbl</span></span>
+              </>
+            )}
+          </>
+        ) : (
+          <span style={{ color: loadErr ? "#f59e0b" : "#374151", fontWeight: 700 }}>
+            {loadErr
+              ? "⚠ Run: python backend/fetchers/seasonality_fetcher.py"
+              : "Loading…"}
+          </span>
+        )}
+      </div>
 
-        {/* Controls */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12, alignItems: "center" }}>
-          {SERIES.map(s => (
-            <button key={s.key} onClick={() => toggleSeries(s.key)} style={{
-              padding: "4px 12px", borderRadius: 20, fontSize: 11, cursor: "pointer",
-              fontWeight: activeSeries[s.key] ? 700 : 400,
-              background: activeSeries[s.key] ? s.color + "22" : "transparent",
-              border: `${activeSeries[s.key] ? "1.5px" : "1px"} solid ${activeSeries[s.key] ? s.color : "#1a2535"}`,
-              color: activeSeries[s.key] ? s.color : "#4b5563",
-            }}>
-              {s.label}
-            </button>
-          ))}
-          <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-            {["index","zscore"].map(m => (
-              <button key={m} onClick={() => setMode(m)} style={{
-                padding: "4px 10px", fontSize: 11, borderRadius: 6, cursor: "pointer",
-                background: mode === m ? "#1a2535" : "transparent",
-                border: `1px solid ${mode === m ? "#374151" : "#1a2535"}`,
-                color: mode === m ? "#e5e7eb" : "#4b5563",
-                fontWeight: mode === m ? 700 : 400,
-              }}>
-                {m === "index" ? "Index (100)" : "Z-score"}
-              </button>
+      {/* ── Controls ──────────────────────────────────────────────────── */}
+      <div style={{ background: "#0a0f1a", border: "1px solid #1a2535", borderRadius: 8,
+        padding: "10px 14px", marginBottom: 12 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+
+          {/* Product */}
+          <div style={{ display: "flex", gap: 4 }}>
+            {[["brent","Brent ICE","#3b82f6"],["wti","WTI NYMEX","#22c55e"]].map(([p,label,col]) => (
+              <button key={p} onClick={() => setProduct(p)} style={{
+                padding: "5px 14px", borderRadius: 6, fontSize: 12, cursor: "pointer",
+                fontWeight: product === p ? 700 : 400,
+                background: product === p ? col + "22" : "transparent",
+                border: `1px solid ${product === p ? col : "#1a2535"}`,
+                color:  product === p ? col : "#4b5563",
+              }}>{label}</button>
             ))}
           </div>
-        </div>
 
-        {/* Legend */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 10, fontSize: 11, color: "#4b5563" }}>
-          {SERIES.filter(s => activeSeries[s.key]).map(s => (
-            <span key={s.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: s.color, display: "inline-block" }}/>
-              {s.label}
-              {s.dash.length > 0 && <span style={{ fontSize: 9, opacity: 0.5 }}>- -</span>}
+          {/* View mode */}
+          <div style={{ display: "flex", gap: 4 }}>
+            {[
+              ["detrended", "Detrended (STL)", "STL trend removed — comparable across years"],
+              ["raw",       "Raw prices",      "Actual monthly average $/bbl"],
+            ].map(([m, label, tip]) => (
+              <button key={m} onClick={() => setViewMode(m)} title={tip} style={{
+                padding: "5px 12px", borderRadius: 6, fontSize: 11, cursor: "pointer",
+                fontWeight: viewMode === m ? 700 : 400,
+                background: viewMode === m ? "#1a2535" : "transparent",
+                border: `1px solid ${viewMode === m ? "#374151" : "#1a2535"}`,
+                color:  viewMode === m ? "#e5e7eb" : "#4b5563",
+              }}>{label}</button>
+            ))}
+          </div>
+
+          {/* Year range */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#4b5563" }}>
+            <span>From</span>
+            <select value={yearFrom} onChange={e => setYearFrom(Number(e.target.value))}
+              style={{ background: "#0d1117", border: "1px solid #1a2535", borderRadius: 5,
+                color: "#e5e7eb", fontSize: 12, padding: "3px 6px", cursor: "pointer" }}>
+              {ALL_YEARS.filter(y => y <= yearTo).map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <span>to</span>
+            <select value={yearTo} onChange={e => setYearTo(Number(e.target.value))}
+              style={{ background: "#0d1117", border: "1px solid #1a2535", borderRadius: 5,
+                color: "#e5e7eb", fontSize: 12, padding: "3px 6px", cursor: "pointer" }}>
+              {ALL_YEARS.filter(y => y >= yearFrom).map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+
+          {/* Presets */}
+          <div style={{ display: "flex", gap: 4 }}>
+            {[["5yr",2021,2026],["7yr",2019,2026],["All",2016,2026]].map(([l,f,t]) => (
+              <button key={l} onClick={() => { setYearFrom(f); setYearTo(t) }} style={{
+                padding: "3px 10px", borderRadius: 5, fontSize: 11, cursor: "pointer",
+                background: yearFrom===f && yearTo===t ? "#1a2535" : "transparent",
+                border: "1px solid #1a2535", color: "#6b7280",
+              }}>{l}</button>
+            ))}
+          </div>
+
+          {/* STL avg toggle — only relevant in detrended mode */}
+          {viewMode === "detrended" && (
+            <button onClick={() => setShowSeasAvg(v => !v)} style={{
+              padding: "3px 10px", borderRadius: 5, fontSize: 11, cursor: "pointer",
+              background: showSeasAvg ? "#ffffff18" : "transparent",
+              border: `1px solid ${showSeasAvg ? "#ffffff44" : "#1a2535"}`,
+              color: showSeasAvg ? "#ffffff" : "#4b5563",
+            }}>
+              STL seasonal avg
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Chart ─────────────────────────────────────────────────────── */}
+      <Card style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between",
+          alignItems: "flex-start", marginBottom: 8 }}>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: productColor }}>
+              {productLabel}
             </span>
-          ))}
+            <span style={{ fontSize: 11, color: "#374151", marginLeft: 8 }}>
+              {viewMode === "detrended"
+                ? "$/bbl above/below STL trend — years directly comparable"
+                : "raw monthly average $/bbl"}
+            </span>
+          </div>
+          <div style={{ fontSize: 10, color: "#374151" }}>
+            Click month label to see year-by-year breakdown ↓
+          </div>
         </div>
 
-        <div style={{ position: "relative", width: "100%", height: 280 }}>
-          <canvas ref={chartRef} role="img"
-            aria-label="Seasonal energy price index chart showing monthly patterns for Brent, WTI, RBOB, HO and ICE Gasoil across a calendar year">
-          </canvas>
-        </div>
+        {!seasonData ? (
+          <div style={{ height: 300, display: "flex", alignItems: "center",
+            justifyContent: "center", color: "#1f2937", fontSize: 11, fontFamily: "monospace" }}>
+            {loadErr ? "⚠ SEASONALITY DATA NOT FOUND — run seasonality_fetcher.py" : "LOADING…"}
+          </div>
+        ) : (
+          <div style={{ position: "relative", width: "100%", height: 300 }}>
+            <canvas ref={chartRef} role="img"
+              aria-label={`Seasonal ${productLabel} price chart by year`} />
+          </div>
+        )}
+
+        {/* Zero reference line note (detrended only) */}
+        {viewMode === "detrended" && seasonData && (
+          <div style={{ fontSize: 9, color: "#374151", marginTop: 6, fontStyle: "italic" }}>
+            Zero = trend baseline. Positive = above trend, negative = below trend.
+            Dashed white = STL seasonal average (pure seasonal pattern).
+          </div>
+        )}
+
+        {/* Month click strip */}
+        {seasonData && (
+          <div style={{ display: "flex", gap: 2, marginTop: 8 }}>
+            {MONTHS.map((m, mi) => (
+              <button key={m} onClick={() => setDetailMonth(detailMonth === mi ? null : mi)}
+                style={{
+                  flex: 1, padding: "4px 0", fontSize: 10, cursor: "pointer",
+                  borderRadius: 4,
+                  background: detailMonth === mi ? productColor + "33" : "transparent",
+                  border: `1px solid ${detailMonth === mi ? productColor : "#1a2535"}`,
+                  color: detailMonth === mi ? productColor : "#374151",
+                  fontWeight: detailMonth === mi ? 700 : 400,
+                }}>{m}</button>
+            ))}
+          </div>
+        )}
       </Card>
 
-      {/* ── Inflection annotations ── */}
-      <div style={{ fontSize: 9, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em",
-        textTransform: "uppercase", marginBottom: 8 }}>
-        Key seasonal inflection points
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-        {ANNOTATIONS.map((a, i) => (
-          <div key={i} style={{ background: "#0a0f1a", border: "1px solid #1a2535",
-            borderRadius: 8, padding: "10px 12px" }}>
-            <div style={{ fontSize: 9, color: "#374151", marginBottom: 2 }}>{a.months}</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#e5e7eb", marginBottom: 4 }}>{a.title}</div>
-            <div style={{ fontSize: 10, color: "#6b7280", lineHeight: 1.5, marginBottom: 8 }}>{a.desc}</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-              <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
-                color: dirColor(a.dir), background: dirColor(a.dir) + "22" }}>
-                {dirLabel(a.dir)}
-              </span>
-              {a.products.map(p => (
-                <span key={p} style={{ fontSize: 9, padding: "1px 7px", borderRadius: 10,
-                  color: seriesColor(p), background: seriesColor(p) + "18", fontWeight: 600 }}>
-                  {seriesLabel(p)}
-                </span>
-              ))}
-            </div>
+      {/* ── STL seasonal pattern bar chart ────────────────────────────── */}
+      {seasonalAvg && viewMode === "detrended" && (
+        <Card title="STL Seasonal Component — $/bbl vs detrended trend" style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: "#374151", marginBottom: 10, fontStyle: "italic" }}>
+            Pure seasonal signal extracted by STL · robust=True downweights 2020/2022 outliers ·
+            positive = month typically above trend · negative = below trend
           </div>
-        ))}
-      </div>
-
-      {/* ── Quarterly breakdown ── */}
-      <div style={{ fontSize: 9, fontWeight: 700, color: "#4b5563", letterSpacing: "0.12em",
-        textTransform: "uppercase", marginBottom: 8 }}>
-        Seasonal signals by quarter
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
-        {QUARTERS.map((qd, qi) => (
-          <div key={qi} style={{ background: "#0a0f1a", border: "1px solid #1a2535", borderRadius: 8, padding: "10px 14px" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#e5e7eb", marginBottom: 8 }}>{qd.q}</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-              {qd.rows.map((row, ri) => (
-                <div key={ri} style={{ background: "#060d18", border: "1px solid #0f1e30",
-                  borderRadius: 6, padding: "8px 10px" }}>
-                  <div style={{ fontSize: 9, color: "#374151", marginBottom: 3 }}>{row.label}</div>
-                  <div style={{ marginBottom: 4 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
-                      color: dirColor(row.dir), background: dirColor(row.dir) + "22" }}>
-                      {row.signal}
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {(() => {
+              const maxAbs = Math.max(...seasonalAvg.map(Math.abs), 1)
+              return MONTHS.map((m, mi) => {
+                const v    = seasonalAvg[mi]
+                const pct  = (Math.abs(v) / maxAbs) * 100
+                const isPos = v >= 0
+                const col  = isPos ? "#22c55e" : "#ef4444"
+                const sign = isPos ? "+" : ""
+                return (
+                  <div key={m} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 11, color: "#6b7280", minWidth: 28 }}>{m}</span>
+                    <div style={{ flex: 1, height: 14, background: "#0a0f1a",
+                      borderRadius: 3, position: "relative", overflow: "hidden" }}>
+                      <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0,
+                        width: 1, background: "#1a2535", zIndex: 1 }} />
+                      <div style={{
+                        position: "absolute", top: 1, bottom: 1,
+                        width: (pct / 2) + "%",
+                        background: col, borderRadius: 2, opacity: 0.85,
+                        ...(isPos ? { left: "50%" } : { right: "50%" }),
+                      }} />
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: col,
+                      minWidth: 52, textAlign: "right", fontFamily: "monospace" }}>
+                      {sign}${Math.abs(v).toFixed(2)}
                     </span>
                   </div>
-                  <div style={{ fontSize: 10, color: "#4b5563", lineHeight: 1.5 }}>{row.note}</div>
-                </div>
-              ))}
-            </div>
+                )
+              })
+            })()}
           </div>
-        ))}
-      </div>
+        </Card>
+      )}
 
-      {/* ── Key trade windows reference ── */}
-      <Card title="Seasonal Trade Windows — Reference">
-        <div style={{ fontSize: 9, color: "#374151", marginBottom: 10, fontStyle: "italic" }}>
-          Per the OilMacroTrading book framework · these are the most reliable recurring seasonal patterns
-        </div>
-        {[
-          ["Feb–May",  "Long RBOB crack (RB – CL)",          "Most consistent seasonal energy trade. Refineries exit maintenance + driving season demand builds."],
-          ["Mar–Apr",  "Short crude / long product spreads",  "Spring turnaround season: crude demand softens, product tightens. Crack spread widening expected."],
-          ["Jul–Aug",  "Long outright crude / backwardation", "US driving peak + EM power gen. Curve typically in backwardation. Physical urgency in M1-M2."],
-          ["Oct–Nov",  "Long HO crack (HO – CL)",            "European heating season + US ULSD demand. Strongest distillate window of the year."],
-          ["Oct",      "Long ICE Gasoil crack (GO – BRN)",   "European equivalent of the HO crack. Q4 peak for gasoil across ARA."],
-          ["Sep–Oct",  "Short RBOB crack",                   "Post-Labour Day demand drop + winter blend spec change. Gasoline crack seasonally weakens."],
-          ["Nov–Dec",  "Watch curve shape for year-end roll", "Low liquidity; year-end positioning can distort M1-M2 spreads. Be cautious with outright length."],
-        ].map(([window, trade, rationale], i) => (
-          <div key={i} style={{ display: "flex", gap: 10, padding: "6px 0",
-            borderBottom: "1px solid #0f1e30", fontSize: 11, alignItems: "flex-start" }}>
-            <span style={{ color: "#f59e0b", fontWeight: 700, minWidth: 70, flexShrink: 0 }}>{window}</span>
-            <span style={{ color: "#00d98b", fontWeight: 600, minWidth: 220, flexShrink: 0 }}>{trade}</span>
-            <span style={{ color: "#4b5563", lineHeight: 1.5 }}>{rationale}</span>
+      {/* ── Month detail panel ────────────────────────────────────────── */}
+      {detailMonth != null && monthDetail.length > 0 && (
+        <Card title={`${MONTH_FULL[detailMonth]} — ${productLabel} by Year`}
+          style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: "#374151", marginBottom: 10 }}>
+            {viewMode === "detrended"
+              ? "$/bbl above/below STL trend for this month · bars show relative magnitude"
+              : "Raw monthly average $/bbl · bars show relative level"}
           </div>
-        ))}
+          {(() => {
+            const vals  = monthDetail.map(r => r.value)
+            const maxV  = Math.max(...vals)
+            const minV  = Math.min(...vals)
+            const range = maxV - minV || 1
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                {monthDetail.map((r, i) => {
+                  const pct    = ((r.value - minV) / range) * 100
+                  const isMax  = r.value === maxV
+                  const isMin  = r.value === minV
+                  const isCurr = r.year === 2026
+                  const col    = isMax ? "#ef4444" : isMin ? "#22c55e" : productColor
+                  return (
+                    <div key={r.year} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: isCurr ? 700 : 400,
+                        color: isCurr ? "#ffffff" : "#6b7280",
+                        minWidth: 36, textAlign: "right", fontFamily: "monospace" }}>
+                        {r.year}
+                      </span>
+                      <div style={{ flex: 1, height: 12, background: "#0a0f1a",
+                        borderRadius: 3, overflow: "hidden" }}>
+                        <div style={{ width: Math.max(pct, 2) + "%", height: "100%",
+                          background: col, borderRadius: 3, opacity: 0.85 }} />
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: isMax||isMin||isCurr ? 700 : 400,
+                        color: isMax ? "#ef4444" : isMin ? "#22c55e" : isCurr ? "#ffffff" : "#9ca3af",
+                        minWidth: 60, textAlign: "right", fontFamily: "monospace" }}>
+                        {viewMode === "detrended"
+                          ? (r.value >= 0 ? "+" : "") + "$" + r.value.toFixed(2)
+                          : "$" + r.value.toFixed(2)}
+                      </span>
+                      {(isMax || isMin || isCurr) && (
+                        <span style={{ fontSize: 9, fontWeight: 700,
+                          color: isMax ? "#ef4444" : isMin ? "#22c55e" : "#ffffff",
+                          minWidth: 36 }}>
+                          {isMax ? "PEAK" : isMin ? "LOW" : "NOW"}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+        </Card>
+      )}
+
+      {/* ── Year legend ───────────────────────────────────────────────── */}
+      {seasonData && (
+        <Card title="Year Overview" style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: "#374151", marginBottom: 8 }}>
+            Hover to highlight year on chart ·
+            {viewMode === "detrended"
+              ? " values are $/bbl vs STL trend (detrended)"
+              : " values are raw monthly avg $/bbl"}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px,1fr))", gap: 6 }}>
+            {[...selectedYears].reverse().map((year, idx) => {
+              const stats  = yearStats(year)
+              const col    = yearColor(year, selectedYears.length - 1 - idx)
+              const isHigh = highlightYr === year
+              return (
+                <div key={year}
+                  onMouseEnter={() => setHighlightYr(year)}
+                  onMouseLeave={() => setHighlightYr(null)}
+                  style={{
+                    background: isHigh ? col + "18" : "#0a0f1a",
+                    border: `1px solid ${isHigh ? col : "#1a2535"}`,
+                    borderRadius: 6, padding: "8px 10px", cursor: "pointer",
+                    transition: "all 0.12s",
+                  }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: col }}>
+                      {year}
+                      {year === 2026 && (
+                        <span style={{ fontSize: 9, color: "#374151", marginLeft: 4, fontWeight: 400 }}>YTD</span>
+                      )}
+                    </span>
+                    {stats && (
+                      <span style={{ fontSize: 10, color: "#6b7280", fontFamily: "monospace" }}>
+                        avg {viewMode === "detrended"
+                          ? (parseFloat(stats.mean) >= 0 ? "+" : "") + "$" + stats.mean
+                          : "$" + stats.mean}
+                      </span>
+                    )}
+                  </div>
+                  {stats && (
+                    <div style={{ fontSize: 9, color: "#374151", marginTop: 2 }}>
+                      {viewMode === "detrended"
+                        ? `${parseFloat(stats.min) >= 0 ? "+" : ""}$${stats.min} → ${parseFloat(stats.max) >= 0 ? "+" : ""}$${stats.max}`
+                        : `$${stats.min} – $${stats.max}`}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            {showSeasAvg && seasonalAvg && viewMode === "detrended" && (
+              <div style={{ background: "#0a0f1a", border: "1px dashed #374151",
+                borderRadius: 6, padding: "8px 10px" }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#ffffff" }}>STL avg</span>
+                <div style={{ fontSize: 9, color: "#374151", marginTop: 2 }}>
+                  dashed white · pure seasonal signal
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* ── Seasonal reference ────────────────────────────────────────── */}
+      <Card title="Seasonal Reference — OilMacroTrading Framework">
+        {[
+          ["Mar–May",  "bull", "Brent/WTI typically +$4–10 above trend. Driving season build + post-turnaround demand ramp."],
+          ["Jun–Aug",  "bull", "Peak US driving + EM power gen. Curve often backwardated. Physical urgency."],
+          ["Sep–Oct",  "bear", "Autumn maintenance. Post-Labour Day gasoline weakness. Crude -$1–2 below trend."],
+          ["Nov–Dec",  "bear", "Year-end positioning, industrial slowdown. Typically -$3–5 below trend."],
+          ["Jan–Feb",  "neut", "Heating demand supports distillates. Crude near seasonal trough before Feb/Mar turn."],
+        ].map(([window, dir, note], i) => {
+          const col = dir === "bull" ? "#22c55e" : dir === "bear" ? "#ef4444" : "#f59e0b"
+          return (
+            <div key={i} style={{ display: "flex", gap: 10, padding: "6px 0",
+              borderBottom: "1px solid #0f1e30", fontSize: 11, alignItems: "flex-start" }}>
+              <span style={{ color: "#f59e0b", fontWeight: 700, minWidth: 70, flexShrink: 0 }}>{window}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
+                color: col, background: col + "22", minWidth: 52, textAlign: "center", flexShrink: 0 }}>
+                {dir === "bull" ? "Bullish" : dir === "bear" ? "Bearish" : "Neutral"}
+              </span>
+              <span style={{ color: "#4b5563", lineHeight: 1.5 }}>{note}</span>
+            </div>
+          )
+        })}
       </Card>
     </>
   )
 }
+
 
 function CountdownDisplay({ initialSeconds = 30 }) {
   const [sec, setSec] = React.useState(initialSeconds)
