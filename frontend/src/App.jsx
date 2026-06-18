@@ -11,6 +11,7 @@ const TABS = [
   { id: "prices",       label: "Prices" },
   { id: "spreads",      label: "Spreads" },
   { id: "curve",        label: "Futures Curve" },
+  { id: "signal",       label: "Trade Signal" },
   { id: "seasonality",  label: "Seasonality" },
   { id: "inventory",    label: "Inventory" },
   { id: "macro",        label: "Macro" },
@@ -880,7 +881,7 @@ function TabSentiment({ d }) {
   )
 }
 
-function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurveRange }) {
+function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurveRange, regimeHistory }) {
   const curve   = d?.curve  || {}
   const curves  = curve.curves  || {}
   const signals = curve.signals || {}
@@ -1072,6 +1073,7 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
         {PRODUCTS.map(p => <ProductChart key={p.key} product={p.key} color={p.color} label={p.label} />)}
       </div>
+      <RegimeHistoryPanel regimeHistory={regimeHistory} demsupCol={demsupCol} />
       <Card title="Signal Reference" style={{ marginTop:12 }}>
         {[
           ["Spread > +1.0","Strong backwardation — physical urgency, prompt scarce"],
@@ -1084,6 +1086,270 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
         ].map(([k,v],i) => (
           <div key={i} style={{ display:"flex", gap:8, padding:"5px 0", borderBottom:"1px solid #0f1e30", fontSize:11 }}>
             <span style={{ color:"#f59e0b", fontWeight:700, minWidth:200 }}>{k}</span>
+            <span style={{ color:"#6b7280" }}>{v}</span>
+          </div>
+        ))}
+      </Card>
+    </>
+  )
+}
+
+// Historical regime classification panel — full training-data history per
+// product, sourced from demsup's regime classifier (the SAME backend that
+// drives the live regime badges above). Shows a colored timeline strip of
+// regime periods, plus a level_z_126 line chart, so today's regime can be
+// seen in the context of how long regimes typically last and how the
+// z-score has behaved historically rather than as an isolated label.
+function RegimeHistoryPanel({ regimeHistory, demsupCol }) {
+  const REGIME_PRODUCTS = [
+    { key: "brent", label: "Brent ICE",    color: "#3b82f6" },
+    { key: "wti",   label: "WTI NYMEX",    color: "#60a5fa" },
+    { key: "ho",    label: "ULSD / HO",    color: "#f97316" },
+    { key: "lgo",   label: "Gasoil (LGO)", color: "#a78bfa" },
+  ]
+  const [selProduct, setSelProduct] = useState("wti")
+
+  if (!regimeHistory) {
+    return (
+      <Card title="Regime Classification History" style={{ marginTop:12 }}>
+        <div style={{ fontSize:10, color:"#374151", fontFamily:"monospace" }}>Loading historical regime data…</div>
+      </Card>
+    )
+  }
+
+  const entry    = regimeHistory.products?.[selProduct]
+  const ok       = entry?.status === "OK"
+  const history  = entry?.history  || []
+  const segments = entry?.segments || []
+  const totalDays = segments.reduce((s,seg) => s + seg.n_days, 0) || 1
+
+  const chartData = history.map(r => ({ date: r.date, z: r.level_z_126 }))
+
+  return (
+    <Card title="Regime Classification History" style={{ marginTop:12 }}>
+      <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+        {REGIME_PRODUCTS.map(p => (
+          <button key={p.key} onClick={() => setSelProduct(p.key)} style={{
+            background: selProduct===p.key ? p.color+"33" : "transparent",
+            border: `1px solid ${selProduct===p.key ? p.color : "#1a2535"}`,
+            borderRadius:5, padding:"4px 10px", fontSize:10, fontWeight:700,
+            color: selProduct===p.key ? p.color : "#4b5563", cursor:"pointer" }}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {!ok ? (
+        <div style={{ fontSize:10, color:"#374151", fontFamily:"monospace" }}>
+          {entry?.note || "No regime history available for this product"}
+        </div>
+      ) : (
+        <>
+          {/* Colored timeline strip — each block is one contiguous regime period,
+              width proportional to how many days that regime lasted. Hovering
+              a block shows the exact dates and duration. */}
+          <div style={{ marginBottom: 6, fontSize:9, color:"#374151", letterSpacing:"0.06em" }}>
+            REGIME TIMELINE · {segments.length} periods over {totalDays} trading days
+          </div>
+          <div style={{ display:"flex", width:"100%", height:28, borderRadius:5, overflow:"hidden", marginBottom:14 }}>
+            {segments.map((seg, i) => {
+              const widthPct = (seg.n_days / totalDays) * 100
+              const col = demsupCol(seg.regime_label)
+              return (
+                <div key={i}
+                     title={`${seg.regime_label}\n${seg.start_date} → ${seg.end_date} (${seg.n_days}d)`}
+                     style={{
+                       width: `${widthPct}%`, minWidth: widthPct > 0.3 ? undefined : 1,
+                       background: col, opacity: 0.85,
+                       borderRight: i < segments.length-1 ? "1px solid #050b14" : "none",
+                       cursor: "pointer",
+                     }} />
+              )
+            })}
+          </div>
+
+          {/* z-score line chart over the same history, colored by sign so
+              extreme backwardation/contango excursions are visually obvious
+              against the regime timeline directly above it. */}
+          <ResponsiveContainer width="100%" height={180}>
+            <ComposedChart data={chartData} margin={{ top:4, right:4, left:-20, bottom:0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#0f1e30" />
+              <XAxis dataKey="date" tick={{ fontSize:8, fill:"#374151" }} tickLine={false}
+                     interval={Math.floor(chartData.length / 8)} />
+              <YAxis tick={{ fontSize:8, fill:"#374151" }} tickLine={false} domain={["auto","auto"]} width={48} />
+              <Tooltip content={({active,payload,label}) => {
+                if (!active || !payload?.length) return null
+                const v = payload[0]?.value
+                return (
+                  <div style={{ background:"#0d1117", border:"1px solid #1a2535", borderRadius:6, padding:"6px 10px", fontSize:11 }}>
+                    <div style={{ color:"#6b7280", marginBottom:3 }}>{label}</div>
+                    <div style={{ color:"#e5e7eb", fontWeight:700 }}>z = {v >= 0 ? "+" : ""}{v?.toFixed(3)}</div>
+                  </div>
+                )
+              }} />
+              <ReferenceLine y={0} stroke="#374151" strokeDasharray="4 4" />
+              <ReferenceLine y={1} stroke="#374151" strokeDasharray="2 2" opacity={0.4} />
+              <ReferenceLine y={-1} stroke="#374151" strokeDasharray="2 2" opacity={0.4} />
+              <Line dataKey="z" stroke="#f59e0b" strokeWidth={1.5} dot={false} activeDot={{ r:3, fill:"#f59e0b" }} name="level_z_126" />
+            </ComposedChart>
+          </ResponsiveContainer>
+          <div style={{ fontSize:9, color:"#1f2937", marginTop:4 }}>
+            level_z_126 — standard deviations from the lagged 126-day M1M2 baseline. Dashed lines at ±1.
+          </div>
+        </>
+      )}
+    </Card>
+  )
+}
+
+function TabSignal({ d }) {
+  // signal_engine_fetcher.py output: { signals: { wti, brent, ho, lgo }, note, fetched_at }
+  // Each product: { status: "OK"|"INSUFFICIENT_DATA", live: {...} | null, summary: {...} | null }
+  const se = d?.signal_engine || {}
+  const signals = se.signals || {}
+
+  const PRODUCTS = [
+    { key: "brent", label: "Brent ICE",     color: "#3b82f6" },
+    { key: "wti",   label: "WTI NYMEX",     color: "#60a5fa" },
+    { key: "ho",    label: "ULSD / HO",     color: "#f97316" },
+    { key: "lgo",   label: "Gasoil (LGO)",  color: "#a78bfa" },
+  ]
+
+  const sigCol = sig => sig === "BUY" ? "#22c55e" : sig === "SELL" ? "#ef4444" : "#6b7280"
+  const sigBg  = sig => sigCol(sig) + "1a"
+
+  const SignalCard = ({ product, color, label }) => {
+    const entry = signals[product]
+    const ok    = entry?.status === "OK"
+    const live  = entry?.live
+    const summary = entry?.summary
+
+    // "Why" line — mirrors the exact gating cascade in signal_engine.R's
+    // run_signal_engine(): warmup -> regime exclusion -> ATR vol gate ->
+    // threshold crossing. This text is descriptive only; the actual gating
+    // decision was already made server-side by the validated R function —
+    // this just explains it, it doesn't recompute it.
+    const whyText = (() => {
+      if (!ok || !live) return null
+      if (live.signal === "FLAT") {
+        if (!live.vol_gate_pass) return `Volatility gate blocked (${live.vol_gate})`
+        return `|z|=${Math.abs(live.level_z).toFixed(2)} below threshold ${live.threshold?.toFixed(2)}`
+      }
+      return `z=${live.level_z >= 0 ? "+" : ""}${live.level_z?.toFixed(2)} crossed threshold ${live.threshold?.toFixed(2)} · regime: ${live.regime}`
+    })()
+
+    return (
+      <Card style={{ marginBottom: 0 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{ width:8, height:8, borderRadius:"50%", background:color }}/>
+            <span style={{ fontSize:12, fontWeight:700, color:"#e5e7eb" }}>{label}</span>
+          </div>
+          {ok && live ? (
+            <span style={{ fontSize:13, fontWeight:900, color:sigCol(live.signal), background:sigBg(live.signal), borderRadius:6, padding:"3px 12px", letterSpacing:"0.05em" }}>
+              {live.signal}
+            </span>
+          ) : (
+            <span style={{ fontSize:10, fontWeight:700, color:"#374151", background:"#1a253522", borderRadius:6, padding:"3px 10px" }}>
+              INSUFFICIENT DATA
+            </span>
+          )}
+        </div>
+
+        {!ok && (
+          <div style={{ fontSize:10, color:"#374151", fontFamily:"monospace" }}>
+            {entry?.note || "Signal service unavailable"}
+          </div>
+        )}
+
+        {ok && live && (
+          <>
+            <div style={{ fontSize:10, color:"#6b7280", marginBottom:10 }}>{whyText}</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:10 }}>
+              <div>
+                <div style={{ fontSize:9, color:"#374151" }}>M1M2</div>
+                <div style={{ fontSize:14, fontWeight:700, color:"#e5e7eb", fontFamily:"monospace" }}>
+                  {live.m1m2 >= 0 ? "+" : ""}{live.m1m2?.toFixed(3)} <span style={{ fontSize:9, color:"#374151" }}>{live.unit}</span>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize:9, color:"#374151" }}>Z-SCORE</div>
+                <div style={{ fontSize:14, fontWeight:700, color:Math.abs(live.level_z) >= live.threshold ? sigCol(live.signal==="FLAT" ? "" : live.signal) : "#e5e7eb", fontFamily:"monospace" }}>
+                  {live.level_z >= 0 ? "+" : ""}{live.level_z?.toFixed(3)}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize:9, color:"#374151" }}>VOL GATE</div>
+                <div style={{ fontSize:12, fontWeight:700, color: live.vol_gate_pass ? "#22c55e" : "#ef4444" }}>
+                  {live.vol_gate_pass ? "PASS" : "BLOCKED"}
+                </div>
+              </div>
+            </div>
+            {live.signal !== "FLAT" && live.hard_stop != null && (
+              <div style={{ display:"flex", gap:16, fontSize:10, color:"#6b7280", padding:"6px 0", borderTop:"1px solid #0f1e30" }}>
+                <span>Stop dist: <span style={{ color:"#e5e7eb" }}>{live.stop_dist?.toFixed(4)}</span></span>
+                <span>Hard stop: <span style={{ color:"#e5e7eb" }}>{live.hard_stop?.toFixed(4)}</span></span>
+                <span>ATR mult: <span style={{ color:"#e5e7eb" }}>{live.atr_multiplier}x</span></span>
+              </div>
+            )}
+            <div style={{ fontSize:9, color:"#1f2937", marginTop:6 }}>as of {live.date}</div>
+          </>
+        )}
+
+        {ok && summary && (
+          <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid #0f1e30" }}>
+            <div style={{ fontSize:9, color:"#374151", marginBottom:6, letterSpacing:"0.08em" }}>
+              VALIDATED TEST-WINDOW PERFORMANCE
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:8 }}>
+              <div>
+                <div style={{ fontSize:9, color:"#374151" }}>TRADES</div>
+                <div style={{ fontSize:12, fontWeight:700, color:"#e5e7eb" }}>{summary.n_trades}</div>
+              </div>
+              <div>
+                <div style={{ fontSize:9, color:"#374151" }}>HIT RATE</div>
+                <div style={{ fontSize:12, fontWeight:700, color: summary.hit_pct >= 55 ? "#22c55e" : "#f59e0b" }}>{summary.hit_pct}%</div>
+              </div>
+              <div>
+                <div style={{ fontSize:9, color:"#374151" }}>R:R</div>
+                <div style={{ fontSize:12, fontWeight:700, color:"#e5e7eb" }}>{summary.rr}</div>
+              </div>
+              <div>
+                <div style={{ fontSize:9, color:"#374151" }}>TOTAL P&L</div>
+                <div style={{ fontSize:12, fontWeight:700, color: summary.total_pnl >= 0 ? "#22c55e" : "#ef4444" }}>
+                  {summary.total_pnl >= 0 ? "+" : ""}{summary.total_pnl} {summary.unit}
+                </div>
+              </div>
+            </div>
+            <div style={{ fontSize:9, color:"#374151", marginTop:6 }}>
+              Max DD: <span style={{ color:"#ef4444" }}>{summary.max_dd}</span> · Vol gate: {summary.vol_gate}
+            </div>
+          </div>
+        )}
+      </Card>
+    )
+  }
+
+  return (
+    <>
+      <div style={{ fontSize:9, color:"#374151", marginBottom:12, fontStyle:"italic" }}>
+        Rule-based M1M2 mean-reversion signal · sourced from demsup regime classifier's level_z_126 ·
+        not an ML model — deterministic threshold + regime + volatility gate.
+        Test-window performance (Jul 2024–May 2026) opened once, per train/validation/test discipline.
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+        {PRODUCTS.map(p => <SignalCard key={p.key} product={p.key} color={p.color} label={p.label} />)}
+      </div>
+      <Card title="How This Signal Works" style={{ marginTop:12 }}>
+        {[
+          ["1. Regime classification", "demsup's regime classifier labels each day (Deep-Backwardation, Easing-Contango, etc.) and computes level_z_126 — how far M1M2 sits from its lagged 126-day baseline, in standard deviations."],
+          ["2. Regime gate", "Each product excludes specific regimes shown historically to have no edge (e.g. Transition labels for all products; LCO excludes Deep-Backwardation at 48.7% hit rate; HO excludes Easing-Backwardation at 0% hit rate)."],
+          ["3. Volatility gate", "LCO and HO only trade in LOW volatility (ATR14 below a threshold); LGO is inverted — it only trades in HIGH volatility. CL has no volatility gate."],
+          ["4. Threshold crossing", "If the regime and vol gates pass, a BUY fires when z < -threshold (spread too depressed) and a SELL fires when z > +threshold (spread too elevated) — mean reversion, not momentum."],
+          ["5. Stop & target", "ATR14 × a per-product multiplier sets the hard stop. A trailing stop activates once price moves partway to target."],
+        ].map(([k,v],i) => (
+          <div key={i} style={{ display:"flex", gap:8, padding:"6px 0", borderBottom:"1px solid #0f1e30", fontSize:11 }}>
+            <span style={{ color:"#f59e0b", fontWeight:700, minWidth:160 }}>{k}</span>
             <span style={{ color:"#6b7280" }}>{v}</span>
           </div>
         ))}
@@ -1593,6 +1859,7 @@ export default function App() {
   const [activeTab,    setActiveTab]    = useState("overview")
   const [data,         setData]         = useState(null)
   const [curveHistory, setCurveHistory] = useState([])
+  const [regimeHistory, setRegimeHistory] = useState(null)
   const [history,      setHistory]      = useState([])
   const [alerts,       setAlerts]       = useState([])
   const [loading,      setLoading]      = useState(true)
@@ -1603,7 +1870,7 @@ export default function App() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, geo, curve, curveHist, qsHist, demsup] = await Promise.all([
+      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, geo, curve, curveHist, qsHist, demsup, signalEngine] = await Promise.all([
         fetch(`${API}/api/all`).then(r => r.json()),
         fetch(`${API}/api/eia`).then(r => r.json()),
         fetch(`${API}/api/rig-count`).then(r => r.json()).catch(() => null),
@@ -1619,12 +1886,13 @@ export default function App() {
         fetch(`${API}/api/curve-history`).then(r => r.json()).catch(() => []),
         fetch(`${API}/api/quality-spreads-history`).then(r => r.json()).catch(() => []),
         fetch(`${API}/api/demsup`).then(r => r.json()).catch(() => null),
+        fetch(`${API}/api/signal-engine`).then(r => r.json()).catch(() => null),
       ])
       const merged = {
         ...all, eia, rig_count: rig, crack, inv_signals: invSig,
         crack_signals: crackSig, fj, quality_spreads: qs, duc,
         qs_history: Array.isArray(qsHist) ? qsHist : [],
-        geo, curve, demsup,
+        geo, curve, demsup, signal_engine: signalEngine,
         curve_history: Array.isArray(curveHist) ? curveHist : [],
       }
       const histArr = Array.isArray(hist) ? hist : []
@@ -1647,6 +1915,16 @@ export default function App() {
     const d = setInterval(fetchAll, 30000)
     return () => clearInterval(d)
   }, [fetchAll])
+
+  // Regime history (full daily series per product, for the Futures Curve tab's
+  // historical timeline + z-score chart) is fetched ONCE on mount, not on the
+  // 30s polling loop — unlike everything else in fetchAll, this is a large
+  // dataset (~1,500+ rows × 4 products) that only changes server-side every
+  // 6 hours (job_regime_history's interval in api.py), so re-fetching it every
+  // 30 seconds would be pure waste with zero new information most of the time.
+  useEffect(() => {
+    fetch(`${API}/api/regime-history`).then(r => r.json()).then(setRegimeHistory).catch(() => setRegimeHistory(null))
+  }, [])
 
   const comp     = data?.composite?.composite || {}
   const score    = comp.score ?? null
@@ -1720,7 +1998,8 @@ export default function App() {
             {activeTab === "macro"       && <TabMacro     d={data} />}
             {activeTab === "sentiment"   && <TabSentiment d={data} />}
             {activeTab === "geo"         && <TabGeo       d={data} />}
-            {activeTab === "curve"       && <TabCurve     d={data} curveHistory={curveHistory} curveSel={curveSel} setCurveSel={setCurveSel} curveRange={curveRange} setCurveRange={setCurveRange} />}
+            {activeTab === "curve"       && <TabCurve     d={data} curveHistory={curveHistory} curveSel={curveSel} setCurveSel={setCurveSel} curveRange={curveRange} setCurveRange={setCurveRange} regimeHistory={regimeHistory} />}
+            {activeTab === "signal"      && <TabSignal    d={data} />}
             {activeTab === "seasonality" && <TabSeasonality />}
           </>
         )}

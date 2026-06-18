@@ -113,6 +113,26 @@ def job_demsup():
     except Exception as e:
         log.warning("job_demsup failed: %s", e)
 
+def job_signal_engine():
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
+        from signal_engine_fetcher import run as signal_run
+        signal_run()
+        log.info("signal engine updated")
+    except Exception as e:
+        log.warning("job_signal_engine failed: %s", e)
+
+def job_regime_history():
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
+        from regime_history_fetcher import run as history_run
+        history_run()
+        log.info("regime history updated")
+    except Exception as e:
+        log.warning("job_regime_history failed: %s", e)
+
 def job_quality_spreads():
     try:
         import sys, os
@@ -152,6 +172,8 @@ scheduler.add_job(job_news,      "interval", minutes=15, id="news",      max_ins
 scheduler.add_job(job_curve,         "interval", minutes=5,  id="curve",         max_instances=1)
 scheduler.add_job(job_quality_spreads,"interval", minutes=30, id="quality_spreads", max_instances=1)
 scheduler.add_job(job_demsup,        "interval", minutes=30, id="demsup",          max_instances=1)
+scheduler.add_job(job_signal_engine, "interval", minutes=30, id="signal_engine",   max_instances=1)
+scheduler.add_job(job_regime_history,"interval", hours=6,    id="regime_history",  max_instances=1)
 scheduler.add_job(job_qs_backfill,   "cron",     hour=2,     id="qs_backfill",    max_instances=1)
 scheduler.add_job(job_curve_backfill,"cron",     hour=2,     id="curve_backfill", max_instances=1)
 scheduler.add_job(job_cftc,      "cron",     day_of_week="fri", hour=16,
@@ -168,6 +190,8 @@ def startup():
     job_quality_spreads()
     job_qs_backfill()
     job_demsup()
+    job_signal_engine()
+    job_regime_history()
     log.info("API ready → http://localhost:8000")
 
 @app.on_event("shutdown")
@@ -250,6 +274,20 @@ async def get_demsup():
     p = DATA_DIR / "demsup_latest.json"
     if not p.exists():
         raise HTTPException(status_code=404, detail="Run demsup_fetcher.py first")
+    return json.loads(p.read_text())
+
+@app.get("/api/signal-engine")
+async def get_signal_engine():
+    p = DATA_DIR / "signal_engine_latest.json"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Run signal_engine_fetcher.py first")
+    return json.loads(p.read_text())
+
+@app.get("/api/regime-history")
+async def get_regime_history():
+    p = DATA_DIR / "regime_history_latest.json"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Run regime_history_fetcher.py first")
     return json.loads(p.read_text())
 
 @app.get("/api/geo-score")
