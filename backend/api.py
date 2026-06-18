@@ -103,6 +103,16 @@ def job_curve():
     except Exception as e:
         log.warning("job_curve failed: %s", e)
 
+def job_demsup():
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
+        from demsup_fetcher import run as demsup_run
+        demsup_run()
+        log.info("demsup regime updated")
+    except Exception as e:
+        log.warning("job_demsup failed: %s", e)
+
 def job_quality_spreads():
     try:
         import sys, os
@@ -141,6 +151,7 @@ scheduler.add_job(job_weather,   "interval", hours=1,    id="weather",   max_ins
 scheduler.add_job(job_news,      "interval", minutes=15, id="news",      max_instances=1)
 scheduler.add_job(job_curve,         "interval", minutes=5,  id="curve",         max_instances=1)
 scheduler.add_job(job_quality_spreads,"interval", minutes=30, id="quality_spreads", max_instances=1)
+scheduler.add_job(job_demsup,        "interval", minutes=30, id="demsup",          max_instances=1)
 scheduler.add_job(job_qs_backfill,   "cron",     hour=2,     id="qs_backfill",    max_instances=1)
 scheduler.add_job(job_curve_backfill,"cron",     hour=2,     id="curve_backfill", max_instances=1)
 scheduler.add_job(job_cftc,      "cron",     day_of_week="fri", hour=16,
@@ -156,6 +167,7 @@ def startup():
     job_curve_backfill()
     job_quality_spreads()
     job_qs_backfill()
+    job_demsup()
     log.info("API ready → http://localhost:8000")
 
 @app.on_event("shutdown")
@@ -231,6 +243,13 @@ async def get_curve():
     p = DATA_DIR / "curve_latest.json"
     if not p.exists():
         raise HTTPException(status_code=404, detail="Run curve_fetcher.py first")
+    return json.loads(p.read_text())
+
+@app.get("/api/demsup")
+async def get_demsup():
+    p = DATA_DIR / "demsup_latest.json"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Run demsup_fetcher.py first")
     return json.loads(p.read_text())
 
 @app.get("/api/geo-score")

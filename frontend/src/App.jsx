@@ -884,6 +884,8 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
   const curve   = d?.curve  || {}
   const curves  = curve.curves  || {}
   const signals = curve.signals || {}
+  const demsup  = d?.demsup?.regimes || {}
+  const geoScore = d?.geo?.composite_signal_score ?? null
   const carry   = d?.fred?.derived?.storage_carry?.total_carry_per_bbl_mo || 0.77
   const ch      = curveHistory || []
   const PRODUCTS = [
@@ -916,6 +918,16 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
   }
   const spreadCol    = v => { if (v == null) return "#374151"; if (v > 1.0) return "#22c55e"; if (v > 0.2) return "#86efac"; if (v > -0.2) return "#6b7280"; if (v > -1.5) return "#fca5a5"; return "#ef4444" }
   const structureCol = s => { if (!s) return "#6b7280"; if (s.includes("STRONG_BACK")) return "#22c55e"; if (s.includes("MILD_BACK")) return "#86efac"; if (s === "FLAT") return "#6b7280"; if (s.includes("MILD_CONT")) return "#fca5a5"; return "#ef4444" }
+  const demsupCol = label => {
+    if (!label) return "#374151"
+    if (label.includes("Deep-Backwardation")) return "#22c55e"
+    if (label.includes("Backwardation") || label === "Transition-Tightening") return "#86efac"
+    if (label === "Flat" || label.includes("Stable")) return "#6b7280"
+    if (label.includes("Contango") || label === "Transition-Loosening") return "#fca5a5"
+    if (label.includes("Deep-Contango")) return "#ef4444"
+    return "#6b7280"
+  }
+  const scopeCol = scope => scope === "GLOBAL" ? "#f59e0b" : scope === "BROAD" ? "#a78bfa" : "#374151"
 
   const ProductChart = ({ product, color, label }) => {
     const selLabel   = curveSel[product]
@@ -926,6 +938,22 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
     const curCol     = spreadCol(curVal)
     const sig        = signals[product]
     const strCol     = structureCol(sig?.structure)
+    const dsup       = demsup[product]
+    const dsupOk     = dsup?.status === "OK"
+    const dsupCol    = demsupCol(dsup?.regime_label)
+    // Cross-check: GLOBAL/BROAD backwardation consensus from demsup vs this dashboard's
+    // independent geo-risk score. Agreement = corroborating signal; a GLOBAL regime with
+    // a low geo score suggests a price-only/technical move rather than a news-driven one.
+    const crossCheck = (() => {
+      if (!dsupOk || !dsup.regime_label) return null
+      const isGlobalBack = (dsup.consensus_scope === "GLOBAL" || dsup.consensus_scope === "BROAD")
+                            && dsup.regime_label.includes("Backwardation")
+      if (!isGlobalBack) return null
+      if (geoScore == null) return null
+      return geoScore >= 3
+        ? { label: "CONFIRMED", note: "Geo risk score corroborates the regime", color: "#22c55e" }
+        : { label: "PRICE-ONLY", note: "No matching geopolitical driver — may be positioning/technical", color: "#f59e0b" }
+    })()
     const allPts     = ch.filter(r => histKey && r[histKey] != null)
     const pts        = allPts.slice(-days)
     const chartData  = pts.map(r => ({ date: r.date?.slice(5), value: r[histKey] }))
@@ -953,6 +981,23 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
               <span style={{ fontSize:10, fontWeight:700, color:strCol, background:strCol+"22", borderRadius:4, padding:"1px 6px" }}>
                 {sig?.structure?.replace(/_/g," ") || "—"}
               </span>
+              {dsupOk && (
+                <span title={`demsup confidence ${(dsup.confidence_score*100||0).toFixed(0)}% · scope ${dsup.consensus_scope||"—"}`}
+                      style={{ fontSize:10, fontWeight:700, color:dsupCol, background:dsupCol+"22", borderRadius:4, padding:"1px 6px" }}>
+                  {dsup.regime_label}
+                </span>
+              )}
+              {dsupOk && dsup.consensus_scope && (
+                <span style={{ fontSize:9, fontWeight:700, color:scopeCol(dsup.consensus_scope), background:scopeCol(dsup.consensus_scope)+"1a", borderRadius:4, padding:"1px 5px" }}>
+                  {dsup.consensus_scope}
+                </span>
+              )}
+              {crossCheck && (
+                <span title={crossCheck.note}
+                      style={{ fontSize:9, fontWeight:700, color:crossCheck.color, background:crossCheck.color+"1a", borderRadius:4, padding:"1px 5px" }}>
+                  {crossCheck.label}
+                </span>
+              )}
             </div>
             <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
               {SPREAD_OPTIONS.map(o => (
@@ -1558,7 +1603,7 @@ export default function App() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, geo, curve, curveHist, qsHist] = await Promise.all([
+      const [all, eia, rig, crack, hist, invSig, crackSig, fj, qs, duc, geo, curve, curveHist, qsHist, demsup] = await Promise.all([
         fetch(`${API}/api/all`).then(r => r.json()),
         fetch(`${API}/api/eia`).then(r => r.json()),
         fetch(`${API}/api/rig-count`).then(r => r.json()).catch(() => null),
@@ -1573,12 +1618,13 @@ export default function App() {
         fetch(`${API}/api/curve`).then(r => r.json()).catch(() => null),
         fetch(`${API}/api/curve-history`).then(r => r.json()).catch(() => []),
         fetch(`${API}/api/quality-spreads-history`).then(r => r.json()).catch(() => []),
+        fetch(`${API}/api/demsup`).then(r => r.json()).catch(() => null),
       ])
       const merged = {
         ...all, eia, rig_count: rig, crack, inv_signals: invSig,
         crack_signals: crackSig, fj, quality_spreads: qs, duc,
         qs_history: Array.isArray(qsHist) ? qsHist : [],
-        geo, curve,
+        geo, curve, demsup,
         curve_history: Array.isArray(curveHist) ? curveHist : [],
       }
       const histArr = Array.isArray(hist) ? hist : []
