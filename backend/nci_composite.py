@@ -60,15 +60,21 @@ log = logging.getLogger(__name__)
 # when price has been trending down for 5 weeks, without dominating.
 
 LAYER_WEIGHTS = {
-    "inventory":   0.25,   # Days cover, Cushing, 5yr deviation — most direct
-    "crack":       0.20,   # Refinery margins — crude demand signal
-    "momentum":    0.15,   # 5-week Brent price trend vs rolling avg (NEW)
-    "macro":       0.13,   # DXY, rates — financial backdrop
-    "demand":      0.09,   # Weather HDD/CDD demand signal
-    "positioning": 0.10,   # CFTC — sentiment/crowding
-    "gie":         0.05,   # EU gas storage
-    "news":        0.08,   # News sentiment — breaking events, geo risk (reduced: 10→8)
+    "inventory":   0.230,  # Days cover, Cushing, 5yr deviation — most direct
+    "crack":       0.180,  # Refinery margins — crude demand signal
+    "momentum":    0.135,  # 5-week Brent price trend vs rolling avg
+    "macro":       0.115,  # DXY, rates — financial backdrop
+    "positioning": 0.090,  # CFTC — sentiment/crowding
+    "news":        0.070,  # News sentiment — breaking events, geo risk
+    "demand":      0.080,  # Weather HDD/CDD demand signal
+    "steo":        0.055,  # EIA STEO monthly global balance overlay (NEW)
+    "gie":         0.045,  # EU gas storage
 }
+# Sum = 1.000 exactly (verified). Previous version summed to 1.05 — a pre-existing
+# bug that silently inflated the composite by ~5% whenever all 8 layers were
+# available, since the total_weight<1.0 normalization check never triggered.
+# Relative ranking between layers is unchanged from before; only the absolute
+# scale was corrected and STEO was added.
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -426,6 +432,49 @@ def get_gie_signal() -> dict:
     }
 
 
+def get_steo_signal() -> dict:
+    """
+    Layer 9 — EIA STEO monthly global supply/demand balance.
+    Bullish when global balance shows a draw (consumption > production);
+    bearish on a build. Slow-moving — updates ~monthly, not weekly.
+    """
+    data = load_json("steo_latest.json")
+    balance = data.get("global_balance_mbd") if data else None
+
+    if balance is None:
+        return {"score": 0, "label": "NO_DATA", "available": False,
+                "details": {}, "contribution": 0}
+
+    # -10/+10 scale: a 2.0 mbd draw maps to +10 (full bullish), a 2.0 mbd build to -10.
+    # 2.0 mbd is a wide global balance move outside crisis periods; clamp protects
+    # against runaway scores during genuine supply shocks (e.g. Hormuz-type events).
+    score = max(-10, min(10, round(-balance / 2.0 * 10, 2)))
+    label = data.get("global_balance_signal", "UNKNOWN")
+
+    details = {
+        "report_period":      data.get("report_period_latest"),
+        "world_production":   data.get("world_production_mbd"),
+        "world_consumption":  data.get("world_consumption_mbd"),
+        "call_on_opec_mbd":   data.get("call_on_opec_mbd"),
+        "opec_actual_mbd":    data.get("opec_actual_production_mbd"),
+        "opec_vs_call_mbd":   data.get("opec_vs_call_mbd"),
+        "opec_balance_signal":data.get("opec_balance_signal"),
+        "spare_capacity_mbd": data.get("spare_capacity_mbd"),
+    }
+
+    log.info("  STEO  balance=%+.2f mbd  call_on_opec=%s  opec_vs_call=%s  [%s]",
+              balance, data.get("call_on_opec_mbd"), data.get("opec_vs_call_mbd"), label)
+
+    return {
+        "score":        score,
+        "label":        label,
+        "available":    True,
+        "details":      details,
+        "weight":       LAYER_WEIGHTS["steo"],
+        "contribution": round(score * LAYER_WEIGHTS["steo"], 3),
+    }
+
+
 def get_news_signal() -> dict:
     """Extract news score from news_signals.json."""
     data  = load_json("news_signals.json")
@@ -579,12 +628,13 @@ def compute_composite() -> dict:
     layers = {
         "inventory":   get_inventory_signal(),
         "crack":       get_crack_signal(),
-        "momentum":    get_momentum_signal(),        # NEW
+        "momentum":    get_momentum_signal(),       
         "macro":       get_macro_signal(),
         "demand":      get_demand_signal(),
         "gie":         get_gie_signal(),
         "positioning": get_positioning_signal(),
         "news":        get_news_signal(),
+        "steo":        get_steo_signal(),       # NEW  
     }
 
     log.info("")
