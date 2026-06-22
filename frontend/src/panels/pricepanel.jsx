@@ -48,7 +48,9 @@ function PriceTile({ contract, data }) {
   )
 }
 
-export default function PricePanel({ apiBase = "http://localhost:8000" }) {
+const DEFAULT_API = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
+
+export default function PricePanel({ apiBase = DEFAULT_API }) {
   const [data,      setData]      = useState(null)
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState(null)

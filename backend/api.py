@@ -9,6 +9,7 @@ Start: python -m uvicorn api:app --reload --port 8000
 
 import json
 import logging
+import os
 import subprocess
 import sys
 from datetime import datetime
@@ -31,9 +32,23 @@ logging.basicConfig(level=logging.INFO,
                     datefmt="%Y-%m-%d %H:%M:%S")
 log = logging.getLogger(__name__)
 
+EIA_API_KEY  = os.environ.get("EIA_API_KEY", "")
+DEMSUP_BASE  = os.environ.get("DEMSUP_URL", "http://localhost:8001")
+CORS_ORIGINS = os.environ.get("CORS_ORIGIN", "http://localhost:5173").split(",")
+
 app = FastAPI(title="Energy Markets Dashboard API", version="1.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"],
+app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS,
                    allow_methods=["*"], allow_headers=["*"])
+
+@app.on_event("startup")
+async def startup_fetch():
+    try:
+        from fetchers.eia_fetcher import fetch_eia
+        from fetchers.steo_fetcher import fetch_steo
+        fetch_eia()
+        fetch_steo()
+    except Exception as e:
+        print(f"Startup fetch warning: {e}")
 
 def load(filename):
     try:
