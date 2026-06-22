@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+apscheduler
+requests
+pandas
+feedparser
+openpyxl
+pysentiment2
+statsmodels
