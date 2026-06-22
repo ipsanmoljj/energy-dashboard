@@ -12,6 +12,7 @@ import logging
 import os
 import subprocess
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -22,7 +23,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 ROOT     = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 
-# ── Signal layer imports ─────────────────────────────────────────────────────────────────────
+# -- Signal layer imports
 sys.path.insert(0, str(ROOT))
 from signals.inventory_signals import run as run_inventory_signals
 from signals.crack_signals      import run as run_crack_signals
@@ -40,14 +41,6 @@ app = FastAPI(title="Energy Markets Dashboard API", version="1.0")
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS,
                    allow_methods=["*"], allow_headers=["*"])
 
-@app.on_event("startup")
-async def startup_fetch():
-    try:
-        from fetchers.eia_fetcher import run as fetch_eia
-        fetch_eia()
-    except Exception as e:
-        print(f"Startup fetch warning: {e}")
-
 def load(filename):
     try:
         return json.loads((DATA_DIR / filename).read_text())
@@ -56,20 +49,19 @@ def load(filename):
 
 def run_script(rel_path, label):
     try:
-        log.info("Scheduler ▶ %s", label)
+        log.info("Scheduler %s", label)
         r = subprocess.run([sys.executable, str(ROOT / rel_path)],
                            capture_output=True, text=True, timeout=180)
         if r.returncode != 0:
             log.warning("  %s error: %s", label, r.stderr[-150:])
         else:
-            log.info("  %s ✓", label)
+            log.info("  %s done", label)
     except Exception as e:
         log.error("  %s failed: %s", label, e)
 
-# ── Scheduled jobs ──────────────────────────────────────────────────────────────────────────────
+# -- Scheduled jobs
 
 def job_prices():
-    """Futures → Crack → Composite → Crack signal layer (every 5 min)"""
     run_script("fetchers/futures_fetcher.py", "futures")
     run_script("crack_spread_engine.py",      "crack")
     run_script("nci_composite.py",            "composite")
@@ -79,7 +71,6 @@ def job_prices():
         log.warning("crack_signals layer error: %s", e)
 
 def job_inventory():
-    """EIA inventory signals (every 30 min)"""
     run_script("fetchers/eia_fetcher.py", "eia")
     run_script("fetchers/wcs_fetcher.py", "wcs")
     try:
@@ -102,14 +93,11 @@ def job_news():
 def job_cftc():
     run_script("fetchers/cftc_fetcher.py", "cftc")
 
-scheduler = BackgroundScheduler()
 def job_curve():
     try:
-        import sys, os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
         from curve_fetcher import run as curve_run
         curve_run()
-        pass  # curve_history called via subprocess
         subprocess.run([sys.executable, str(ROOT / "curve_history.py")], timeout=60, check=False)
         log.info("Curve + history updated")
     except Exception as e:
@@ -117,7 +105,6 @@ def job_curve():
 
 def job_demsup():
     try:
-        import sys, os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
         from demsup_fetcher import run as demsup_run
         demsup_run()
@@ -127,7 +114,6 @@ def job_demsup():
 
 def job_signal_engine():
     try:
-        import sys, os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
         from signal_engine_fetcher import run as signal_run
         signal_run()
@@ -137,7 +123,6 @@ def job_signal_engine():
 
 def job_regime_history():
     try:
-        import sys, os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
         from regime_history_fetcher import run as history_run
         history_run()
@@ -147,7 +132,6 @@ def job_regime_history():
 
 def job_quality_spreads():
     try:
-        import sys, os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
         from quality_spreads_fetcher import run as qs_run
         qs_run()
@@ -157,7 +141,6 @@ def job_quality_spreads():
 
 def job_qs_backfill():
     try:
-        import sys, os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
         from qs_backfill import run as qs_run
         qs_run()
@@ -167,7 +150,6 @@ def job_qs_backfill():
 
 def job_curve_backfill():
     try:
-        import sys, os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
         from curve_backfill import run as backfill_run
         backfill_run()
@@ -175,26 +157,26 @@ def job_curve_backfill():
     except Exception as e:
         log.warning("job_curve_backfill failed: %s", e)
 
-scheduler.add_job(job_prices,    "interval", minutes=5,  id="prices",    max_instances=1)
-scheduler.add_job(job_inventory, "interval", minutes=30, id="inventory", max_instances=1)
-scheduler.add_job(job_fred,      "interval", hours=1,    id="fred",      max_instances=1)
-scheduler.add_job(job_gie,       "interval", hours=1,    id="gie",       max_instances=1)
-scheduler.add_job(job_weather,   "interval", hours=1,    id="weather",   max_instances=1)
-scheduler.add_job(job_news,      "interval", minutes=15, id="news",      max_instances=1)
-scheduler.add_job(job_curve,         "interval", minutes=5,  id="curve",         max_instances=1)
+scheduler = BackgroundScheduler()
+scheduler.add_job(job_prices,         "interval", minutes=5,  id="prices",          max_instances=1)
+scheduler.add_job(job_inventory,      "interval", minutes=30, id="inventory",       max_instances=1)
+scheduler.add_job(job_fred,           "interval", hours=1,    id="fred",            max_instances=1)
+scheduler.add_job(job_gie,            "interval", hours=1,    id="gie",             max_instances=1)
+scheduler.add_job(job_weather,        "interval", hours=1,    id="weather",         max_instances=1)
+scheduler.add_job(job_news,           "interval", minutes=15, id="news",            max_instances=1)
+scheduler.add_job(job_curve,          "interval", minutes=5,  id="curve",           max_instances=1)
 scheduler.add_job(job_quality_spreads,"interval", minutes=30, id="quality_spreads", max_instances=1)
-scheduler.add_job(job_demsup,        "interval", minutes=30, id="demsup",          max_instances=1)
-scheduler.add_job(job_signal_engine, "interval", minutes=30, id="signal_engine",   max_instances=1)
-scheduler.add_job(job_regime_history,"interval", hours=6,    id="regime_history",  max_instances=1)
-scheduler.add_job(job_qs_backfill,   "cron",     hour=2,     id="qs_backfill",    max_instances=1)
-scheduler.add_job(job_curve_backfill,"cron",     hour=2,     id="curve_backfill", max_instances=1)
-scheduler.add_job(job_cftc,      "cron",     day_of_week="fri", hour=16,
+scheduler.add_job(job_demsup,         "interval", minutes=30, id="demsup",          max_instances=1)
+scheduler.add_job(job_signal_engine,  "interval", minutes=30, id="signal_engine",   max_instances=1)
+scheduler.add_job(job_regime_history, "interval", hours=6,    id="regime_history",  max_instances=1)
+scheduler.add_job(job_qs_backfill,    "cron",     hour=2,     id="qs_backfill",     max_instances=1)
+scheduler.add_job(job_curve_backfill, "cron",     hour=2,     id="curve_backfill",  max_instances=1)
+scheduler.add_job(job_cftc,           "cron",     day_of_week="fri", hour=16,
                   minute=5, id="cftc", max_instances=1, timezone="America/New_York")
 
-@app.on_event("startup")
-def startup():
-    scheduler.start()
-    log.info("Scheduler started — running initial fetch...")
+def _initial_fetch():
+    """Run in a background thread so uvicorn can start serving immediately."""
+    log.info("Background startup fetch beginning...")
     job_prices()
     job_inventory()
     job_curve()
@@ -204,13 +186,22 @@ def startup():
     job_demsup()
     job_signal_engine()
     job_regime_history()
-    log.info("API ready → http://localhost:8000")
+    log.info("Background startup fetch complete.")
+
+@app.on_event("startup")
+def startup():
+    scheduler.start()
+    log.info("Scheduler started. Launching initial fetch in background...")
+    # Run in a daemon thread so the server starts accepting requests immediately.
+    t = threading.Thread(target=_initial_fetch, daemon=True)
+    t.start()
+    log.info("API ready")
 
 @app.on_event("shutdown")
 def shutdown():
     scheduler.shutdown()
 
-# ── Endpoints ────────────────────────────────────────────────────────────────────────────────
+# -- Endpoints
 
 @app.get("/api/composite")
 def composite():        return load("nci_composite.json")
@@ -247,25 +238,24 @@ def rig_count():        return load("rig_count_latest.json")
 
 @app.get("/api/history")
 def history():          return load("price_history.json")
-  
+
 @app.get("/api/quality-spreads")
-def quality_spreads(): return load("quality_spreads_latest.json")
+def quality_spreads():  return load("quality_spreads_latest.json")
 
 @app.get("/api/financialjuice")
-def financialjuice(): return load("financialjuice_latest.json")
-  
+def financialjuice():   return load("financialjuice_latest.json")
+
 @app.get("/api/quality-spreads-history")
 def quality_spreads_history(): return load("quality_spreads_history.json")
 
 @app.get("/api/duc")
-def duc(): return load("duc_latest.json")
+def duc():              return load("duc_latest.json")
 
 @app.get("/api/wcs")
-def wcs(): return load("wcs_latest.json")
+def wcs():              return load("wcs_latest.json")
+
 @app.get("/health")
-def health():
-    return {"status": "ok"}
-# ── Signal layer endpoints (Day 4 + 5) ────────────────────────────────────────────────────────────────
+def health():           return {"status": "ok"}
 
 @app.get("/api/curve-history")
 async def get_curve_history():
@@ -278,39 +268,34 @@ async def get_curve_history():
 async def get_curve():
     p = DATA_DIR / "curve_latest.json"
     if not p.exists():
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Run curve_fetcher.py first")
+        return {"error": "curve_latest.json not found"}
     return json.loads(p.read_text())
 
 @app.get("/api/demsup")
 async def get_demsup():
     p = DATA_DIR / "demsup_latest.json"
     if not p.exists():
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Run demsup_fetcher.py first")
+        return {"error": "demsup_latest.json not found"}
     return json.loads(p.read_text())
 
 @app.get("/api/signal-engine")
 async def get_signal_engine():
     p = DATA_DIR / "signal_engine_latest.json"
     if not p.exists():
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Run signal_engine_fetcher.py first")
+        return {"error": "signal_engine_latest.json not found"}
     return json.loads(p.read_text())
 
 @app.get("/api/regime-history")
 async def get_regime_history():
     p = DATA_DIR / "regime_history_latest.json"
     if not p.exists():
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Run regime_history_fetcher.py first")
+        return {"error": "regime_history_latest.json not found"}
     return json.loads(p.read_text())
 
 @app.get("/api/geo-score")
 async def get_geo_score():
     p = DATA_DIR / "geo_score_latest.json"
     if not p.exists():
-        import sys, os
         sys.path.insert(0, os.path.dirname(__file__))
         from geo_scorer import run as geo_run
         return geo_run()
@@ -320,8 +305,7 @@ async def get_geo_score():
 async def get_seasonality():
     p = DATA_DIR / "seasonality.json"
     if not p.exists():
-        from fastapi import HTTPException
-        raise HTTPException(status_code=503, detail="seasonality.json not found — run seasonality_fetcher.py first")
+        return {"error": "seasonality.json not found"}
     with open(p) as f:
         return json.load(f)
 
@@ -343,7 +327,6 @@ def get_crack_signals():
 
 @app.get("/api/signals-summary")
 def get_signals_summary():
-    """Single endpoint — both signal layer composites for the frontend."""
     inv   = json.loads((DATA_DIR / "inventory_signals.json").read_text()) \
             if (DATA_DIR / "inventory_signals.json").exists() else {}
     crack = json.loads((DATA_DIR / "crack_signal_layer.json").read_text()) \
@@ -355,8 +338,6 @@ def get_signals_summary():
         "crack_signals":      crack.get("signals", {}),
         "generated_at":       inv.get("generated_at", ""),
     }
-
-# ── Aggregate + status ─────────────────────────────────────────────────────────────────────────────
 
 @app.get("/api/all")
 def all_data():
