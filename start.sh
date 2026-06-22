@@ -3,6 +3,11 @@
 # Energy Signal — Full Startup Script
 # Run from repo root: bash start.sh
 #
+# On Railway (PORT env var is set), skip the dev loop and run uvicorn directly.
+if [ -n "$PORT" ]; then
+    exec uvicorn api:app --host 0.0.0.0 --port "$PORT" --app-dir backend
+fi
+#
 # What this does:
 #   1. Pulls latest code from git
 #   2. Re-runs all fetchers (backend/data/ is gitignored — must re-run each session)
