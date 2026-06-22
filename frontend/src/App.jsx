@@ -4,7 +4,8 @@ import {
   ResponsiveContainer, ReferenceLine, Area, ComposedChart
 } from "recharts"
 
-const API = ""
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
+const API = API_BASE
 
 const TABS = [
   { id: "overview",     label: "Overview" },
