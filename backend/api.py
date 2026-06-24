@@ -98,6 +98,9 @@ def job_history():
     # On first run after a cold start it also backfills up to 2 years.
     run_script("history_store.py", "history", timeout=300)
 
+def job_seasonality():
+    run_script("fetchers/seasonality_fetcher.py", "seasonality", timeout=300)
+
 def job_curve():
     try:
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "fetchers"))
@@ -175,6 +178,7 @@ scheduler.add_job(job_demsup,         "interval", minutes=30, id="demsup",      
 scheduler.add_job(job_signal_engine,  "interval", minutes=30, id="signal_engine",   max_instances=1)
 scheduler.add_job(job_regime_history, "interval", hours=6,    id="regime_history",  max_instances=1)
 scheduler.add_job(job_history,        "cron",     hour=3,     id="history",         max_instances=1)
+scheduler.add_job(job_seasonality,    "cron",     hour=4,     id="seasonality",     max_instances=1)
 scheduler.add_job(job_qs_backfill,    "cron",     hour=2,     id="qs_backfill",     max_instances=1)
 scheduler.add_job(job_curve_backfill, "cron",     hour=2,     id="curve_backfill",  max_instances=1)
 scheduler.add_job(job_cftc,           "cron",     day_of_week="fri", hour=16,
@@ -189,7 +193,8 @@ def _initial_fetch():
     job_curve_backfill()
     job_quality_spreads()
     job_qs_backfill()
-    job_history()       # backfills up to 2y on first cold start, fast append thereafter
+    job_history()       # backfills up to 42 days on cold start, fast append thereafter
+    job_seasonality()   # builds seasonality.json from Yahoo Finance history
     job_demsup()
     job_signal_engine()
     job_regime_history()
@@ -199,7 +204,6 @@ def _initial_fetch():
 def startup():
     scheduler.start()
     log.info("Scheduler started. Launching initial fetch in background...")
-    # Run in a daemon thread so the server starts accepting requests immediately.
     t = threading.Thread(target=_initial_fetch, daemon=True)
     t.start()
     log.info("API ready")
@@ -367,7 +371,7 @@ def status():
     for f in ["nci_composite.json", "inventory_signals.json", "crack_signals.json",
               "crack_signal_layer.json", "futures_latest.json", "fred_latest.json",
               "gie_latest.json", "weather_latest.json", "cftc_latest.json",
-              "price_history.json"]:
+              "price_history.json", "seasonality.json"]:
         p = DATA_DIR / f
         files[f] = {
             "exists":   p.exists(),
