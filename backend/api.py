@@ -47,11 +47,11 @@ def load(filename):
     except Exception:
         return {"error": f"{filename} not found"}
 
-def run_script(rel_path, label):
+def run_script(rel_path, label, timeout=180):
     try:
         log.info("Scheduler %s", label)
         r = subprocess.run([sys.executable, str(ROOT / rel_path)],
-                           capture_output=True, text=True, timeout=180)
+                           capture_output=True, text=True, timeout=timeout)
         if r.returncode != 0:
             log.warning("  %s error: %s", label, r.stderr[-150:])
         else:
@@ -92,6 +92,11 @@ def job_news():
 
 def job_cftc():
     run_script("fetchers/cftc_fetcher.py", "cftc")
+
+def job_history():
+    # Daily append of today's prices to rolling 42-day history.
+    # On first run after a cold start it also backfills up to 2 years.
+    run_script("history_store.py", "history", timeout=300)
 
 def job_curve():
     try:
@@ -169,6 +174,7 @@ scheduler.add_job(job_quality_spreads,"interval", minutes=30, id="quality_spread
 scheduler.add_job(job_demsup,         "interval", minutes=30, id="demsup",          max_instances=1)
 scheduler.add_job(job_signal_engine,  "interval", minutes=30, id="signal_engine",   max_instances=1)
 scheduler.add_job(job_regime_history, "interval", hours=6,    id="regime_history",  max_instances=1)
+scheduler.add_job(job_history,        "cron",     hour=3,     id="history",         max_instances=1)
 scheduler.add_job(job_qs_backfill,    "cron",     hour=2,     id="qs_backfill",     max_instances=1)
 scheduler.add_job(job_curve_backfill, "cron",     hour=2,     id="curve_backfill",  max_instances=1)
 scheduler.add_job(job_cftc,           "cron",     day_of_week="fri", hour=16,
@@ -183,6 +189,7 @@ def _initial_fetch():
     job_curve_backfill()
     job_quality_spreads()
     job_qs_backfill()
+    job_history()       # backfills up to 2y on first cold start, fast append thereafter
     job_demsup()
     job_signal_engine()
     job_regime_history()
@@ -359,7 +366,8 @@ def status():
     files = {}
     for f in ["nci_composite.json", "inventory_signals.json", "crack_signals.json",
               "crack_signal_layer.json", "futures_latest.json", "fred_latest.json",
-              "gie_latest.json", "weather_latest.json", "cftc_latest.json"]:
+              "gie_latest.json", "weather_latest.json", "cftc_latest.json",
+              "price_history.json"]:
         p = DATA_DIR / f
         files[f] = {
             "exists":   p.exists(),
