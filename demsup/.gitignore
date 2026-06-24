@@ -1,0 +1,4 @@
+# keep output/ .rds and .csv files in git — Railway needs them
+# only ignore large raw data files if added
+*.csv.gz
+data/
