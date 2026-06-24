@@ -27,6 +27,7 @@ to a frontend card).
 
 import json
 import logging
+import os
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
@@ -38,7 +39,7 @@ ROOT     = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 OUT_FILE = DATA_DIR / "demsup_latest.json"
 
-DEMSUP_BASE_URL = "http://localhost:8001"  # plumber default; change if deployed elsewhere
+DEMSUP_BASE_URL = os.environ.get("DEMSUP_BASE_URL", "http://localhost:8001")
 
 # demsup product code -> dashboard product key
 PRODUCT_MAP = {
