@@ -30,6 +30,7 @@ from the same data classify_regimes() already produced.
 
 import json
 import logging
+import os
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
@@ -41,7 +42,7 @@ ROOT     = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 OUT_FILE = DATA_DIR / "regime_history_latest.json"
 
-DEMSUP_BASE_URL = "http://localhost:8001"
+DEMSUP_BASE_URL = os.environ.get("DEMSUP_BASE_URL", "http://localhost:8001")
 
 PRODUCT_MAP = {
     "CL":  "wti",
