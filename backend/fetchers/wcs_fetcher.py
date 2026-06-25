@@ -15,6 +15,7 @@ with live WTI-WCS differential instead of fixed differential.
 Backfills 36 months of history into quality_spreads_history.json on first run.
 """
 
+from __future__ import annotations
 import json
 import logging
 import requests

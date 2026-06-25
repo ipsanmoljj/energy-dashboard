@@ -32,6 +32,7 @@ Usage:
   python backend/nci_composite.py --full       # re-run all engines first
 """
 
+from __future__ import annotations
 import argparse
 import json
 import logging

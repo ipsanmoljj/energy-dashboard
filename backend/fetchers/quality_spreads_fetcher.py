@@ -19,6 +19,7 @@ Writes:
   backend/data/quality_spreads_history.json  — daily history (all 7 spreads)
 """
 
+from __future__ import annotations
 import json
 import logging
 import os

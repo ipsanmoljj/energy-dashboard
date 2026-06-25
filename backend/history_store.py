@@ -12,6 +12,7 @@ Usage:
   python backend/history_store.py --backfill # force re-fetch all history without wiping
 """
 
+from __future__ import annotations
 import json
 import sys
 import time

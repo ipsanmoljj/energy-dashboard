@@ -24,6 +24,7 @@ Usage:
   python backend/fetchers/futures_fetcher.py
 """
 
+from __future__ import annotations
 import json
 import logging
 import time
