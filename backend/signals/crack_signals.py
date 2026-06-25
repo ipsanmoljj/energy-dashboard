@@ -185,7 +185,11 @@ def sig_brent_wti(crack):
     bottleneck = (val or 0) > BRENT_WTI_BOTTLENECK
     surplus    = (val or 0) < BRENT_WTI_SURPLUS
 
-    if bottleneck:
+    if val is None:
+        sig, sth = "NEUTRAL", 1
+        note = "Brent or WTI price unavailable"
+        interp = "No price data"
+    elif bottleneck:
         sig, sth = "BEARISH", 2
         note = f"Brent-WTI ${val:.2f} — US export bottleneck or North Sea disruption"
         interp = "BOTTLENECK: US cannot export freely OR North Sea disruption"
