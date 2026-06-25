@@ -11,8 +11,11 @@ import time
 import requests
 import pandas as pd
 from datetime import datetime, timezone
+from pathlib import Path
 
 CACHE = {}
+
+_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 WPSR_URLS = {
     "table1":  "https://ir.eia.gov/wpsr/table1.csv",
@@ -211,8 +214,8 @@ def fetch_all(mock: bool = False) -> dict:
 
     CACHE[cache_key] = {"ts": now, "data": result}
 
-    os.makedirs("backend/data", exist_ok=True)
-    with open("backend/data/eia_latest.json", "w") as f:
+    _DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with open(_DATA_DIR / "eia_latest.json", "w") as f:
         json.dump(result, f, indent=2, default=str)
 
     return result
