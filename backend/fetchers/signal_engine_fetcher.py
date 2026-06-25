@@ -51,6 +51,7 @@ stats. It does not retrain, re-validate, or re-open the test window.
 
 import json
 import logging
+import os
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
@@ -62,7 +63,7 @@ ROOT     = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 OUT_FILE = DATA_DIR / "signal_engine_latest.json"
 
-DEMSUP_BASE_URL = "http://localhost:8001"  # same plumber service as demsup_fetcher.py
+DEMSUP_BASE_URL = os.environ.get("DEMSUP_BASE_URL", "http://localhost:8001")
 
 # demsup product code -> dashboard product key (same mapping as demsup_fetcher.py,
 # kept in sync deliberately — these two fetchers describe the same four products)
