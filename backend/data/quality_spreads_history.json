@@ -1,0 +1,1684 @@
+[
+  {
+    "date": "2023-05-01",
+    "timestamp": "2023-05-01T00:00:00Z",
+    "wti_wcs": 15.34
+  },
+  {
+    "date": "2023-06-01",
+    "timestamp": "2023-06-01T00:00:00Z",
+    "wti_wcs": 13.83
+  },
+  {
+    "date": "2023-07-01",
+    "timestamp": "2023-07-01T00:00:00Z",
+    "wti_wcs": 11.95
+  },
+  {
+    "date": "2023-08-01",
+    "timestamp": "2023-08-01T00:00:00Z",
+    "wti_wcs": 11.26
+  },
+  {
+    "date": "2023-09-01",
+    "timestamp": "2023-09-01T00:00:00Z",
+    "wti_wcs": 15.58
+  },
+  {
+    "date": "2023-10-01",
+    "timestamp": "2023-10-01T00:00:00Z",
+    "wti_wcs": 18.41
+  },
+  {
+    "date": "2023-11-01",
+    "timestamp": "2023-11-01T00:00:00Z",
+    "wti_wcs": 21.08
+  },
+  {
+    "date": "2023-12-01",
+    "timestamp": "2023-12-01T00:00:00Z",
+    "wti_wcs": 26.42
+  },
+  {
+    "date": "2024-01-01",
+    "timestamp": "2024-01-01T00:00:00Z",
+    "wti_wcs": 20.38
+  },
+  {
+    "date": "2024-02-01",
+    "timestamp": "2024-02-01T00:00:00Z",
+    "wti_wcs": 19.42
+  },
+  {
+    "date": "2024-03-01",
+    "timestamp": "2024-03-01T00:00:00Z",
+    "wti_wcs": 20.0
+  },
+  {
+    "date": "2024-04-01",
+    "timestamp": "2024-04-01T00:00:00Z",
+    "wti_wcs": 16.7
+  },
+  {
+    "date": "2024-05-01",
+    "timestamp": "2024-05-01T00:00:00Z",
+    "wti_wcs": 14.43
+  },
+  {
+    "date": "2024-06-01",
+    "timestamp": "2024-06-01T00:00:00Z",
+    "wti_wcs": 12.94
+  },
+  {
+    "date": "2024-07-01",
+    "timestamp": "2024-07-01T00:00:00Z",
+    "wti_wcs": 14.31
+  },
+  {
+    "date": "2024-08-01",
+    "timestamp": "2024-08-01T00:00:00Z",
+    "wti_wcs": 15.31
+  },
+  {
+    "date": "2024-09-01",
+    "timestamp": "2024-09-01T00:00:00Z",
+    "wti_wcs": 14.34
+  },
+  {
+    "date": "2024-10-01",
+    "timestamp": "2024-10-01T00:00:00Z",
+    "wti_wcs": 14.13
+  },
+  {
+    "date": "2024-11-01",
+    "timestamp": "2024-11-01T00:00:00Z",
+    "wti_wcs": 12.39
+  },
+  {
+    "date": "2024-12-01",
+    "timestamp": "2024-12-01T00:00:00Z",
+    "wti_wcs": 12.36
+  },
+  {
+    "date": "2025-01-01",
+    "timestamp": "2025-01-01T00:00:00Z",
+    "wti_wcs": 12.88
+  },
+  {
+    "date": "2025-02-01",
+    "timestamp": "2025-02-01T00:00:00Z",
+    "wti_wcs": 12.46
+  },
+  {
+    "date": "2025-03-01",
+    "timestamp": "2025-03-01T00:00:00Z",
+    "wti_wcs": 13.86
+  },
+  {
+    "date": "2025-04-01",
+    "timestamp": "2025-04-01T00:00:00Z",
+    "wti_wcs": 12.71
+  },
+  {
+    "date": "2025-05-01",
+    "timestamp": "2025-05-01T00:00:00Z",
+    "wti_wcs": 10.6
+  },
+  {
+    "date": "2025-06-01",
+    "timestamp": "2025-06-01T00:00:00Z",
+    "wti_wcs": 9.95
+  },
+  {
+    "date": "2025-07-01",
+    "timestamp": "2025-07-01T00:00:00Z",
+    "wti_wcs": 10.08
+  },
+  {
+    "date": "2025-08-01",
+    "timestamp": "2025-08-01T00:00:00Z",
+    "wti_wcs": 11.16
+  },
+  {
+    "date": "2025-09-01",
+    "timestamp": "2025-09-01T00:00:00Z",
+    "wti_wcs": 12.33
+  },
+  {
+    "date": "2025-10-01",
+    "timestamp": "2025-10-01T00:00:00Z",
+    "wti_wcs": 12.27
+  },
+  {
+    "date": "2025-11-01",
+    "timestamp": "2025-11-01T00:00:00Z",
+    "wti_wcs": 11.29
+  },
+  {
+    "date": "2025-12-01",
+    "timestamp": "2025-12-01T00:00:00Z",
+    "wti_wcs": 11.52
+  },
+  {
+    "date": "2025-12-11",
+    "timestamp": "2025-12-11T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.44,
+    "brent_maya": 17.68,
+    "wti_wcs": 14.22,
+    "lls_mars": 5.75,
+    "wti_wts": 1.98
+  },
+  {
+    "date": "2025-12-12",
+    "timestamp": "2025-12-12T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.43,
+    "brent_maya": 17.66,
+    "wti_wcs": 14.21,
+    "lls_mars": 5.75,
+    "wti_wts": 1.97
+  },
+  {
+    "date": "2025-12-15",
+    "timestamp": "2025-12-15T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.41,
+    "brent_maya": 17.61,
+    "wti_wcs": 14.18,
+    "lls_mars": 5.74,
+    "wti_wts": 1.97
+  },
+  {
+    "date": "2025-12-16",
+    "timestamp": "2025-12-16T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.36,
+    "brent_maya": 17.44,
+    "wti_wcs": 14.1,
+    "lls_mars": 5.71,
+    "wti_wts": 1.95
+  },
+  {
+    "date": "2025-12-17",
+    "timestamp": "2025-12-17T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.39,
+    "brent_maya": 17.52,
+    "wti_wcs": 14.14,
+    "lls_mars": 5.72,
+    "wti_wts": 1.96
+  },
+  {
+    "date": "2025-12-18",
+    "timestamp": "2025-12-18T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.4,
+    "brent_maya": 17.53,
+    "wti_wcs": 14.15,
+    "lls_mars": 5.72,
+    "wti_wts": 1.96
+  },
+  {
+    "date": "2025-12-19",
+    "timestamp": "2025-12-19T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.42,
+    "brent_maya": 17.6,
+    "wti_wcs": 14.17,
+    "lls_mars": 5.73,
+    "wti_wts": 1.97
+  },
+  {
+    "date": "2025-12-22",
+    "timestamp": "2025-12-22T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.47,
+    "brent_maya": 17.76,
+    "wti_wcs": 14.24,
+    "lls_mars": 5.76,
+    "wti_wts": 1.98
+  },
+  {
+    "date": "2025-12-23",
+    "timestamp": "2025-12-23T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.47,
+    "brent_maya": 17.79,
+    "wti_wcs": 14.26,
+    "lls_mars": 5.77,
+    "wti_wts": 1.98
+  },
+  {
+    "date": "2025-12-24",
+    "timestamp": "2025-12-24T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.47,
+    "brent_maya": 17.77,
+    "wti_wcs": 14.26,
+    "lls_mars": 5.77,
+    "wti_wts": 1.98
+  },
+  {
+    "date": "2025-12-26",
+    "timestamp": "2025-12-26T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.42,
+    "brent_maya": 17.61,
+    "wti_wcs": 14.18,
+    "lls_mars": 5.73,
+    "wti_wts": 1.97
+  },
+  {
+    "date": "2025-12-29",
+    "timestamp": "2025-12-29T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.46,
+    "brent_maya": 17.74,
+    "wti_wcs": 14.24,
+    "lls_mars": 5.76,
+    "wti_wts": 1.98
+  },
+  {
+    "date": "2025-12-30",
+    "timestamp": "2025-12-30T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.45,
+    "brent_maya": 17.74,
+    "wti_wcs": 14.24,
+    "lls_mars": 5.76,
+    "wti_wts": 1.98
+  },
+  {
+    "date": "2025-12-31",
+    "timestamp": "2025-12-31T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.43,
+    "brent_maya": 17.64,
+    "wti_wcs": 14.21,
+    "lls_mars": 5.75,
+    "wti_wts": 1.97
+  },
+  {
+    "date": "2026-01-01",
+    "timestamp": "2026-01-01T00:00:00Z",
+    "wti_wcs": 12.82
+  },
+  {
+    "date": "2026-01-02",
+    "timestamp": "2026-01-02T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.42,
+    "brent_maya": 17.62,
+    "wti_wcs": 14.21,
+    "lls_mars": 5.75,
+    "wti_wts": 1.97
+  },
+  {
+    "date": "2026-01-05",
+    "timestamp": "2026-01-05T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.45,
+    "brent_maya": 17.73,
+    "wti_wcs": 14.26,
+    "lls_mars": 5.77,
+    "wti_wts": 1.98
+  },
+  {
+    "date": "2026-01-06",
+    "timestamp": "2026-01-06T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.42,
+    "brent_maya": 17.62,
+    "wti_wcs": 14.2,
+    "lls_mars": 5.74,
+    "wti_wts": 1.97
+  },
+  {
+    "date": "2026-01-07",
+    "timestamp": "2026-01-07T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.4,
+    "brent_maya": 17.55,
+    "wti_wcs": 14.14,
+    "lls_mars": 5.72,
+    "wti_wts": 1.96
+  },
+  {
+    "date": "2026-01-08",
+    "timestamp": "2026-01-08T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.46,
+    "brent_maya": 17.75,
+    "wti_wcs": 14.23,
+    "lls_mars": 5.76,
+    "wti_wts": 1.98
+  },
+  {
+    "date": "2026-01-09",
+    "timestamp": "2026-01-09T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.5,
+    "brent_maya": 17.88,
+    "wti_wcs": 14.3,
+    "lls_mars": 5.78,
+    "wti_wts": 1.99
+  },
+  {
+    "date": "2026-01-12",
+    "timestamp": "2026-01-12T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.52,
+    "brent_maya": 17.94,
+    "wti_wcs": 14.31,
+    "lls_mars": 5.79,
+    "wti_wts": 2.0
+  },
+  {
+    "date": "2026-01-13",
+    "timestamp": "2026-01-13T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.57,
+    "brent_maya": 18.1,
+    "wti_wcs": 14.4,
+    "lls_mars": 5.82,
+    "wti_wts": 2.01
+  },
+  {
+    "date": "2026-01-14",
+    "timestamp": "2026-01-14T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.59,
+    "brent_maya": 18.2,
+    "wti_wcs": 14.44,
+    "lls_mars": 5.84,
+    "wti_wts": 2.02
+  },
+  {
+    "date": "2026-01-15",
+    "timestamp": "2026-01-15T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.51,
+    "brent_maya": 17.93,
+    "wti_wcs": 14.3,
+    "lls_mars": 5.78,
+    "wti_wts": 1.99
+  },
+  {
+    "date": "2026-01-16",
+    "timestamp": "2026-01-16T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.52,
+    "brent_maya": 17.96,
+    "wti_wcs": 14.31,
+    "lls_mars": 5.79,
+    "wti_wts": 1.99
+  },
+  {
+    "date": "2026-01-20",
+    "timestamp": "2026-01-20T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.54,
+    "brent_maya": 18.04,
+    "wti_wcs": 14.36,
+    "lls_mars": 5.81,
+    "wti_wts": 2.0
+  },
+  {
+    "date": "2026-01-21",
+    "timestamp": "2026-01-21T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.56,
+    "brent_maya": 18.07,
+    "wti_wcs": 14.37,
+    "lls_mars": 5.81,
+    "wti_wts": 2.01
+  },
+  {
+    "date": "2026-01-22",
+    "timestamp": "2026-01-22T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.52,
+    "brent_maya": 17.96,
+    "wti_wcs": 14.31,
+    "lls_mars": 5.79,
+    "wti_wts": 1.99
+  },
+  {
+    "date": "2026-01-23",
+    "timestamp": "2026-01-23T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.58,
+    "brent_maya": 18.14,
+    "wti_wcs": 14.39,
+    "lls_mars": 5.82,
+    "wti_wts": 2.01
+  },
+  {
+    "date": "2026-01-26",
+    "timestamp": "2026-01-26T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.57,
+    "brent_maya": 18.11,
+    "wti_wcs": 14.37,
+    "lls_mars": 5.81,
+    "wti_wts": 2.01
+  },
+  {
+    "date": "2026-01-27",
+    "timestamp": "2026-01-27T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.63,
+    "brent_maya": 18.31,
+    "wti_wcs": 14.46,
+    "lls_mars": 5.85,
+    "wti_wts": 2.02
+  },
+  {
+    "date": "2026-01-28",
+    "timestamp": "2026-01-28T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.65,
+    "brent_maya": 18.39,
+    "wti_wcs": 14.5,
+    "lls_mars": 5.86,
+    "wti_wts": 2.03
+  },
+  {
+    "date": "2026-01-29",
+    "timestamp": "2026-01-29T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.11,
+    "naphtha_gasoil": -22.72,
+    "brent_maya": 18.62,
+    "wti_wcs": 14.61,
+    "lls_mars": 5.91,
+    "wti_wts": 2.05
+  },
+  {
+    "date": "2026-01-30",
+    "timestamp": "2026-01-30T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.1,
+    "naphtha_gasoil": -22.73,
+    "brent_maya": 18.62,
+    "wti_wcs": 14.6,
+    "lls_mars": 5.9,
+    "wti_wts": 2.05
+  },
+  {
+    "date": "2026-02-01",
+    "timestamp": "2026-02-01T00:00:00Z",
+    "wti_wcs": 14.18
+  },
+  {
+    "date": "2026-02-02",
+    "timestamp": "2026-02-02T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.59,
+    "brent_maya": 18.18,
+    "wti_wcs": 14.45,
+    "lls_mars": 5.84,
+    "wti_wts": 2.02
+  },
+  {
+    "date": "2026-02-03",
+    "timestamp": "2026-02-03T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.62,
+    "brent_maya": 18.28,
+    "wti_wcs": 14.5,
+    "lls_mars": 5.86,
+    "wti_wts": 2.03
+  },
+  {
+    "date": "2026-02-04",
+    "timestamp": "2026-02-04T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.69,
+    "brent_maya": 18.5,
+    "wti_wcs": 14.6,
+    "lls_mars": 5.9,
+    "wti_wts": 2.05
+  },
+  {
+    "date": "2026-02-05",
+    "timestamp": "2026-02-05T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.62,
+    "brent_maya": 18.3,
+    "wti_wcs": 14.5,
+    "lls_mars": 5.87,
+    "wti_wts": 2.03
+  },
+  {
+    "date": "2026-02-06",
+    "timestamp": "2026-02-06T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.64,
+    "brent_maya": 18.36,
+    "wti_wcs": 14.52,
+    "lls_mars": 5.87,
+    "wti_wts": 2.04
+  },
+  {
+    "date": "2026-02-09",
+    "timestamp": "2026-02-09T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.67,
+    "brent_maya": 18.45,
+    "wti_wcs": 14.56,
+    "lls_mars": 5.89,
+    "wti_wts": 2.04
+  },
+  {
+    "date": "2026-02-10",
+    "timestamp": "2026-02-10T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.66,
+    "brent_maya": 18.43,
+    "wti_wcs": 14.54,
+    "lls_mars": 5.88,
+    "wti_wts": 2.04
+  },
+  {
+    "date": "2026-02-11",
+    "timestamp": "2026-02-11T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.68,
+    "brent_maya": 18.49,
+    "wti_wcs": 14.57,
+    "lls_mars": 5.89,
+    "wti_wts": 2.05
+  },
+  {
+    "date": "2026-02-12",
+    "timestamp": "2026-02-12T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.62,
+    "brent_maya": 18.3,
+    "wti_wcs": 14.48,
+    "lls_mars": 5.86,
+    "wti_wts": 2.03
+  },
+  {
+    "date": "2026-02-13",
+    "timestamp": "2026-02-13T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.63,
+    "brent_maya": 18.32,
+    "wti_wcs": 14.48,
+    "lls_mars": 5.86,
+    "wti_wts": 2.03
+  },
+  {
+    "date": "2026-02-17",
+    "timestamp": "2026-02-17T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.0,
+    "naphtha_gasoil": -22.62,
+    "brent_maya": 18.29,
+    "wti_wcs": 14.46,
+    "lls_mars": 5.85,
+    "wti_wts": 2.02
+  },
+  {
+    "date": "2026-02-18",
+    "timestamp": "2026-02-18T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.05,
+    "naphtha_gasoil": -22.71,
+    "brent_maya": 18.59,
+    "wti_wcs": 14.6,
+    "lls_mars": 5.9,
+    "wti_wts": 2.05
+  },
+  {
+    "date": "2026-02-19",
+    "timestamp": "2026-02-19T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.25,
+    "naphtha_gasoil": -22.75,
+    "brent_maya": 18.72,
+    "wti_wcs": 14.66,
+    "lls_mars": 5.93,
+    "wti_wts": 2.06
+  },
+  {
+    "date": "2026-02-20",
+    "timestamp": "2026-02-20T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.26,
+    "naphtha_gasoil": -22.75,
+    "brent_maya": 18.73,
+    "wti_wcs": 14.66,
+    "lls_mars": 5.93,
+    "wti_wts": 2.06
+  },
+  {
+    "date": "2026-02-23",
+    "timestamp": "2026-02-23T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.22,
+    "naphtha_gasoil": -22.75,
+    "brent_maya": 18.7,
+    "wti_wcs": 14.66,
+    "lls_mars": 5.93,
+    "wti_wts": 2.06
+  },
+  {
+    "date": "2026-02-24",
+    "timestamp": "2026-02-24T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.12,
+    "naphtha_gasoil": -22.72,
+    "brent_maya": 18.63,
+    "wti_wcs": 14.62,
+    "lls_mars": 5.91,
+    "wti_wts": 2.06
+  },
+  {
+    "date": "2026-02-25",
+    "timestamp": "2026-02-25T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.13,
+    "naphtha_gasoil": -22.73,
+    "brent_maya": 18.64,
+    "wti_wcs": 14.61,
+    "lls_mars": 5.91,
+    "wti_wts": 2.05
+  },
+  {
+    "date": "2026-02-26",
+    "timestamp": "2026-02-26T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.11,
+    "naphtha_gasoil": -22.72,
+    "brent_maya": 18.62,
+    "wti_wcs": 14.6,
+    "lls_mars": 5.9,
+    "wti_wts": 2.05
+  },
+  {
+    "date": "2026-02-27",
+    "timestamp": "2026-02-27T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.37,
+    "naphtha_gasoil": -22.78,
+    "brent_maya": 18.8,
+    "wti_wcs": 14.69,
+    "lls_mars": 5.94,
+    "wti_wts": 2.07
+  },
+  {
+    "date": "2026-03-01",
+    "timestamp": "2026-03-01T00:00:00Z",
+    "wti_wcs": 15.53
+  },
+  {
+    "date": "2026-03-02",
+    "timestamp": "2026-03-02T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 4.16,
+    "naphtha_gasoil": -22.93,
+    "brent_maya": 19.32,
+    "wti_wcs": 14.9,
+    "lls_mars": 6.02,
+    "wti_wts": 2.11
+  },
+  {
+    "date": "2026-03-03",
+    "timestamp": "2026-03-03T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 4.71,
+    "naphtha_gasoil": -23.04,
+    "brent_maya": 19.69,
+    "wti_wcs": 15.07,
+    "lls_mars": 6.09,
+    "wti_wts": 2.15
+  },
+  {
+    "date": "2026-03-04",
+    "timestamp": "2026-03-04T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 4.71,
+    "naphtha_gasoil": -23.04,
+    "brent_maya": 19.69,
+    "wti_wcs": 15.07,
+    "lls_mars": 6.09,
+    "wti_wts": 2.15
+  },
+  {
+    "date": "2026-03-05",
+    "timestamp": "2026-03-05T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 5.31,
+    "naphtha_gasoil": -23.16,
+    "brent_maya": 20.09,
+    "wti_wcs": 15.39,
+    "lls_mars": 6.22,
+    "wti_wts": 2.21
+  },
+  {
+    "date": "2026-03-06",
+    "timestamp": "2026-03-06T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.4,
+    "naphtha_gasoil": -23.39,
+    "brent_maya": 20.82,
+    "wti_wcs": 15.88,
+    "lls_mars": 6.42,
+    "wti_wts": 2.31
+  },
+  {
+    "date": "2026-03-09",
+    "timestamp": "2026-03-09T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.34,
+    "naphtha_gasoil": -23.57,
+    "brent_maya": 21.45,
+    "wti_wcs": 16.08,
+    "lls_mars": 6.5,
+    "wti_wts": 2.35
+  },
+  {
+    "date": "2026-03-10",
+    "timestamp": "2026-03-10T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 5.67,
+    "naphtha_gasoil": -23.23,
+    "brent_maya": 20.33,
+    "wti_wcs": 15.51,
+    "lls_mars": 6.27,
+    "wti_wts": 2.23
+  },
+  {
+    "date": "2026-03-11",
+    "timestamp": "2026-03-11T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.3,
+    "naphtha_gasoil": -23.36,
+    "brent_maya": 20.75,
+    "wti_wcs": 15.7,
+    "lls_mars": 6.34,
+    "wti_wts": 2.27
+  },
+  {
+    "date": "2026-03-12",
+    "timestamp": "2026-03-12T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.57,
+    "naphtha_gasoil": -23.62,
+    "brent_maya": 21.6,
+    "wti_wcs": 16.13,
+    "lls_mars": 6.51,
+    "wti_wts": 2.36
+  },
+  {
+    "date": "2026-03-13",
+    "timestamp": "2026-03-13T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.97,
+    "naphtha_gasoil": -23.69,
+    "brent_maya": 21.86,
+    "wti_wcs": 16.28,
+    "lls_mars": 6.57,
+    "wti_wts": 2.39
+  },
+  {
+    "date": "2026-03-16",
+    "timestamp": "2026-03-16T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.53,
+    "naphtha_gasoil": -23.61,
+    "brent_maya": 21.57,
+    "wti_wcs": 16.02,
+    "lls_mars": 6.47,
+    "wti_wts": 2.33
+  },
+  {
+    "date": "2026-03-17",
+    "timestamp": "2026-03-17T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.01,
+    "naphtha_gasoil": -23.7,
+    "brent_maya": 21.89,
+    "wti_wcs": 16.15,
+    "lls_mars": 6.52,
+    "wti_wts": 2.36
+  },
+  {
+    "date": "2026-03-18",
+    "timestamp": "2026-03-18T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.61,
+    "naphtha_gasoil": -23.82,
+    "brent_maya": 22.29,
+    "wti_wcs": 16.16,
+    "lls_mars": 6.53,
+    "wti_wts": 2.36
+  },
+  {
+    "date": "2026-03-19",
+    "timestamp": "2026-03-19T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.8,
+    "naphtha_gasoil": -23.86,
+    "brent_maya": 22.42,
+    "wti_wcs": 16.15,
+    "lls_mars": 6.52,
+    "wti_wts": 2.36
+  },
+  {
+    "date": "2026-03-20",
+    "timestamp": "2026-03-20T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 9.33,
+    "naphtha_gasoil": -23.97,
+    "brent_maya": 22.77,
+    "wti_wcs": 16.26,
+    "lls_mars": 6.57,
+    "wti_wts": 2.38
+  },
+  {
+    "date": "2026-03-23",
+    "timestamp": "2026-03-23T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.49,
+    "naphtha_gasoil": -23.6,
+    "brent_maya": 21.54,
+    "wti_wcs": 15.75,
+    "lls_mars": 6.36,
+    "wti_wts": 2.28
+  },
+  {
+    "date": "2026-03-24",
+    "timestamp": "2026-03-24T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.17,
+    "naphtha_gasoil": -23.74,
+    "brent_maya": 22.0,
+    "wti_wcs": 15.96,
+    "lls_mars": 6.45,
+    "wti_wts": 2.32
+  },
+  {
+    "date": "2026-03-25",
+    "timestamp": "2026-03-25T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.83,
+    "naphtha_gasoil": -23.67,
+    "brent_maya": 21.77,
+    "wti_wcs": 15.86,
+    "lls_mars": 6.41,
+    "wti_wts": 2.3
+  },
+  {
+    "date": "2026-03-26",
+    "timestamp": "2026-03-26T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.7,
+    "naphtha_gasoil": -23.84,
+    "brent_maya": 22.35,
+    "wti_wcs": 16.06,
+    "lls_mars": 6.49,
+    "wti_wts": 2.34
+  },
+  {
+    "date": "2026-03-27",
+    "timestamp": "2026-03-27T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 9.39,
+    "naphtha_gasoil": -23.98,
+    "brent_maya": 22.81,
+    "wti_wcs": 16.32,
+    "lls_mars": 6.59,
+    "wti_wts": 2.4
+  },
+  {
+    "date": "2026-03-30",
+    "timestamp": "2026-03-30T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 9.42,
+    "naphtha_gasoil": -23.98,
+    "brent_maya": 22.83,
+    "wti_wcs": 16.48,
+    "lls_mars": 6.66,
+    "wti_wts": 2.43
+  },
+  {
+    "date": "2026-03-31",
+    "timestamp": "2026-03-31T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 10.25,
+    "naphtha_gasoil": -24.15,
+    "brent_maya": 23.39,
+    "wti_wcs": 16.41,
+    "lls_mars": 6.63,
+    "wti_wts": 2.41
+  },
+  {
+    "date": "2026-04-01",
+    "timestamp": "2026-04-01T00:00:00Z",
+    "wti_wcs": 14.84,
+    "brent_urals": 7.67,
+    "naphtha_gasoil": -23.63,
+    "brent_maya": 21.67,
+    "lls_mars": 6.6,
+    "wti_wts": 2.4
+  },
+  {
+    "date": "2026-04-02",
+    "timestamp": "2026-04-02T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.85,
+    "naphtha_gasoil": -23.87,
+    "brent_maya": 22.45,
+    "wti_wcs": 16.92,
+    "lls_mars": 6.83,
+    "wti_wts": 2.52
+  },
+  {
+    "date": "2026-04-06",
+    "timestamp": "2026-04-06T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.97,
+    "naphtha_gasoil": -23.89,
+    "brent_maya": 22.53,
+    "wti_wcs": 16.96,
+    "lls_mars": 6.85,
+    "wti_wts": 2.52
+  },
+  {
+    "date": "2026-04-07",
+    "timestamp": "2026-04-07T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.89,
+    "naphtha_gasoil": -23.88,
+    "brent_maya": 22.48,
+    "wti_wcs": 16.99,
+    "lls_mars": 6.86,
+    "wti_wts": 2.53
+  },
+  {
+    "date": "2026-04-08",
+    "timestamp": "2026-04-08T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.71,
+    "naphtha_gasoil": -23.44,
+    "brent_maya": 21.03,
+    "wti_wcs": 16.06,
+    "lls_mars": 6.49,
+    "wti_wts": 2.34
+  },
+  {
+    "date": "2026-04-09",
+    "timestamp": "2026-04-09T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.89,
+    "naphtha_gasoil": -23.47,
+    "brent_maya": 21.14,
+    "wti_wcs": 16.23,
+    "lls_mars": 6.56,
+    "wti_wts": 2.38
+  },
+  {
+    "date": "2026-04-10",
+    "timestamp": "2026-04-10T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.78,
+    "naphtha_gasoil": -23.46,
+    "brent_maya": 21.07,
+    "wti_wcs": 16.17,
+    "lls_mars": 6.53,
+    "wti_wts": 2.37
+  },
+  {
+    "date": "2026-04-13",
+    "timestamp": "2026-04-13T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.4,
+    "naphtha_gasoil": -23.58,
+    "brent_maya": 21.49,
+    "wti_wcs": 16.29,
+    "lls_mars": 6.58,
+    "wti_wts": 2.39
+  },
+  {
+    "date": "2026-04-14",
+    "timestamp": "2026-04-14T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.72,
+    "naphtha_gasoil": -23.44,
+    "brent_maya": 21.03,
+    "wti_wcs": 15.9,
+    "lls_mars": 6.43,
+    "wti_wts": 2.31
+  },
+  {
+    "date": "2026-04-15",
+    "timestamp": "2026-04-15T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.74,
+    "naphtha_gasoil": -23.44,
+    "brent_maya": 21.04,
+    "wti_wcs": 15.9,
+    "lls_mars": 6.43,
+    "wti_wts": 2.31
+  },
+  {
+    "date": "2026-04-16",
+    "timestamp": "2026-04-16T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.41,
+    "naphtha_gasoil": -23.58,
+    "brent_maya": 21.49,
+    "wti_wcs": 16.07,
+    "lls_mars": 6.49,
+    "wti_wts": 2.35
+  },
+  {
+    "date": "2026-04-17",
+    "timestamp": "2026-04-17T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.06,
+    "naphtha_gasoil": -23.31,
+    "brent_maya": 20.59,
+    "wti_wcs": 15.53,
+    "lls_mars": 6.28,
+    "wti_wts": 2.24
+  },
+  {
+    "date": "2026-04-20",
+    "timestamp": "2026-04-20T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.82,
+    "naphtha_gasoil": -23.47,
+    "brent_maya": 21.1,
+    "wti_wcs": 15.82,
+    "lls_mars": 6.39,
+    "wti_wts": 2.3
+  },
+  {
+    "date": "2026-04-21",
+    "timestamp": "2026-04-21T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.27,
+    "naphtha_gasoil": -23.56,
+    "brent_maya": 21.4,
+    "wti_wcs": 15.95,
+    "lls_mars": 6.44,
+    "wti_wts": 2.32
+  },
+  {
+    "date": "2026-04-22",
+    "timestamp": "2026-04-22T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.79,
+    "naphtha_gasoil": -23.65,
+    "brent_maya": 21.74,
+    "wti_wcs": 15.99,
+    "lls_mars": 6.46,
+    "wti_wts": 2.33
+  },
+  {
+    "date": "2026-04-23",
+    "timestamp": "2026-04-23T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.26,
+    "naphtha_gasoil": -23.76,
+    "brent_maya": 22.06,
+    "wti_wcs": 16.13,
+    "lls_mars": 6.52,
+    "wti_wts": 2.36
+  },
+  {
+    "date": "2026-04-24",
+    "timestamp": "2026-04-24T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.3,
+    "naphtha_gasoil": -23.76,
+    "brent_maya": 22.08,
+    "wti_wcs": 16.06,
+    "lls_mars": 6.49,
+    "wti_wts": 2.34
+  },
+  {
+    "date": "2026-04-27",
+    "timestamp": "2026-04-27T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.73,
+    "naphtha_gasoil": -23.85,
+    "brent_maya": 22.37,
+    "wti_wcs": 16.16,
+    "lls_mars": 6.53,
+    "wti_wts": 2.36
+  },
+  {
+    "date": "2026-04-28",
+    "timestamp": "2026-04-28T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 9.19,
+    "naphtha_gasoil": -23.94,
+    "brent_maya": 22.68,
+    "wti_wcs": 16.34,
+    "lls_mars": 6.6,
+    "wti_wts": 2.4
+  },
+  {
+    "date": "2026-04-29",
+    "timestamp": "2026-04-29T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 10.2,
+    "naphtha_gasoil": -24.14,
+    "brent_maya": 23.35,
+    "wti_wcs": 16.68,
+    "lls_mars": 6.74,
+    "wti_wts": 2.47
+  },
+  {
+    "date": "2026-04-30",
+    "timestamp": "2026-04-30T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 9.6,
+    "naphtha_gasoil": -24.02,
+    "brent_maya": 22.95,
+    "wti_wcs": 16.59,
+    "lls_mars": 6.7,
+    "wti_wts": 2.45
+  },
+  {
+    "date": "2026-05-01",
+    "timestamp": "2026-05-01T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.73,
+    "naphtha_gasoil": -23.84,
+    "brent_maya": 22.37,
+    "wti_wcs": 18.99,
+    "lls_mars": 6.64,
+    "wti_wts": 2.42
+  },
+  {
+    "date": "2026-05-04",
+    "timestamp": "2026-05-04T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 9.67,
+    "naphtha_gasoil": -24.04,
+    "brent_maya": 22.99,
+    "wti_wcs": 16.66,
+    "lls_mars": 6.73,
+    "wti_wts": 2.46
+  },
+  {
+    "date": "2026-05-05",
+    "timestamp": "2026-05-05T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.98,
+    "naphtha_gasoil": -23.9,
+    "brent_maya": 22.54,
+    "wti_wcs": 16.45,
+    "lls_mars": 6.65,
+    "wti_wts": 2.42
+  },
+  {
+    "date": "2026-05-06",
+    "timestamp": "2026-05-06T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.69,
+    "naphtha_gasoil": -23.64,
+    "brent_maya": 21.68,
+    "wti_wcs": 16.09,
+    "lls_mars": 6.5,
+    "wti_wts": 2.35
+  },
+  {
+    "date": "2026-05-07",
+    "timestamp": "2026-05-07T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.51,
+    "naphtha_gasoil": -23.6,
+    "brent_maya": 21.56,
+    "wti_wcs": 16.08,
+    "lls_mars": 6.5,
+    "wti_wts": 2.35
+  },
+  {
+    "date": "2026-05-08",
+    "timestamp": "2026-05-08T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.69,
+    "naphtha_gasoil": -23.64,
+    "brent_maya": 21.68,
+    "wti_wcs": 16.11,
+    "lls_mars": 6.51,
+    "wti_wts": 2.35
+  },
+  {
+    "date": "2026-05-11",
+    "timestamp": "2026-05-11T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.13,
+    "naphtha_gasoil": -23.73,
+    "brent_maya": 21.97,
+    "wti_wcs": 16.24,
+    "lls_mars": 6.56,
+    "wti_wts": 2.38
+  },
+  {
+    "date": "2026-05-12",
+    "timestamp": "2026-05-12T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.67,
+    "naphtha_gasoil": -23.83,
+    "brent_maya": 22.33,
+    "wti_wcs": 16.45,
+    "lls_mars": 6.64,
+    "wti_wts": 2.42
+  },
+  {
+    "date": "2026-05-13",
+    "timestamp": "2026-05-13T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.34,
+    "naphtha_gasoil": -23.77,
+    "brent_maya": 22.11,
+    "wti_wcs": 16.39,
+    "lls_mars": 6.62,
+    "wti_wts": 2.41
+  },
+  {
+    "date": "2026-05-14",
+    "timestamp": "2026-05-14T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.36,
+    "naphtha_gasoil": -23.77,
+    "brent_maya": 22.12,
+    "wti_wcs": 16.4,
+    "lls_mars": 6.62,
+    "wti_wts": 2.41
+  },
+  {
+    "date": "2026-05-15",
+    "timestamp": "2026-05-15T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.89,
+    "naphtha_gasoil": -23.88,
+    "brent_maya": 22.48,
+    "wti_wcs": 16.61,
+    "lls_mars": 6.71,
+    "wti_wts": 2.45
+  },
+  {
+    "date": "2026-05-18",
+    "timestamp": "2026-05-18T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 9.31,
+    "naphtha_gasoil": -23.96,
+    "brent_maya": 22.76,
+    "wti_wcs": 16.77,
+    "lls_mars": 6.77,
+    "wti_wts": 2.49
+  },
+  {
+    "date": "2026-05-19",
+    "timestamp": "2026-05-19T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 9.19,
+    "naphtha_gasoil": -23.94,
+    "brent_maya": 22.68,
+    "wti_wcs": 16.73,
+    "lls_mars": 6.76,
+    "wti_wts": 2.48
+  },
+  {
+    "date": "2026-05-20",
+    "timestamp": "2026-05-20T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.25,
+    "naphtha_gasoil": -23.75,
+    "brent_maya": 22.05,
+    "wti_wcs": 16.25,
+    "lls_mars": 6.57,
+    "wti_wts": 2.38
+  },
+  {
+    "date": "2026-05-21",
+    "timestamp": "2026-05-21T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.89,
+    "naphtha_gasoil": -23.68,
+    "brent_maya": 21.81,
+    "wti_wcs": 16.16,
+    "lls_mars": 6.53,
+    "wti_wts": 2.36
+  },
+  {
+    "date": "2026-05-22",
+    "timestamp": "2026-05-22T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 8.03,
+    "naphtha_gasoil": -23.7,
+    "brent_maya": 21.9,
+    "wti_wcs": 16.17,
+    "lls_mars": 6.53,
+    "wti_wts": 2.37
+  },
+  {
+    "date": "2026-05-26",
+    "timestamp": "2026-05-26T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.44,
+    "naphtha_gasoil": -23.59,
+    "brent_maya": 21.51,
+    "wti_wcs": 16.03,
+    "lls_mars": 6.48,
+    "wti_wts": 2.34
+  },
+  {
+    "date": "2026-05-27",
+    "timestamp": "2026-05-27T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.64,
+    "naphtha_gasoil": -23.43,
+    "brent_maya": 20.98,
+    "wti_wcs": 15.77,
+    "lls_mars": 6.37,
+    "wti_wts": 2.29
+  },
+  {
+    "date": "2026-05-28",
+    "timestamp": "2026-05-28T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.56,
+    "naphtha_gasoil": -23.41,
+    "brent_maya": 20.92,
+    "wti_wcs": 15.79,
+    "lls_mars": 6.38,
+    "wti_wts": 2.29
+  },
+  {
+    "date": "2026-05-29",
+    "timestamp": "2026-05-29T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.31,
+    "naphtha_gasoil": -23.36,
+    "brent_maya": 20.75,
+    "wti_wcs": 15.71,
+    "lls_mars": 6.35,
+    "wti_wts": 2.27
+  },
+  {
+    "date": "2026-06-01",
+    "timestamp": "2026-06-01T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.75,
+    "naphtha_gasoil": -23.45,
+    "brent_maya": 21.05,
+    "wti_wcs": 15.95,
+    "lls_mars": 6.44,
+    "wti_wts": 2.32
+  },
+  {
+    "date": "2026-06-02",
+    "timestamp": "2026-06-02T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.9,
+    "naphtha_gasoil": -23.48,
+    "brent_maya": 21.15,
+    "wti_wcs": 16.03,
+    "lls_mars": 6.48,
+    "wti_wts": 2.34
+  },
+  {
+    "date": "2026-06-03",
+    "timestamp": "2026-06-03T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 7.17,
+    "naphtha_gasoil": -23.53,
+    "brent_maya": 21.33,
+    "wti_wcs": 16.14,
+    "lls_mars": 6.52,
+    "wti_wts": 2.36
+  },
+  {
+    "date": "2026-06-04",
+    "timestamp": "2026-06-04T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.75,
+    "naphtha_gasoil": -23.45,
+    "brent_maya": 21.05,
+    "wti_wcs": 15.99,
+    "lls_mars": 6.46,
+    "wti_wts": 2.33
+  },
+  {
+    "date": "2026-06-05",
+    "timestamp": "2026-06-05T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.46,
+    "naphtha_gasoil": -23.4,
+    "brent_maya": 20.86,
+    "wti_wcs": 15.87,
+    "lls_mars": 6.41,
+    "wti_wts": 2.31
+  },
+  {
+    "date": "2026-06-08",
+    "timestamp": "2026-06-08T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.64,
+    "naphtha_gasoil": -23.43,
+    "brent_maya": 20.98,
+    "wti_wcs": 15.9,
+    "lls_mars": 6.43,
+    "wti_wts": 2.31
+  },
+  {
+    "date": "2026-06-09",
+    "timestamp": "2026-06-09T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.22,
+    "naphtha_gasoil": -23.35,
+    "brent_maya": 20.7,
+    "wti_wcs": 15.75,
+    "lls_mars": 6.36,
+    "wti_wts": 2.28
+  },
+  {
+    "date": "2026-06-10",
+    "timestamp": "2026-06-10T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 6.46,
+    "naphtha_gasoil": -23.4,
+    "brent_maya": 20.86,
+    "wti_wcs": 15.84,
+    "lls_mars": 6.4,
+    "wti_wts": 2.3
+  },
+  {
+    "date": "2026-06-11",
+    "timestamp": "2026-06-11T23:59:37Z",
+    "brent_urals": 6.06,
+    "wti_wcs": 15.73,
+    "naphtha_gasoil": -23.31,
+    "brent_maya": 20.59,
+    "lls_mars": 6.35,
+    "wti_wts": 2.28
+  },
+  {
+    "date": "2026-06-12",
+    "timestamp": "2026-06-12T05:41:06Z",
+    "brent_urals": 5.6,
+    "wti_wcs": 15.58,
+    "naphtha_gasoil": -23.22,
+    "brent_maya": 20.28,
+    "lls_mars": 6.3,
+    "wti_wts": 2.25
+  },
+  {
+    "date": "2026-06-15",
+    "timestamp": "2026-06-15T23:49:01Z",
+    "brent_urals": 4.98,
+    "wti_wcs": 15.38,
+    "naphtha_gasoil": -23.09,
+    "brent_maya": 19.87,
+    "lls_mars": 6.21,
+    "wti_wts": 2.21
+  },
+  {
+    "date": "2026-06-16",
+    "timestamp": "2026-06-16T23:49:01Z",
+    "brent_urals": 4.34,
+    "wti_wcs": 15.14,
+    "naphtha_gasoil": -22.97,
+    "brent_maya": 19.45,
+    "lls_mars": 6.12,
+    "wti_wts": 2.16
+  },
+  {
+    "date": "2026-06-17",
+    "timestamp": "2026-06-17T23:59:16Z",
+    "brent_urals": 4.43,
+    "wti_wcs": 15.18,
+    "naphtha_gasoil": -22.98,
+    "brent_maya": 19.5,
+    "lls_mars": 6.14,
+    "wti_wts": 2.17
+  },
+  {
+    "date": "2026-06-18",
+    "timestamp": "2026-06-18T15:56:35Z",
+    "brent_urals": 4.48,
+    "wti_wcs": 15.17,
+    "naphtha_gasoil": -23.0,
+    "brent_maya": 19.54,
+    "lls_mars": 6.13,
+    "wti_wts": 2.17
+  },
+  {
+    "date": "2026-06-19",
+    "timestamp": "2026-06-19T07:25:14Z",
+    "brent_urals": 9.2,
+    "wti_wcs": 14.8,
+    "naphtha_gasoil": -22.7,
+    "brent_maya": 22.36,
+    "lls_mars": 6.0,
+    "wti_wts": 2.1
+  },
+  {
+    "date": "2026-06-22",
+    "timestamp": "2026-06-22T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 4.19,
+    "naphtha_gasoil": -22.94,
+    "brent_maya": 19.34,
+    "wti_wcs": 15.08,
+    "lls_mars": 6.1,
+    "wti_wts": 2.15
+  },
+  {
+    "date": "2026-06-23",
+    "timestamp": "2026-06-23T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 4.06,
+    "naphtha_gasoil": -22.92,
+    "brent_maya": 19.26,
+    "wti_wcs": 15.0,
+    "lls_mars": 6.06,
+    "wti_wts": 2.13
+  },
+  {
+    "date": "2026-06-24",
+    "timestamp": "2026-06-24T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.56,
+    "naphtha_gasoil": -22.81,
+    "brent_maya": 18.92,
+    "wti_wcs": 14.86,
+    "lls_mars": 6.01,
+    "wti_wts": 2.1
+  },
+  {
+    "date": "2026-06-25",
+    "timestamp": "2026-06-25T11:14:05Z",
+    "brent_urals": 3.79,
+    "wti_wcs": 14.94,
+    "naphtha_gasoil": -22.86,
+    "brent_maya": 19.08,
+    "lls_mars": 6.04,
+    "wti_wts": 2.12
+  },
+  {
+    "date": "2026-06-26",
+    "timestamp": "2026-06-26T00:00:00Z",
+    "source": "qs_backfill",
+    "brent_urals": 3.3,
+    "naphtha_gasoil": -22.76,
+    "brent_maya": 18.75,
+    "wti_wcs": 14.8,
+    "lls_mars": 5.98,
+    "wti_wts": 2.09
+  },
+  {
+    "date": "2026-06-29",
+    "timestamp": "2026-06-29T12:36:43Z",
+    "brent_urals": 3.47,
+    "wti_wcs": 14.88,
+    "naphtha_gasoil": -22.79,
+    "brent_maya": 18.87,
+    "lls_mars": 6.01,
+    "wti_wts": 2.11
+  },
+  {
+    "date": "2026-06-30",
+    "timestamp": "2026-06-30T11:24:19Z",
+    "brent_urals": 9.2,
+    "wti_wcs": 14.8,
+    "naphtha_gasoil": -22.7,
+    "brent_maya": 21.75,
+    "lls_mars": 6.0,
+    "wti_wts": 2.1
+  }
+]

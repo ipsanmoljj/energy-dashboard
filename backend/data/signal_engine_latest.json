@@ -1,0 +1,112 @@
+{
+  "fetcher": "signal_engine_fetcher",
+  "fetched_at": "2026-06-30T11:24:25Z",
+  "source": "demsup R/signal_engine.R \u2014 Layer A daily M1M2 mean-reversion signal (level_z_126-based)",
+  "note": "Rule-based deterministic signal, not an ML model. 'live' reflects today's gated signal; 'summary' is the validated test-window backtest (Jul 2024-May 2026, opened once). See backtesting handover doc for train/validation/test discipline \u2014 do not treat repeated /signal polls as re-opening or re-validating the test window.",
+  "signals": {
+    "wti": {
+      "status": "OK",
+      "live": {
+        "date": "2026-05-22",
+        "signal": "SELL",
+        "regime": "Deep-Backwardation",
+        "m1m2": 3.3467,
+        "z_score": 6.709,
+        "atr14": 0.3219,
+        "vol_gate": "PASS",
+        "stop_dist": 0.8047,
+        "hard_stop": 4.1514
+      },
+      "summary": {
+        "product": "CL",
+        "unit": "$/bbl",
+        "n_trades": 331,
+        "hit_pct": 55,
+        "rr": 2.197,
+        "ev_trade": 0.3073,
+        "ev_be": -0.0301,
+        "total_pnl": 101.718,
+        "max_dd": -20.9344,
+        "vol_gate": "none"
+      }
+    },
+    "brent": {
+      "status": "OK",
+      "live": {
+        "date": "2026-05-22",
+        "signal": "FLAT",
+        "regime": "Deep-Backwardation",
+        "m1m2": 3.3721,
+        "z_score": 8.906,
+        "atr14": 0.2658,
+        "vol_gate": "BLOCKED",
+        "stop_dist": null,
+        "hard_stop": null
+      },
+      "summary": {
+        "product": "LCO",
+        "unit": "$/bbl",
+        "n_trades": 18,
+        "hit_pct": 77.8,
+        "rr": 4.596,
+        "ev_trade": 0.6978,
+        "ev_be": 0.0778,
+        "total_pnl": 12.5612,
+        "max_dd": -0.4266,
+        "vol_gate": "ATR14 \u2264 0.1381 (low-vol only)"
+      }
+    },
+    "ho": {
+      "status": "OK",
+      "live": {
+        "date": "2026-05-20",
+        "signal": "FLAT",
+        "regime": "Stable-Elevated",
+        "m1m2": 0.0901,
+        "z_score": 1.08,
+        "atr14": 0.0215,
+        "vol_gate": "BLOCKED",
+        "stop_dist": null,
+        "hard_stop": null
+      },
+      "summary": {
+        "product": "HO",
+        "unit": "$/gal",
+        "n_trades": 45,
+        "hit_pct": 75.6,
+        "rr": 6.169,
+        "ev_trade": 0.0151,
+        "ev_be": -0.0005,
+        "total_pnl": 0.6794,
+        "max_dd": -0.0215,
+        "vol_gate": "ATR14 \u2264 0.0189 (low-vol only)"
+      }
+    },
+    "lgo": {
+      "status": "OK",
+      "live": {
+        "date": "2026-05-20",
+        "signal": "FLAT",
+        "regime": "Stable-Elevated",
+        "m1m2": 23.875,
+        "z_score": 1.101,
+        "atr14": 8.1238,
+        "vol_gate": "PASS",
+        "stop_dist": null,
+        "hard_stop": null
+      },
+      "summary": {
+        "product": "LGO",
+        "unit": "$/mt",
+        "n_trades": 95,
+        "hit_pct": 62.1,
+        "rr": 2.193,
+        "ev_trade": 18.2218,
+        "ev_be": 1.7462,
+        "total_pnl": 1731.0731,
+        "max_dd": -357.5777,
+        "vol_gate": "ATR14 \u2265 3.1000 (high-vol only)"
+      }
+    }
+  }
+}

@@ -1,0 +1,549 @@
+{
+  "fetcher": "fred_fetcher",
+  "fetched_at": "2026-06-19T06:41:14.759318Z",
+  "source": "Federal Reserve Bank of St. Louis (FRED)",
+  "series": {
+    "dxy_broad": {
+      "series_id": "DTWEXBGS",
+      "label": "DXY Broad Dollar Index (trade-weighted)",
+      "unit": "index",
+      "signal_note": "Strong USD \u2192 bearish oil (USD-priced crude more expensive for non-USD buyers). Weak USD \u2192 bullish oil. Watch DXY direction vs Brent M1-M2 divergence.",
+      "crude_signal": "BULLISH",
+      "latest_date": "2026-06-12",
+      "latest": 119.5073,
+      "dod": -0.6101,
+      "wow": -0.5758,
+      "mom": 0.2205,
+      "history_30d": [
+        {
+          "date": "2026-06-12",
+          "value": 119.5073
+        },
+        {
+          "date": "2026-06-11",
+          "value": 120.1174
+        },
+        {
+          "date": "2026-06-10",
+          "value": 119.9134
+        },
+        {
+          "date": "2026-06-09",
+          "value": 119.9617
+        },
+        {
+          "date": "2026-06-08",
+          "value": 120.034
+        },
+        {
+          "date": "2026-06-05",
+          "value": 120.0831
+        },
+        {
+          "date": "2026-06-04",
+          "value": 119.3615
+        },
+        {
+          "date": "2026-06-03",
+          "value": 119.3848
+        },
+        {
+          "date": "2026-06-02",
+          "value": 119.0359
+        },
+        {
+          "date": "2026-06-01",
+          "value": 119.1653
+        },
+        {
+          "date": "2026-05-29",
+          "value": 118.8783
+        },
+        {
+          "date": "2026-05-28",
+          "value": 119.0318
+        },
+        {
+          "date": "2026-05-27",
+          "value": 119.1829
+        },
+        {
+          "date": "2026-05-26",
+          "value": 119.1696
+        },
+        {
+          "date": "2026-05-22",
+          "value": 119.2868
+        },
+        {
+          "date": "2026-05-21",
+          "value": 119.369
+        },
+        {
+          "date": "2026-05-20",
+          "value": 119.1624
+        },
+        {
+          "date": "2026-05-19",
+          "value": 119.451
+        },
+        {
+          "date": "2026-05-18",
+          "value": 119.0574
+        },
+        {
+          "date": "2026-05-15",
+          "value": 119.2825
+        },
+        {
+          "date": "2026-05-14",
+          "value": 118.6696
+        },
+        {
+          "date": "2026-05-13",
+          "value": 118.4737
+        },
+        {
+          "date": "2026-05-12",
+          "value": 118.5238
+        },
+        {
+          "date": "2026-05-11",
+          "value": 118.0562
+        },
+        {
+          "date": "2026-05-08",
+          "value": 118.0392
+        },
+        {
+          "date": "2026-05-07",
+          "value": 118.0116
+        },
+        {
+          "date": "2026-05-06",
+          "value": 118.0982
+        },
+        {
+          "date": "2026-05-05",
+          "value": 118.6207
+        },
+        {
+          "date": "2026-05-04",
+          "value": 118.8264
+        }
+      ]
+    },
+    "sofr": {
+      "series_id": "SOFR",
+      "label": "SOFR (Secured Overnight Financing Rate)",
+      "unit": "percent",
+      "signal_note": "Higher SOFR \u2192 higher cost of carry for oil storage (financing leg of contango). Compresses profitable contango window. Key input to storage economics model.",
+      "crude_signal": "NEUTRAL",
+      "latest_date": "2026-06-17",
+      "latest": 3.63,
+      "dod": 0.0,
+      "wow": -0.02,
+      "mom": 0.0,
+      "history_30d": [
+        {
+          "date": "2026-06-17",
+          "value": 3.63
+        },
+        {
+          "date": "2026-06-16",
+          "value": 3.63
+        },
+        {
+          "date": "2026-06-15",
+          "value": 3.69
+        },
+        {
+          "date": "2026-06-12",
+          "value": 3.65
+        },
+        {
+          "date": "2026-06-11",
+          "value": 3.6
+        },
+        {
+          "date": "2026-06-10",
+          "value": 3.59
+        },
+        {
+          "date": "2026-06-09",
+          "value": 3.6
+        },
+        {
+          "date": "2026-06-08",
+          "value": 3.63
+        },
+        {
+          "date": "2026-06-05",
+          "value": 3.63
+        },
+        {
+          "date": "2026-06-04",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-03",
+          "value": 3.61
+        },
+        {
+          "date": "2026-06-02",
+          "value": 3.63
+        },
+        {
+          "date": "2026-06-01",
+          "value": 3.65
+        },
+        {
+          "date": "2026-05-29",
+          "value": 3.63
+        },
+        {
+          "date": "2026-05-28",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-27",
+          "value": 3.63
+        },
+        {
+          "date": "2026-05-26",
+          "value": 3.63
+        },
+        {
+          "date": "2026-05-22",
+          "value": 3.55
+        },
+        {
+          "date": "2026-05-21",
+          "value": 3.51
+        },
+        {
+          "date": "2026-05-20",
+          "value": 3.5
+        },
+        {
+          "date": "2026-05-19",
+          "value": 3.51
+        },
+        {
+          "date": "2026-05-18",
+          "value": 3.53
+        },
+        {
+          "date": "2026-05-15",
+          "value": 3.55
+        },
+        {
+          "date": "2026-05-14",
+          "value": 3.56
+        },
+        {
+          "date": "2026-05-13",
+          "value": 3.59
+        },
+        {
+          "date": "2026-05-12",
+          "value": 3.6
+        },
+        {
+          "date": "2026-05-11",
+          "value": 3.6
+        },
+        {
+          "date": "2026-05-08",
+          "value": 3.6
+        },
+        {
+          "date": "2026-05-07",
+          "value": 3.6
+        }
+      ]
+    },
+    "fed_funds": {
+      "series_id": "DFF",
+      "label": "Effective Federal Funds Rate",
+      "unit": "percent",
+      "signal_note": "FEDFUNDS sets the macro rate environment. Rate cuts \u2192 weaker USD \u2192 bullish crude. Rate hikes \u2192 USD strength \u2192 bearish.",
+      "crude_signal": "NEUTRAL",
+      "latest_date": "2026-06-17",
+      "latest": 3.63,
+      "dod": 0.0,
+      "wow": 0.01,
+      "mom": 0.01,
+      "history_30d": [
+        {
+          "date": "2026-06-17",
+          "value": 3.63
+        },
+        {
+          "date": "2026-06-16",
+          "value": 3.63
+        },
+        {
+          "date": "2026-06-15",
+          "value": 3.63
+        },
+        {
+          "date": "2026-06-14",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-13",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-12",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-11",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-10",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-09",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-08",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-07",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-06",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-05",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-04",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-03",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-02",
+          "value": 3.62
+        },
+        {
+          "date": "2026-06-01",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-31",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-30",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-29",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-28",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-27",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-26",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-25",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-24",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-23",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-22",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-21",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-20",
+          "value": 3.62
+        },
+        {
+          "date": "2026-05-19",
+          "value": 3.62
+        }
+      ]
+    },
+    "us_10y_yield": {
+      "series_id": "DGS10",
+      "label": "10-Year Treasury Yield",
+      "unit": "percent",
+      "signal_note": "Rising 10Y \u2192 higher discount rates \u2192 risk assets (incl. oil) under pressure. Also drives USD strength. Watch for divergence with oil when both spike.",
+      "crude_signal": "NEUTRAL",
+      "latest_date": "2026-06-17",
+      "latest": 4.49,
+      "dod": 0.06,
+      "wow": 0.01,
+      "mom": 0.01,
+      "history_30d": [
+        {
+          "date": "2026-06-17",
+          "value": 4.49
+        },
+        {
+          "date": "2026-06-16",
+          "value": 4.43
+        },
+        {
+          "date": "2026-06-15",
+          "value": 4.47
+        },
+        {
+          "date": "2026-06-12",
+          "value": 4.48
+        },
+        {
+          "date": "2026-06-11",
+          "value": 4.45
+        },
+        {
+          "date": "2026-06-10",
+          "value": 4.55
+        },
+        {
+          "date": "2026-06-09",
+          "value": 4.53
+        },
+        {
+          "date": "2026-06-08",
+          "value": 4.56
+        },
+        {
+          "date": "2026-06-05",
+          "value": 4.55
+        },
+        {
+          "date": "2026-06-04",
+          "value": 4.47
+        },
+        {
+          "date": "2026-06-03",
+          "value": 4.49
+        },
+        {
+          "date": "2026-06-02",
+          "value": 4.46
+        },
+        {
+          "date": "2026-06-01",
+          "value": 4.47
+        },
+        {
+          "date": "2026-05-29",
+          "value": 4.45
+        },
+        {
+          "date": "2026-05-28",
+          "value": 4.45
+        },
+        {
+          "date": "2026-05-27",
+          "value": 4.48
+        },
+        {
+          "date": "2026-05-26",
+          "value": 4.5
+        },
+        {
+          "date": "2026-05-22",
+          "value": 4.56
+        },
+        {
+          "date": "2026-05-21",
+          "value": 4.57
+        },
+        {
+          "date": "2026-05-20",
+          "value": 4.57
+        },
+        {
+          "date": "2026-05-19",
+          "value": 4.67
+        },
+        {
+          "date": "2026-05-18",
+          "value": 4.61
+        },
+        {
+          "date": "2026-05-15",
+          "value": 4.59
+        },
+        {
+          "date": "2026-05-14",
+          "value": 4.47
+        },
+        {
+          "date": "2026-05-13",
+          "value": 4.46
+        },
+        {
+          "date": "2026-05-12",
+          "value": 4.46
+        },
+        {
+          "date": "2026-05-11",
+          "value": 4.42
+        },
+        {
+          "date": "2026-05-08",
+          "value": 4.38
+        },
+        {
+          "date": "2026-05-07",
+          "value": 4.41
+        }
+      ]
+    }
+  },
+  "derived": {
+    "storage_carry": {
+      "sofr_used_pct": 3.63,
+      "financing_per_bbl_mo": 0.268,
+      "tank_lease_per_bbl_mo": 0.45,
+      "insurance_per_bbl_mo": 0.05,
+      "total_carry_per_bbl_mo": 0.768,
+      "m1_m12_contango_needed": 8.45,
+      "note": "Contango > $8.45/bbl for M1-M12 = floating storage profitable. Contango < $0.77/bbl/mo = storage uneconomic \u2192 draws."
+    },
+    "macro_composite": {
+      "bullish_count": 1,
+      "bearish_count": 0,
+      "neutral_count": 3,
+      "composite_signal": "MIXED",
+      "note": "Macro composite: DXY + SOFR + FEDFUNDS + DGS10 directional signals. BULLISH = falling rates/USD environment. BEARISH = rising rates/USD environment. MIXED = conflicting signals \u2014 watch physical fundamentals (Cushing draw, OECD stocks) to determine whether macro headwind or tailwind dominates."
+    }
+  }
+}

@@ -1,0 +1,1293 @@
+{
+  "fetcher": "gie_fetcher",
+  "fetched_at": "2026-06-19T08:24:00Z",
+  "source": "GIE AGSI+ (https://agsi.gie.eu)",
+  "season": "injection",
+  "note": "5yr average not provided by GIE country endpoints; using absolute fill thresholds.",
+  "regions": {
+    "eu_aggregate": {
+      "error": "no_data",
+      "label": "EU Aggregate"
+    },
+    "germany": {
+      "label": "Germany",
+      "country_code": "de",
+      "signal_note": "Germany = largest EU gas market; Rehden storage hub is key.",
+      "latest_date": "2026-06-17",
+      "fill_pct": 37.47,
+      "five_yr_avg": null,
+      "deviation_pp": null,
+      "inject_twh": 570.89,
+      "withdraw_twh": 7.6,
+      "wow_fill_pp": 1.99,
+      "flow_direction": "injecting 563.3 TWh/d (injection season)",
+      "crude_signal": "BULLISH",
+      "signal_detail": "Fill 37.5% \u2014 below 50%. Elevated distillate demand risk for winter.",
+      "history_30d": [
+        {
+          "date": "2026-06-17",
+          "fill_pct": 37.47,
+          "prev_fill_pct": 0.22,
+          "inject_twh": 570.89,
+          "withdraw_twh": 7.6,
+          "gas_in_storage_twh": 92.4687,
+          "five_yr_avg": null,
+          "info": "E"
+        },
+        {
+          "date": "2026-06-16",
+          "fill_pct": 37.25,
+          "prev_fill_pct": 0.19,
+          "inject_twh": 515.83,
+          "withdraw_twh": 56.9,
+          "gas_in_storage_twh": 91.9222,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-15",
+          "fill_pct": 37.06,
+          "prev_fill_pct": 0.24,
+          "inject_twh": 664.85,
+          "withdraw_twh": 55.9,
+          "gas_in_storage_twh": 91.4603,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-14",
+          "fill_pct": 36.82,
+          "prev_fill_pct": 0.37,
+          "inject_twh": 950.36,
+          "withdraw_twh": 37.2,
+          "gas_in_storage_twh": 90.86,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-13",
+          "fill_pct": 36.45,
+          "prev_fill_pct": 0.44,
+          "inject_twh": 1106.65,
+          "withdraw_twh": 10.2,
+          "gas_in_storage_twh": 89.9469,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-12",
+          "fill_pct": 35.87,
+          "prev_fill_pct": 0.24,
+          "inject_twh": 700.29,
+          "withdraw_twh": 6.0,
+          "gas_in_storage_twh": 88.8577,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-11",
+          "fill_pct": 35.63,
+          "prev_fill_pct": 0.14,
+          "inject_twh": 398.96,
+          "withdraw_twh": 32.7,
+          "gas_in_storage_twh": 88.2634,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-10",
+          "fill_pct": 35.48,
+          "prev_fill_pct": 0.2,
+          "inject_twh": 499.47,
+          "withdraw_twh": 7.3,
+          "gas_in_storage_twh": 87.9046,
+          "five_yr_avg": null,
+          "info": "E"
+        },
+        {
+          "date": "2026-06-09",
+          "fill_pct": 35.28,
+          "prev_fill_pct": 0.28,
+          "inject_twh": 698.24,
+          "withdraw_twh": 7.0,
+          "gas_in_storage_twh": 87.3989,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-08",
+          "fill_pct": 35.0,
+          "prev_fill_pct": 0.29,
+          "inject_twh": 727.63,
+          "withdraw_twh": 8.5,
+          "gas_in_storage_twh": 86.7014,
+          "five_yr_avg": null,
+          "info": "E"
+        },
+        {
+          "date": "2026-06-07",
+          "fill_pct": 34.71,
+          "prev_fill_pct": 0.39,
+          "inject_twh": 961.12,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 85.9904,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-06",
+          "fill_pct": 34.32,
+          "prev_fill_pct": 0.4,
+          "inject_twh": 1004.89,
+          "withdraw_twh": 0.3,
+          "gas_in_storage_twh": 85.024,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-05",
+          "fill_pct": 33.92,
+          "prev_fill_pct": 0.29,
+          "inject_twh": 721.63,
+          "withdraw_twh": 12.4,
+          "gas_in_storage_twh": 84.0399,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-04",
+          "fill_pct": 33.63,
+          "prev_fill_pct": 0.39,
+          "inject_twh": 967.44,
+          "withdraw_twh": 6.8,
+          "gas_in_storage_twh": 83.3196,
+          "five_yr_avg": null,
+          "info": "E"
+        },
+        {
+          "date": "2026-06-03",
+          "fill_pct": 33.24,
+          "prev_fill_pct": 0.25,
+          "inject_twh": 621.45,
+          "withdraw_twh": 12.2,
+          "gas_in_storage_twh": 82.359,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-02",
+          "fill_pct": 33.0,
+          "prev_fill_pct": 0.31,
+          "inject_twh": 755.11,
+          "withdraw_twh": 8.4,
+          "gas_in_storage_twh": 81.75,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-01",
+          "fill_pct": 32.69,
+          "prev_fill_pct": 0.17,
+          "inject_twh": 657.35,
+          "withdraw_twh": 8.9,
+          "gas_in_storage_twh": 80.9866,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-31",
+          "fill_pct": 32.52,
+          "prev_fill_pct": 0.42,
+          "inject_twh": 1027.16,
+          "withdraw_twh": 4.1,
+          "gas_in_storage_twh": 80.557,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-30",
+          "fill_pct": 32.09,
+          "prev_fill_pct": 0.37,
+          "inject_twh": 934.73,
+          "withdraw_twh": 12.3,
+          "gas_in_storage_twh": 79.5102,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-29",
+          "fill_pct": 31.73,
+          "prev_fill_pct": 0.41,
+          "inject_twh": 1018.43,
+          "withdraw_twh": 11.7,
+          "gas_in_storage_twh": 78.6005,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-28",
+          "fill_pct": 31.32,
+          "prev_fill_pct": 0.32,
+          "inject_twh": 788.13,
+          "withdraw_twh": 15.0,
+          "gas_in_storage_twh": 77.5937,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-27",
+          "fill_pct": 31.0,
+          "prev_fill_pct": 0.36,
+          "inject_twh": 887.34,
+          "withdraw_twh": 8.9,
+          "gas_in_storage_twh": 76.8096,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-26",
+          "fill_pct": 30.64,
+          "prev_fill_pct": 0.38,
+          "inject_twh": 949.81,
+          "withdraw_twh": 24.0,
+          "gas_in_storage_twh": 75.9172,
+          "five_yr_avg": null,
+          "info": "E"
+        },
+        {
+          "date": "2026-05-25",
+          "fill_pct": 30.27,
+          "prev_fill_pct": 0.43,
+          "inject_twh": 1116.74,
+          "withdraw_twh": 42.8,
+          "gas_in_storage_twh": 74.9854,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-24",
+          "fill_pct": 29.84,
+          "prev_fill_pct": 0.5,
+          "inject_twh": 1262.41,
+          "withdraw_twh": 18.2,
+          "gas_in_storage_twh": 73.9207,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-23",
+          "fill_pct": 29.33,
+          "prev_fill_pct": 0.47,
+          "inject_twh": 1204.49,
+          "withdraw_twh": 24.0,
+          "gas_in_storage_twh": 72.6752,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-22",
+          "fill_pct": 28.86,
+          "prev_fill_pct": 0.25,
+          "inject_twh": 655.42,
+          "withdraw_twh": 21.2,
+          "gas_in_storage_twh": 71.5024,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-21",
+          "fill_pct": 28.61,
+          "prev_fill_pct": 0.13,
+          "inject_twh": 374.22,
+          "withdraw_twh": 32.0,
+          "gas_in_storage_twh": 70.8824,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-20",
+          "fill_pct": 28.48,
+          "prev_fill_pct": -0.02,
+          "inject_twh": 99.05,
+          "withdraw_twh": 182.6,
+          "gas_in_storage_twh": 70.5616,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-19",
+          "fill_pct": 28.5,
+          "prev_fill_pct": 0.04,
+          "inject_twh": 262.62,
+          "withdraw_twh": 137.2,
+          "gas_in_storage_twh": 70.6091,
+          "five_yr_avg": null,
+          "info": "C"
+        }
+      ]
+    },
+    "france": {
+      "label": "France",
+      "country_code": "fr",
+      "signal_note": "France heating season peaks Dec-Feb; nuclear outages can spike gas/oil demand.",
+      "latest_date": "2026-06-17",
+      "fill_pct": 46.66,
+      "five_yr_avg": null,
+      "deviation_pp": null,
+      "inject_twh": 519.62,
+      "withdraw_twh": 53.8,
+      "wow_fill_pp": 2.57,
+      "flow_direction": "injecting 465.8 TWh/d (injection season)",
+      "crude_signal": "BULLISH",
+      "signal_detail": "Fill 46.7% \u2014 below 50%. Elevated distillate demand risk for winter.",
+      "history_30d": [
+        {
+          "date": "2026-06-17",
+          "fill_pct": 46.66,
+          "prev_fill_pct": 0.38,
+          "inject_twh": 519.62,
+          "withdraw_twh": 53.8,
+          "gas_in_storage_twh": 57.8019,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-16",
+          "fill_pct": 46.28,
+          "prev_fill_pct": 0.41,
+          "inject_twh": 578.85,
+          "withdraw_twh": 65.7,
+          "gas_in_storage_twh": 57.3361,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-15",
+          "fill_pct": 45.87,
+          "prev_fill_pct": 0.44,
+          "inject_twh": 578.98,
+          "withdraw_twh": 37.9,
+          "gas_in_storage_twh": 56.8225,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-14",
+          "fill_pct": 45.43,
+          "prev_fill_pct": 0.43,
+          "inject_twh": 562.17,
+          "withdraw_twh": 25.6,
+          "gas_in_storage_twh": 56.2814,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-13",
+          "fill_pct": 45.0,
+          "prev_fill_pct": 0.42,
+          "inject_twh": 545.79,
+          "withdraw_twh": 19.7,
+          "gas_in_storage_twh": 55.7449,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-12",
+          "fill_pct": 44.58,
+          "prev_fill_pct": 0.36,
+          "inject_twh": 502.14,
+          "withdraw_twh": 57.3,
+          "gas_in_storage_twh": 55.2188,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-11",
+          "fill_pct": 44.22,
+          "prev_fill_pct": 0.12,
+          "inject_twh": 368.55,
+          "withdraw_twh": 217.5,
+          "gas_in_storage_twh": 54.7739,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-10",
+          "fill_pct": 44.09,
+          "prev_fill_pct": 0.1,
+          "inject_twh": 355.14,
+          "withdraw_twh": 227.7,
+          "gas_in_storage_twh": 54.6229,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-09",
+          "fill_pct": 43.99,
+          "prev_fill_pct": 0.19,
+          "inject_twh": 395.68,
+          "withdraw_twh": 154.7,
+          "gas_in_storage_twh": 54.4955,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-08",
+          "fill_pct": 43.8,
+          "prev_fill_pct": 0.31,
+          "inject_twh": 462.63,
+          "withdraw_twh": 75.9,
+          "gas_in_storage_twh": 54.255,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-07",
+          "fill_pct": 43.48,
+          "prev_fill_pct": 0.37,
+          "inject_twh": 489.78,
+          "withdraw_twh": 32.7,
+          "gas_in_storage_twh": 53.8683,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-06",
+          "fill_pct": 43.12,
+          "prev_fill_pct": 0.32,
+          "inject_twh": 450.06,
+          "withdraw_twh": 55.2,
+          "gas_in_storage_twh": 53.4112,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-05",
+          "fill_pct": 42.8,
+          "prev_fill_pct": 0.2,
+          "inject_twh": 380.39,
+          "withdraw_twh": 137.1,
+          "gas_in_storage_twh": 53.0163,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-04",
+          "fill_pct": 42.6,
+          "prev_fill_pct": 0.2,
+          "inject_twh": 411.75,
+          "withdraw_twh": 165.1,
+          "gas_in_storage_twh": 52.773,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-03",
+          "fill_pct": 42.4,
+          "prev_fill_pct": 0.12,
+          "inject_twh": 421.32,
+          "withdraw_twh": 278.3,
+          "gas_in_storage_twh": 52.5264,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-02",
+          "fill_pct": 42.29,
+          "prev_fill_pct": 0.23,
+          "inject_twh": 416.07,
+          "withdraw_twh": 126.4,
+          "gas_in_storage_twh": 52.3833,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-01",
+          "fill_pct": 42.05,
+          "prev_fill_pct": 0.17,
+          "inject_twh": 397.81,
+          "withdraw_twh": 181.9,
+          "gas_in_storage_twh": 52.0937,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-31",
+          "fill_pct": 41.88,
+          "prev_fill_pct": 0.65,
+          "inject_twh": 763.36,
+          "withdraw_twh": 28.6,
+          "gas_in_storage_twh": 51.8777,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-30",
+          "fill_pct": 41.23,
+          "prev_fill_pct": 0.54,
+          "inject_twh": 697.75,
+          "withdraw_twh": 29.1,
+          "gas_in_storage_twh": 51.0688,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-29",
+          "fill_pct": 40.69,
+          "prev_fill_pct": 0.38,
+          "inject_twh": 484.3,
+          "withdraw_twh": 12.7,
+          "gas_in_storage_twh": 50.4002,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-28",
+          "fill_pct": 40.3,
+          "prev_fill_pct": 0.3,
+          "inject_twh": 416.66,
+          "withdraw_twh": 47.6,
+          "gas_in_storage_twh": 49.9285,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-27",
+          "fill_pct": 40.01,
+          "prev_fill_pct": 0.27,
+          "inject_twh": 450.64,
+          "withdraw_twh": 110.1,
+          "gas_in_storage_twh": 49.5595,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-26",
+          "fill_pct": 39.73,
+          "prev_fill_pct": 0.3,
+          "inject_twh": 452.27,
+          "withdraw_twh": 85.1,
+          "gas_in_storage_twh": 49.2189,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-25",
+          "fill_pct": 39.44,
+          "prev_fill_pct": 0.34,
+          "inject_twh": 478.45,
+          "withdraw_twh": 55.8,
+          "gas_in_storage_twh": 48.8518,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-24",
+          "fill_pct": 39.09,
+          "prev_fill_pct": 0.51,
+          "inject_twh": 641.67,
+          "withdraw_twh": 9.3,
+          "gas_in_storage_twh": 48.4291,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-23",
+          "fill_pct": 38.58,
+          "prev_fill_pct": 0.49,
+          "inject_twh": 616.21,
+          "withdraw_twh": 12.0,
+          "gas_in_storage_twh": 47.7968,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-22",
+          "fill_pct": 38.1,
+          "prev_fill_pct": 0.32,
+          "inject_twh": 448.14,
+          "withdraw_twh": 53.2,
+          "gas_in_storage_twh": 47.1927,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-21",
+          "fill_pct": 37.78,
+          "prev_fill_pct": 0.04,
+          "inject_twh": 312.69,
+          "withdraw_twh": 274.3,
+          "gas_in_storage_twh": 46.7977,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-20",
+          "fill_pct": 37.74,
+          "prev_fill_pct": -0.04,
+          "inject_twh": 300.19,
+          "withdraw_twh": 348.6,
+          "gas_in_storage_twh": 46.7535,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-19",
+          "fill_pct": 37.78,
+          "prev_fill_pct": 0.14,
+          "inject_twh": 338.88,
+          "withdraw_twh": 168.3,
+          "gas_in_storage_twh": 46.8019,
+          "five_yr_avg": null,
+          "info": "C"
+        }
+      ]
+    },
+    "italy": {
+      "label": "Italy",
+      "country_code": "it",
+      "signal_note": "Italy heavily dependent on gas; Stogit storage critical.",
+      "latest_date": "2026-06-17",
+      "fill_pct": 64.13,
+      "five_yr_avg": null,
+      "deviation_pp": null,
+      "inject_twh": 571.28,
+      "withdraw_twh": 1.6,
+      "wow_fill_pp": 2.3,
+      "flow_direction": "injecting 569.7 TWh/d (injection season)",
+      "crude_signal": "NEUTRAL",
+      "signal_detail": "Fill 64.1% \u2014 mid-range (50\u201380%). Neutral oil demand impact.",
+      "history_30d": [
+        {
+          "date": "2026-06-17",
+          "fill_pct": 64.13,
+          "prev_fill_pct": 0.28,
+          "inject_twh": 571.28,
+          "withdraw_twh": 1.6,
+          "gas_in_storage_twh": 130.4569,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-16",
+          "fill_pct": 63.85,
+          "prev_fill_pct": 0.28,
+          "inject_twh": 568.17,
+          "withdraw_twh": 1.2,
+          "gas_in_storage_twh": 129.8864,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-15",
+          "fill_pct": 63.57,
+          "prev_fill_pct": 0.31,
+          "inject_twh": 633.37,
+          "withdraw_twh": 1.1,
+          "gas_in_storage_twh": 129.3258,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-14",
+          "fill_pct": 63.27,
+          "prev_fill_pct": 0.42,
+          "inject_twh": 859.66,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 128.7013,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-13",
+          "fill_pct": 62.85,
+          "prev_fill_pct": 0.4,
+          "inject_twh": 819.61,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 127.849,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-12",
+          "fill_pct": 62.45,
+          "prev_fill_pct": 0.33,
+          "inject_twh": 676.1,
+          "withdraw_twh": 0.5,
+          "gas_in_storage_twh": 127.0346,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-11",
+          "fill_pct": 62.12,
+          "prev_fill_pct": 0.28,
+          "inject_twh": 586.12,
+          "withdraw_twh": 1.9,
+          "gas_in_storage_twh": 126.3625,
+          "five_yr_avg": null,
+          "info": "E"
+        },
+        {
+          "date": "2026-06-10",
+          "fill_pct": 61.83,
+          "prev_fill_pct": 0.29,
+          "inject_twh": 596.93,
+          "withdraw_twh": 1.2,
+          "gas_in_storage_twh": 125.7859,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-09",
+          "fill_pct": 61.54,
+          "prev_fill_pct": 0.29,
+          "inject_twh": 596.41,
+          "withdraw_twh": 1.8,
+          "gas_in_storage_twh": 125.1869,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-08",
+          "fill_pct": 61.24,
+          "prev_fill_pct": 0.3,
+          "inject_twh": 607.16,
+          "withdraw_twh": 3.2,
+          "gas_in_storage_twh": 124.5872,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-07",
+          "fill_pct": 60.95,
+          "prev_fill_pct": 0.34,
+          "inject_twh": 689.48,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 123.9788,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-06",
+          "fill_pct": 60.61,
+          "prev_fill_pct": 0.33,
+          "inject_twh": 684.54,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 123.2859,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-05",
+          "fill_pct": 60.28,
+          "prev_fill_pct": 0.27,
+          "inject_twh": 552.9,
+          "withdraw_twh": 2.4,
+          "gas_in_storage_twh": 122.6172,
+          "five_yr_avg": null,
+          "info": "E"
+        },
+        {
+          "date": "2026-06-04",
+          "fill_pct": 60.0,
+          "prev_fill_pct": 0.27,
+          "inject_twh": 550.47,
+          "withdraw_twh": 3.3,
+          "gas_in_storage_twh": 122.0635,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-03",
+          "fill_pct": 59.73,
+          "prev_fill_pct": 0.31,
+          "inject_twh": 616.65,
+          "withdraw_twh": 2.2,
+          "gas_in_storage_twh": 121.511,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-02",
+          "fill_pct": 59.43,
+          "prev_fill_pct": 0.33,
+          "inject_twh": 663.3,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 120.8886,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-01",
+          "fill_pct": 59.1,
+          "prev_fill_pct": 0.34,
+          "inject_twh": 683.87,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 120.2226,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-31",
+          "fill_pct": 58.76,
+          "prev_fill_pct": 0.35,
+          "inject_twh": 703.92,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 119.5377,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-30",
+          "fill_pct": 58.41,
+          "prev_fill_pct": 0.34,
+          "inject_twh": 689.36,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 118.8293,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-29",
+          "fill_pct": 58.07,
+          "prev_fill_pct": 0.28,
+          "inject_twh": 557.61,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 118.1312,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-28",
+          "fill_pct": 57.79,
+          "prev_fill_pct": 0.28,
+          "inject_twh": 560.65,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 117.5646,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-27",
+          "fill_pct": 57.51,
+          "prev_fill_pct": 0.27,
+          "inject_twh": 548.96,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 116.9991,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-26",
+          "fill_pct": 57.24,
+          "prev_fill_pct": 0.27,
+          "inject_twh": 545.33,
+          "withdraw_twh": 0.2,
+          "gas_in_storage_twh": 116.4462,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-25",
+          "fill_pct": 56.97,
+          "prev_fill_pct": 0.1,
+          "inject_twh": 607.64,
+          "withdraw_twh": 0.4,
+          "gas_in_storage_twh": 115.899,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-24",
+          "fill_pct": 56.75,
+          "prev_fill_pct": 0.35,
+          "inject_twh": 735.71,
+          "withdraw_twh": 35.3,
+          "gas_in_storage_twh": 115.6909,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-23",
+          "fill_pct": 56.41,
+          "prev_fill_pct": 0.37,
+          "inject_twh": 762.63,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 114.9822,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-22",
+          "fill_pct": 56.03,
+          "prev_fill_pct": 0.28,
+          "inject_twh": 567.83,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 114.2183,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-21",
+          "fill_pct": 55.76,
+          "prev_fill_pct": 0.26,
+          "inject_twh": 529.3,
+          "withdraw_twh": null,
+          "gas_in_storage_twh": 113.6561,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-20",
+          "fill_pct": 55.5,
+          "prev_fill_pct": 0.22,
+          "inject_twh": 446.11,
+          "withdraw_twh": 0.5,
+          "gas_in_storage_twh": 113.1272,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-19",
+          "fill_pct": 55.28,
+          "prev_fill_pct": 0.23,
+          "inject_twh": 480.08,
+          "withdraw_twh": 1.2,
+          "gas_in_storage_twh": 112.6847,
+          "five_yr_avg": null,
+          "info": "C"
+        }
+      ]
+    },
+    "netherlands": {
+      "label": "Netherlands",
+      "country_code": "nl",
+      "signal_note": "Netherlands (TTF hub country); Bergermeer storage tracks TTF closely.",
+      "latest_date": "2026-06-17",
+      "fill_pct": 22.55,
+      "five_yr_avg": null,
+      "deviation_pp": null,
+      "inject_twh": 471.44,
+      "withdraw_twh": 34.9,
+      "wow_fill_pp": 2.69,
+      "flow_direction": "injecting 436.5 TWh/d (injection season)",
+      "crude_signal": "BULLISH",
+      "signal_detail": "Fill 22.6% \u2014 critically low. High heating oil / gasoil demand risk.",
+      "history_30d": [
+        {
+          "date": "2026-06-17",
+          "fill_pct": 22.55,
+          "prev_fill_pct": 0.3,
+          "inject_twh": 471.44,
+          "withdraw_twh": 34.9,
+          "gas_in_storage_twh": 32.4237,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-16",
+          "fill_pct": 22.25,
+          "prev_fill_pct": 0.26,
+          "inject_twh": 426.74,
+          "withdraw_twh": 58.5,
+          "gas_in_storage_twh": 31.9871,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-15",
+          "fill_pct": 21.99,
+          "prev_fill_pct": 0.37,
+          "inject_twh": 574.54,
+          "withdraw_twh": 47.0,
+          "gas_in_storage_twh": 31.6134,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-14",
+          "fill_pct": 21.61,
+          "prev_fill_pct": 0.44,
+          "inject_twh": 628.61,
+          "withdraw_twh": 14.2,
+          "gas_in_storage_twh": 31.0745,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-13",
+          "fill_pct": 21.18,
+          "prev_fill_pct": 0.46,
+          "inject_twh": 658.75,
+          "withdraw_twh": 13.6,
+          "gas_in_storage_twh": 30.4485,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-12",
+          "fill_pct": 20.72,
+          "prev_fill_pct": 0.47,
+          "inject_twh": 673.35,
+          "withdraw_twh": 2.5,
+          "gas_in_storage_twh": 29.7917,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-11",
+          "fill_pct": 20.25,
+          "prev_fill_pct": 0.38,
+          "inject_twh": 593.58,
+          "withdraw_twh": 52.3,
+          "gas_in_storage_twh": 29.1117,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-10",
+          "fill_pct": 19.86,
+          "prev_fill_pct": 0.41,
+          "inject_twh": 613.2,
+          "withdraw_twh": 33.5,
+          "gas_in_storage_twh": 28.5622,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-09",
+          "fill_pct": 19.45,
+          "prev_fill_pct": 0.47,
+          "inject_twh": 680.51,
+          "withdraw_twh": 6.4,
+          "gas_in_storage_twh": 27.9709,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-08",
+          "fill_pct": 18.98,
+          "prev_fill_pct": 0.48,
+          "inject_twh": 685.4,
+          "withdraw_twh": 8.5,
+          "gas_in_storage_twh": 27.2968,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-07",
+          "fill_pct": 18.51,
+          "prev_fill_pct": 0.48,
+          "inject_twh": 713.57,
+          "withdraw_twh": 20.2,
+          "gas_in_storage_twh": 26.6096,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-06",
+          "fill_pct": 18.03,
+          "prev_fill_pct": 0.51,
+          "inject_twh": 738.95,
+          "withdraw_twh": 3.2,
+          "gas_in_storage_twh": 25.9262,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-05",
+          "fill_pct": 17.52,
+          "prev_fill_pct": 0.37,
+          "inject_twh": 555.09,
+          "withdraw_twh": 18.8,
+          "gas_in_storage_twh": 25.1904,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-04",
+          "fill_pct": 17.15,
+          "prev_fill_pct": 0.39,
+          "inject_twh": 581.46,
+          "withdraw_twh": 20.3,
+          "gas_in_storage_twh": 24.6542,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-03",
+          "fill_pct": 16.76,
+          "prev_fill_pct": 0.32,
+          "inject_twh": 484.43,
+          "withdraw_twh": 8.8,
+          "gas_in_storage_twh": 24.0931,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-02",
+          "fill_pct": 16.43,
+          "prev_fill_pct": 0.37,
+          "inject_twh": 541.73,
+          "withdraw_twh": 8.9,
+          "gas_in_storage_twh": 23.6275,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-06-01",
+          "fill_pct": 16.06,
+          "prev_fill_pct": 0.29,
+          "inject_twh": 430.92,
+          "withdraw_twh": 17.5,
+          "gas_in_storage_twh": 23.0947,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-31",
+          "fill_pct": 15.77,
+          "prev_fill_pct": 0.27,
+          "inject_twh": 403.76,
+          "withdraw_twh": 11.6,
+          "gas_in_storage_twh": 22.6827,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-30",
+          "fill_pct": 15.5,
+          "prev_fill_pct": 0.26,
+          "inject_twh": 399.75,
+          "withdraw_twh": 30.7,
+          "gas_in_storage_twh": 22.2904,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-29",
+          "fill_pct": 15.24,
+          "prev_fill_pct": 0.26,
+          "inject_twh": 387.94,
+          "withdraw_twh": 7.9,
+          "gas_in_storage_twh": 21.9214,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-28",
+          "fill_pct": 14.98,
+          "prev_fill_pct": 0.27,
+          "inject_twh": 414.35,
+          "withdraw_twh": 31.9,
+          "gas_in_storage_twh": 21.5414,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-27",
+          "fill_pct": 14.71,
+          "prev_fill_pct": 0.31,
+          "inject_twh": 461.23,
+          "withdraw_twh": 17.0,
+          "gas_in_storage_twh": 21.1589,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-26",
+          "fill_pct": 14.41,
+          "prev_fill_pct": 0.28,
+          "inject_twh": 432.58,
+          "withdraw_twh": 35.1,
+          "gas_in_storage_twh": 20.7147,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-25",
+          "fill_pct": 14.13,
+          "prev_fill_pct": 0.23,
+          "inject_twh": 357.74,
+          "withdraw_twh": 30.2,
+          "gas_in_storage_twh": 20.3172,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-24",
+          "fill_pct": 13.9,
+          "prev_fill_pct": 0.28,
+          "inject_twh": 422.22,
+          "withdraw_twh": 13.1,
+          "gas_in_storage_twh": 19.9897,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-23",
+          "fill_pct": 13.62,
+          "prev_fill_pct": 0.27,
+          "inject_twh": 404.81,
+          "withdraw_twh": 23.1,
+          "gas_in_storage_twh": 19.5805,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-22",
+          "fill_pct": 13.35,
+          "prev_fill_pct": 0.28,
+          "inject_twh": 407.29,
+          "withdraw_twh": 6.7,
+          "gas_in_storage_twh": 19.1988,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-21",
+          "fill_pct": 13.07,
+          "prev_fill_pct": 0.22,
+          "inject_twh": 327.68,
+          "withdraw_twh": 14.6,
+          "gas_in_storage_twh": 18.7983,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-20",
+          "fill_pct": 12.86,
+          "prev_fill_pct": 0.05,
+          "inject_twh": 129.48,
+          "withdraw_twh": 51.5,
+          "gas_in_storage_twh": 18.4851,
+          "five_yr_avg": null,
+          "info": "C"
+        },
+        {
+          "date": "2026-05-19",
+          "fill_pct": 12.8,
+          "prev_fill_pct": 0.2,
+          "inject_twh": 312.24,
+          "withdraw_twh": 31.7,
+          "gas_in_storage_twh": 18.4071,
+          "five_yr_avg": null,
+          "info": "C"
+        }
+      ]
+    }
+  },
+  "composite": {
+    "signal": "BULLISH",
+    "score": 0.75,
+    "reasons": [
+      "Germany: BULLISH (37.5%)",
+      "France: BULLISH (46.7%)",
+      "Netherlands: BULLISH (22.6%)"
+    ],
+    "season": "injection",
+    "crude_oil_impact": "Low EU gas storage \u2192 heating oil/gasoil demand uplift (especially Oct\u2013Mar)",
+    "oil_market_context": "Gas-to-oil switching adds ~0.3\u20130.8 mbd to European distillate demand when storage is critically low (<30%). Signal strongest Oct\u2013Mar."
+  }
+}

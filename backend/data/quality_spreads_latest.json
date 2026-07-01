@@ -1,0 +1,438 @@
+{
+  "fetched_at": "2026-06-30",
+  "timestamp": "2026-06-30T11:24:19.218200+00:00",
+  "benchmarks": {
+    "brent": 73.96,
+    "wti": 70.71
+  },
+  "spreads": {
+    "brent_urals": {
+      "id": "brent_urals",
+      "label": "Brent \u2013 Urals (Sanctions Premium)",
+      "category": "sweet_sour",
+      "chartable": true,
+      "value": 9.2,
+      "long_leg": {
+        "grade": "brent",
+        "price": 73.96
+      },
+      "short_leg": {
+        "grade": "urals",
+        "price": 64.76
+      },
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "bull_threshold": 12.0,
+      "bear_threshold": 3.0,
+      "unit": "$/bbl",
+      "note": "Post-2022 sanctions premium. Wide = Russia discounting deeply. Key geopolitical signal."
+    },
+    "wti_wcs": {
+      "id": "wti_wcs",
+      "label": "WTI \u2013 WCS (Canadian Heavy)",
+      "category": "light_heavy",
+      "chartable": true,
+      "value": 18.99,
+      "long_leg": {
+        "grade": "wti",
+        "price": 102.13
+      },
+      "short_leg": {
+        "grade": "wcs",
+        "price": 83.14
+      },
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "bull_threshold": 20.0,
+      "bear_threshold": 10.0,
+      "unit": "$/bbl",
+      "note": "Alberta pipeline capacity signal. Wide = Trans Mountain congested.",
+      "data_source": "Alberta Govt API (period: 2026-05)"
+    },
+    "naphtha_gasoil": {
+      "id": "naphtha_gasoil",
+      "label": "Naphtha \u2013 ULSD (Product Spread)",
+      "category": "product",
+      "chartable": true,
+      "value": -22.7,
+      "long_leg": {
+        "grade": "naphtha_bbl",
+        "price": 65.46
+      },
+      "short_leg": {
+        "grade": "gasoil_bbl",
+        "price": 88.16
+      },
+      "signal": "BEARISH",
+      "strength": 3,
+      "bull_threshold": 0.0,
+      "bear_threshold": -10.0,
+      "unit": "$/bbl",
+      "note": "Refinery yield signal. Negative = gasoil/diesel premium (distillate tight)."
+    },
+    "brent_maya": {
+      "id": "brent_maya",
+      "label": "Brent \u2013 Maya (Light-Heavy)",
+      "category": "light_heavy",
+      "chartable": false,
+      "value": 21.75,
+      "long_leg": {
+        "grade": "brent",
+        "price": 73.96
+      },
+      "short_leg": {
+        "grade": "maya",
+        "price": 52.21
+      },
+      "signal": "BULLISH",
+      "strength": 1,
+      "bull_threshold": 20.0,
+      "bear_threshold": 8.0,
+      "unit": "$/bbl",
+      "note": "Complex refinery upgrading margin. History building \u2014 chart available when paid data added."
+    },
+    "lls_mars": {
+      "id": "lls_mars",
+      "label": "LLS \u2013 Mars (US Gulf Light-Heavy)",
+      "category": "light_heavy",
+      "chartable": false,
+      "value": 6.0,
+      "long_leg": {
+        "grade": "lls",
+        "price": 72.51
+      },
+      "short_leg": {
+        "grade": "mars",
+        "price": 66.51
+      },
+      "signal": "BULLISH",
+      "strength": 1,
+      "bull_threshold": 6.0,
+      "bear_threshold": 2.0,
+      "unit": "$/bbl",
+      "note": "US Gulf refinery configuration signal. History building \u2014 chart available when paid data added."
+    },
+    "wti_wts": {
+      "id": "wti_wts",
+      "label": "WTI \u2013 West Texas Sour",
+      "category": "sweet_sour",
+      "chartable": false,
+      "value": 2.1,
+      "long_leg": {
+        "grade": "wti",
+        "price": 70.71
+      },
+      "short_leg": {
+        "grade": "wts",
+        "price": 68.61
+      },
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "bull_threshold": 4.0,
+      "bear_threshold": 1.0,
+      "unit": "$/bbl",
+      "note": "Permian Basin sweet-sour differential. History building \u2014 chart available when paid data added."
+    }
+  },
+  "spreads_list": [
+    {
+      "id": "brent_urals",
+      "label": "Brent \u2013 Urals (Sanctions Premium)",
+      "category": "sweet_sour",
+      "chartable": true,
+      "value": 9.2,
+      "long_leg": {
+        "grade": "brent",
+        "price": 73.96
+      },
+      "short_leg": {
+        "grade": "urals",
+        "price": 64.76
+      },
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "bull_threshold": 12.0,
+      "bear_threshold": 3.0,
+      "unit": "$/bbl",
+      "note": "Post-2022 sanctions premium. Wide = Russia discounting deeply. Key geopolitical signal."
+    },
+    {
+      "id": "wti_wcs",
+      "label": "WTI \u2013 WCS (Canadian Heavy)",
+      "category": "light_heavy",
+      "chartable": true,
+      "value": 18.99,
+      "long_leg": {
+        "grade": "wti",
+        "price": 102.13
+      },
+      "short_leg": {
+        "grade": "wcs",
+        "price": 83.14
+      },
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "bull_threshold": 20.0,
+      "bear_threshold": 10.0,
+      "unit": "$/bbl",
+      "note": "Alberta pipeline capacity signal. Wide = Trans Mountain congested."
+    },
+    {
+      "id": "naphtha_gasoil",
+      "label": "Naphtha \u2013 ULSD (Product Spread)",
+      "category": "product",
+      "chartable": true,
+      "value": -22.7,
+      "long_leg": {
+        "grade": "naphtha_bbl",
+        "price": 65.46
+      },
+      "short_leg": {
+        "grade": "gasoil_bbl",
+        "price": 88.16
+      },
+      "signal": "BEARISH",
+      "strength": 3,
+      "bull_threshold": 0.0,
+      "bear_threshold": -10.0,
+      "unit": "$/bbl",
+      "note": "Refinery yield signal. Negative = gasoil/diesel premium (distillate tight)."
+    },
+    {
+      "id": "brent_maya",
+      "label": "Brent \u2013 Maya (Light-Heavy)",
+      "category": "light_heavy",
+      "chartable": false,
+      "value": 21.75,
+      "long_leg": {
+        "grade": "brent",
+        "price": 73.96
+      },
+      "short_leg": {
+        "grade": "maya",
+        "price": 52.21
+      },
+      "signal": "BULLISH",
+      "strength": 1,
+      "bull_threshold": 20.0,
+      "bear_threshold": 8.0,
+      "unit": "$/bbl",
+      "note": "Complex refinery upgrading margin. History building \u2014 chart available when paid data added."
+    },
+    {
+      "id": "lls_mars",
+      "label": "LLS \u2013 Mars (US Gulf Light-Heavy)",
+      "category": "light_heavy",
+      "chartable": false,
+      "value": 6.0,
+      "long_leg": {
+        "grade": "lls",
+        "price": 72.51
+      },
+      "short_leg": {
+        "grade": "mars",
+        "price": 66.51
+      },
+      "signal": "BULLISH",
+      "strength": 1,
+      "bull_threshold": 6.0,
+      "bear_threshold": 2.0,
+      "unit": "$/bbl",
+      "note": "US Gulf refinery configuration signal. History building \u2014 chart available when paid data added."
+    },
+    {
+      "id": "wti_wts",
+      "label": "WTI \u2013 West Texas Sour",
+      "category": "sweet_sour",
+      "chartable": false,
+      "value": 2.1,
+      "long_leg": {
+        "grade": "wti",
+        "price": 70.71
+      },
+      "short_leg": {
+        "grade": "wts",
+        "price": 68.61
+      },
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "bull_threshold": 4.0,
+      "bear_threshold": 1.0,
+      "unit": "$/bbl",
+      "note": "Permian Basin sweet-sour differential. History building \u2014 chart available when paid data added."
+    }
+  ],
+  "chartable": [
+    {
+      "id": "brent_urals",
+      "label": "Brent \u2013 Urals (Sanctions Premium)",
+      "category": "sweet_sour",
+      "chartable": true,
+      "value": 9.2,
+      "long_leg": {
+        "grade": "brent",
+        "price": 73.96
+      },
+      "short_leg": {
+        "grade": "urals",
+        "price": 64.76
+      },
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "bull_threshold": 12.0,
+      "bear_threshold": 3.0,
+      "unit": "$/bbl",
+      "note": "Post-2022 sanctions premium. Wide = Russia discounting deeply. Key geopolitical signal."
+    },
+    {
+      "id": "wti_wcs",
+      "label": "WTI \u2013 WCS (Canadian Heavy)",
+      "category": "light_heavy",
+      "chartable": true,
+      "value": 18.99,
+      "long_leg": {
+        "grade": "wti",
+        "price": 102.13
+      },
+      "short_leg": {
+        "grade": "wcs",
+        "price": 83.14
+      },
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "bull_threshold": 20.0,
+      "bear_threshold": 10.0,
+      "unit": "$/bbl",
+      "note": "Alberta pipeline capacity signal. Wide = Trans Mountain congested."
+    },
+    {
+      "id": "naphtha_gasoil",
+      "label": "Naphtha \u2013 ULSD (Product Spread)",
+      "category": "product",
+      "chartable": true,
+      "value": -22.7,
+      "long_leg": {
+        "grade": "naphtha_bbl",
+        "price": 65.46
+      },
+      "short_leg": {
+        "grade": "gasoil_bbl",
+        "price": 88.16
+      },
+      "signal": "BEARISH",
+      "strength": 3,
+      "bull_threshold": 0.0,
+      "bear_threshold": -10.0,
+      "unit": "$/bbl",
+      "note": "Refinery yield signal. Negative = gasoil/diesel premium (distillate tight)."
+    }
+  ],
+  "nonchartable": [
+    {
+      "id": "brent_maya",
+      "label": "Brent \u2013 Maya (Light-Heavy)",
+      "category": "light_heavy",
+      "chartable": false,
+      "value": 21.75,
+      "long_leg": {
+        "grade": "brent",
+        "price": 73.96
+      },
+      "short_leg": {
+        "grade": "maya",
+        "price": 52.21
+      },
+      "signal": "BULLISH",
+      "strength": 1,
+      "bull_threshold": 20.0,
+      "bear_threshold": 8.0,
+      "unit": "$/bbl",
+      "note": "Complex refinery upgrading margin. History building \u2014 chart available when paid data added."
+    },
+    {
+      "id": "lls_mars",
+      "label": "LLS \u2013 Mars (US Gulf Light-Heavy)",
+      "category": "light_heavy",
+      "chartable": false,
+      "value": 6.0,
+      "long_leg": {
+        "grade": "lls",
+        "price": 72.51
+      },
+      "short_leg": {
+        "grade": "mars",
+        "price": 66.51
+      },
+      "signal": "BULLISH",
+      "strength": 1,
+      "bull_threshold": 6.0,
+      "bear_threshold": 2.0,
+      "unit": "$/bbl",
+      "note": "US Gulf refinery configuration signal. History building \u2014 chart available when paid data added."
+    },
+    {
+      "id": "wti_wts",
+      "label": "WTI \u2013 West Texas Sour",
+      "category": "sweet_sour",
+      "chartable": false,
+      "value": 2.1,
+      "long_leg": {
+        "grade": "wti",
+        "price": 70.71
+      },
+      "short_leg": {
+        "grade": "wts",
+        "price": 68.61
+      },
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "bull_threshold": 4.0,
+      "bear_threshold": 1.0,
+      "unit": "$/bbl",
+      "note": "Permian Basin sweet-sour differential. History building \u2014 chart available when paid data added."
+    }
+  ],
+  "composite": {
+    "score": 1.0,
+    "overall_signal": "NEUTRAL",
+    "components": [
+      {
+        "id": "brent_urals",
+        "label": "Brent \u2013 Urals (Sanctions Premium)",
+        "signal": "NEUTRAL",
+        "value": 9.2
+      },
+      {
+        "id": "wti_wcs",
+        "label": "WTI \u2013 WCS (Canadian Heavy)",
+        "signal": "NEUTRAL",
+        "value": 14.8
+      },
+      {
+        "id": "naphtha_gasoil",
+        "label": "Naphtha \u2013 ULSD (Product Spread)",
+        "signal": "BEARISH",
+        "value": -22.7
+      },
+      {
+        "id": "brent_maya",
+        "label": "Brent \u2013 Maya (Light-Heavy)",
+        "signal": "BULLISH",
+        "value": 21.75
+      },
+      {
+        "id": "lls_mars",
+        "label": "LLS \u2013 Mars (US Gulf Light-Heavy)",
+        "signal": "BULLISH",
+        "value": 6.0
+      },
+      {
+        "id": "wti_wts",
+        "label": "WTI \u2013 West Texas Sour",
+        "signal": "NEUTRAL",
+        "value": 2.1
+      }
+    ]
+  },
+  "methodology": "Hybrid: live Brent/WTI from Yahoo Finance + published grade differentials (Argus Media, Platts, PEMEX OSP) updated monthly. Chartable spreads accumulate daily history. Non-chartable spreads (Brent-Maya, LLS-Mars, WTI-WTS) stored for future line charts."
+}

@@ -1,0 +1,249 @@
+{
+  "engine": "nci_composite",
+  "computed_at": "2026-06-30T12:45:17Z",
+  "date": "2026-06-30",
+  "composite": {
+    "score": 2.99,
+    "label": "MILD_BUY",
+    "direction": "BULLISH",
+    "scale": "Composite Signal Score (-10 to +10)",
+    "interpretation": "Composite +3.0 (MILD_BUY): Slight bullish edge. Monitor for confirmation from macro/positioning.",
+    "momentum": {
+      "today_brent": 72.3,
+      "avg_5w": 90.28,
+      "avg_5d": 72.34,
+      "dev_from_5w_pct": -21.14,
+      "dev_from_5d_pct": -1.59,
+      "trend_direction": "DOWN",
+      "label": "DOWNTREND"
+    },
+    "divergence": null,
+    "reasons": []
+  },
+  "layers": {
+    "inventory": {
+      "score": 6.0,
+      "label": "BULLISH",
+      "weight_pct": 23.0,
+      "contribution": 1.38,
+      "available": true,
+      "details": {
+        "days_cover": 57.1,
+        "cushing_signal": "BULLISH",
+        "gasoline_signal": "BULLISH",
+        "distillate_signal": "BULLISH",
+        "refinery_util": 96.7,
+        "gie_signal": "BULLISH",
+        "components": [
+          {
+            "id": "cushing_stocks",
+            "label": "Cushing Crude Stocks",
+            "signal": "BULLISH",
+            "score": 2,
+            "weight": 0.2
+          },
+          {
+            "id": "total_crude_stocks",
+            "label": "Total US Crude Stocks",
+            "signal": "BULLISH",
+            "score": 3,
+            "weight": 0.15
+          },
+          {
+            "id": "gasoline_stocks",
+            "label": "US Gasoline Stocks",
+            "signal": "BULLISH",
+            "score": 3,
+            "weight": 0.15
+          },
+          {
+            "id": "distillate_stocks",
+            "label": "US Distillate Stocks",
+            "signal": "BULLISH",
+            "score": 2,
+            "weight": 0.15
+          },
+          {
+            "id": "crude_production",
+            "label": "US Crude Production",
+            "signal": "NEUTRAL",
+            "score": 0,
+            "weight": 0.1
+          },
+          {
+            "id": "refinery_util",
+            "label": "US Refinery Utilisation",
+            "signal": "BULLISH",
+            "score": 2,
+            "weight": 0.1
+          },
+          {
+            "id": "days_cover",
+            "label": "Days of Forward Demand Cover",
+            "signal": "NEUTRAL",
+            "score": 0,
+            "weight": 0.15
+          }
+        ]
+      }
+    },
+    "crack": {
+      "score": 8.83,
+      "label": "CRACKS_VERY_WIDE",
+      "weight_pct": 18.0,
+      "contribution": 1.589,
+      "available": true,
+      "details": {
+        "crack_321_bbl": 54.68,
+        "gasoline_crack_bbl": 51.5,
+        "ho_crack_bbl": 57.62,
+        "brent_wti_bbl": 3.42,
+        "brent_wti_alert": null,
+        "curve_shape": "BACKWARDATION",
+        "season_phase": "PEAK_DRIVING"
+      }
+    },
+    "momentum": {
+      "score": -8,
+      "label": "DOWNTREND",
+      "weight_pct": 14.0,
+      "contribution": -1.08,
+      "available": true,
+      "details": {
+        "today_brent": 72.3,
+        "today_wti": 70.08,
+        "today_avg": 71.19,
+        "today_date": "2026-06-30",
+        "avg_5w": 90.28,
+        "avg_5d": 72.34,
+        "dev_from_5w_pct": -21.14,
+        "dev_from_5d_pct": -1.59,
+        "dev_brent_5w_pct": -21.54,
+        "dev_wti_5w_pct": -21.16,
+        "avg_5w_brent": 92.15,
+        "avg_5w_wti": 88.89,
+        "lookback_days_used": 35,
+        "trend_direction": "DOWN",
+        "benchmark_note": "Brent+WTI averaged"
+      }
+    },
+    "macro": {
+      "score": 3,
+      "label": "BULLISH",
+      "weight_pct": 12.0,
+      "contribution": 0.345,
+      "available": true,
+      "details": {
+        "dxy": 119.5073,
+        "sofr_pct": 3.63,
+        "dgs10_pct": 4.49,
+        "fedfunds_pct": 3.63,
+        "carry_cost_per_bbl_mo": 0.768,
+        "composite": "MIXED",
+        "dxy_wow": -0.5758
+      }
+    },
+    "demand": {
+      "score": 5,
+      "label": "BULLISH",
+      "weight_pct": 8.0,
+      "contribution": 0.4,
+      "available": true,
+      "details": {
+        "weighted_hdd_7d": 0.54,
+        "weighted_cdd_7d": 54.6,
+        "dubai_cdd_7d": 116.6,
+        "tokyo_cdd_7d": 26.7,
+        "ny_hdd_7d": 0.0,
+        "london_hdd_7d": 0.0,
+        "composite": "BULLISH"
+      }
+    },
+    "gie": {
+      "score": 7.5,
+      "label": "BULLISH",
+      "weight_pct": 4.0,
+      "contribution": 0.337,
+      "available": true,
+      "details": {
+        "composite": "BULLISH",
+        "germany_fill": 37.47,
+        "france_fill": 46.66,
+        "netherlands_fill": 22.55,
+        "italy_fill": 64.13,
+        "season": "injection"
+      }
+    },
+    "positioning": {
+      "score": 2,
+      "label": "BULLISH",
+      "weight_pct": 9.0,
+      "contribution": 0.18,
+      "available": true,
+      "details": {
+        "composite": "NEUTRAL",
+        "rbob_net_pct": 20.39,
+        "wti_net_pct": 0.0,
+        "brent_net_pct": 3.08,
+        "ng_signal": "BEARISH",
+        "crowded_longs": [],
+        "crowded_shorts": []
+      }
+    },
+    "news": {
+      "score": -4.71,
+      "label": "BEARISH",
+      "weight_pct": 7.0,
+      "contribution": -0.33,
+      "available": true,
+      "details": {
+        "bullish_count": 2,
+        "bearish_count": 4,
+        "geo_alerts": 1,
+        "total_relevant": 10,
+        "top_bullish": "Britain\u2019s Electric Vehicle Market Is Booming as Fuel Prices Climb",
+        "top_bearish": "U.S. To Build Its First Ever Floating LNG Export Terminal"
+      }
+    },
+    "steo": {
+      "score": 0,
+      "label": "NO_DATA",
+      "weight_pct": 6.0,
+      "contribution": 0,
+      "available": false,
+      "details": {}
+    }
+  },
+  "signal_summary": {
+    "bullish_layers": [
+      "inventory",
+      "crack",
+      "macro",
+      "demand",
+      "gie",
+      "positioning"
+    ],
+    "bearish_layers": [
+      "momentum",
+      "news"
+    ],
+    "neutral_layers": [
+      "steo"
+    ],
+    "bullish_count": 6,
+    "bearish_count": 2,
+    "neutral_count": 1
+  },
+  "alerts": [],
+  "weights_used": {
+    "inventory": 0.23,
+    "crack": 0.18,
+    "momentum": 0.135,
+    "macro": 0.115,
+    "positioning": 0.09,
+    "news": 0.07,
+    "demand": 0.08,
+    "steo": 0.055,
+    "gie": 0.045
+  }
+}

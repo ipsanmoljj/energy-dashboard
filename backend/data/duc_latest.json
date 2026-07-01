@@ -1,0 +1,222 @@
+{
+  "fetched_at": "2026-06-11T08:15:22.781241+00:00",
+  "fetcher": "duc_fetcher",
+  "source": "EIA Drilling Productivity Report (monthly, ~2 month lag)",
+  "duc": {
+    "by_region": {
+      "Anadarko": {
+        "duc_latest": 701.0,
+        "duc_prev": 697.0,
+        "duc_change": 4.0,
+        "period": "2024-04-01",
+        "prev_period": "2024-03-01"
+      },
+      "Appalachia": {
+        "duc_latest": 824.0,
+        "duc_prev": 819.0,
+        "duc_change": 5.0,
+        "period": "2024-04-01",
+        "prev_period": "2024-03-01"
+      },
+      "Bakken": {
+        "duc_latest": 328.0,
+        "duc_prev": 322.0,
+        "duc_change": 6.0,
+        "period": "2024-04-01",
+        "prev_period": "2024-03-01"
+      },
+      "Eagle Ford": {
+        "duc_latest": 345.0,
+        "duc_prev": 347.0,
+        "duc_change": -2.0,
+        "period": "2024-04-01",
+        "prev_period": "2024-03-01"
+      },
+      "Haynesville": {
+        "duc_latest": 791.0,
+        "duc_prev": 784.0,
+        "duc_change": 7.0,
+        "period": "2024-04-01",
+        "prev_period": "2024-03-01"
+      },
+      "Niobrara": {
+        "duc_latest": 628.0,
+        "duc_prev": 644.0,
+        "duc_change": -16.0,
+        "period": "2024-04-01",
+        "prev_period": "2024-03-01"
+      },
+      "Permian": {
+        "duc_latest": 893.0,
+        "duc_prev": 891.0,
+        "duc_change": 2.0,
+        "period": "2024-04-01",
+        "prev_period": "2024-03-01"
+      }
+    },
+    "total": {
+      "duc_latest": 4510,
+      "duc_prev": 4504,
+      "duc_change": 6,
+      "period": "2024-04-01"
+    },
+    "history": [
+      {
+        "date": "2022-05-01",
+        "total_duc": 5225
+      },
+      {
+        "date": "2022-06-01",
+        "total_duc": 5236
+      },
+      {
+        "date": "2022-07-01",
+        "total_duc": 5216
+      },
+      {
+        "date": "2022-08-01",
+        "total_duc": 5156
+      },
+      {
+        "date": "2022-09-01",
+        "total_duc": 5114
+      },
+      {
+        "date": "2022-10-01",
+        "total_duc": 5066
+      },
+      {
+        "date": "2022-11-01",
+        "total_duc": 5153
+      },
+      {
+        "date": "2022-12-01",
+        "total_duc": 5295
+      },
+      {
+        "date": "2023-01-01",
+        "total_duc": 5289
+      },
+      {
+        "date": "2023-02-01",
+        "total_duc": 5407
+      },
+      {
+        "date": "2023-03-01",
+        "total_duc": 5339
+      },
+      {
+        "date": "2023-04-01",
+        "total_duc": 5323
+      },
+      {
+        "date": "2023-05-01",
+        "total_duc": 5288
+      },
+      {
+        "date": "2023-06-01",
+        "total_duc": 5256
+      },
+      {
+        "date": "2023-07-01",
+        "total_duc": 5109
+      },
+      {
+        "date": "2023-08-01",
+        "total_duc": 5023
+      },
+      {
+        "date": "2023-09-01",
+        "total_duc": 4873
+      },
+      {
+        "date": "2023-10-01",
+        "total_duc": 4725
+      },
+      {
+        "date": "2023-11-01",
+        "total_duc": 4613
+      },
+      {
+        "date": "2023-12-01",
+        "total_duc": 4554
+      },
+      {
+        "date": "2024-01-01",
+        "total_duc": 4521
+      },
+      {
+        "date": "2024-02-01",
+        "total_duc": 4494
+      },
+      {
+        "date": "2024-03-01",
+        "total_duc": 4504
+      },
+      {
+        "date": "2024-04-01",
+        "total_duc": 4510
+      }
+    ]
+  },
+  "rigs": {
+    "by_region": {
+      "Anadarko": {
+        "rigs": 45.0,
+        "prev": 44.0,
+        "mom": 1.0,
+        "period": "2024-04-01"
+      },
+      "Appalachia": {
+        "rigs": 41.0,
+        "prev": 43.0,
+        "mom": -2.0,
+        "period": "2024-04-01"
+      },
+      "Bakken": {
+        "rigs": 34.0,
+        "prev": 34.0,
+        "mom": 0.0,
+        "period": "2024-04-01"
+      },
+      "Eagle Ford": {
+        "rigs": 59.0,
+        "prev": 58.0,
+        "mom": 1.0,
+        "period": "2024-04-01"
+      },
+      "Haynesville": {
+        "rigs": 35.0,
+        "prev": 40.0,
+        "mom": -5.0,
+        "period": "2024-04-01"
+      },
+      "Niobrara": {
+        "rigs": 22.0,
+        "prev": 23.0,
+        "mom": -1.0,
+        "period": "2024-04-01"
+      },
+      "Permian": {
+        "rigs": 317.0,
+        "prev": 315.0,
+        "mom": 2.0,
+        "period": "2024-04-01"
+      }
+    },
+    "total_rigs": 553.0
+  },
+  "signal": {
+    "score": 0,
+    "overall_signal": "NEUTRAL",
+    "reasons": [],
+    "key_metrics": {
+      "total_duc": 4510,
+      "duc_change": 6,
+      "permian_duc": 893.0,
+      "total_rigs": 553.0,
+      "permian_rigs": 317.0
+    },
+    "interpretation": "Total DUC inventory: 4510 wells (+6 MoM). Permian: 893 DUCs, 317 rigs. DUC inventory within normal range."
+  }
+}

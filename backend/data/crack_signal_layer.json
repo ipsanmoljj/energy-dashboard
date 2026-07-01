@@ -1,0 +1,108 @@
+{
+  "generated_at": "2026-06-30T11:45:17.853618+00:00",
+  "signals": {
+    "crack_321": {
+      "id": "crack_321",
+      "label": "3-2-1 Crack Spread (US)",
+      "value": 54.68,
+      "unit": "$/bbl",
+      "signal": "BULLISH",
+      "strength": 3,
+      "weight": 0.25,
+      "score": 3,
+      "note": "3-2-1 crack $54.68/bbl \u2014 product demand tight, crude demand rising"
+    },
+    "gasoline_crack": {
+      "id": "gasoline_crack",
+      "label": "Gasoline Crack (RBOB vs WTI)",
+      "value": 51.5,
+      "unit": "$/bbl",
+      "driving_season_build": false,
+      "signal": "BULLISH",
+      "strength": 2,
+      "weight": 0.15,
+      "score": 2,
+      "note": "Gasoline crack $51.50/bbl"
+    },
+    "ho_rbob_spread": {
+      "id": "ho_rbob_spread",
+      "label": "HO\u2013RBOB Spread (Diesel Premium)",
+      "value": 9.53,
+      "unit": "$/bbl",
+      "heating_season": false,
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "weight": 0.15,
+      "score": 0,
+      "note": "HO-RBOB spread $9.53/bbl"
+    },
+    "curve_shape": {
+      "id": "curve_shape",
+      "label": "Forward Curve Shape",
+      "value": "BACKWARDATION",
+      "unit": "structure",
+      "storage_economic": false,
+      "signal": "BULLISH",
+      "strength": 3,
+      "weight": 0.2,
+      "score": 3,
+      "note": "Curve in backwardation \u2014 physical urgency, prompt market tight"
+    },
+    "brent_wti_spread": {
+      "id": "brent_wti_spread",
+      "label": "Brent\u2013WTI Spread",
+      "value": 3.42,
+      "unit": "$/bbl",
+      "bottleneck_flag": false,
+      "surplus_flag": false,
+      "interpretation": "NORMAL: $2\u20138 range, no structural dislocation",
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "weight": 0.25,
+      "score": 0,
+      "note": "Brent-WTI $3.42 \u2014 normal range $2\u20138"
+    }
+  },
+  "composite": {
+    "score": 5.5,
+    "overall_signal": "BULLISH",
+    "interpretation": "Bullish refining backdrop \u2014 cracks wide, curve supporting tightness",
+    "components": [
+      {
+        "id": "crack_321",
+        "label": "3-2-1 Crack Spread (US)",
+        "signal": "BULLISH",
+        "score": 3,
+        "weight": 0.25
+      },
+      {
+        "id": "gasoline_crack",
+        "label": "Gasoline Crack (RBOB vs WTI)",
+        "signal": "BULLISH",
+        "score": 2,
+        "weight": 0.15
+      },
+      {
+        "id": "ho_rbob_spread",
+        "label": "HO\u2013RBOB Spread (Diesel Premium)",
+        "signal": "NEUTRAL",
+        "score": 0,
+        "weight": 0.15
+      },
+      {
+        "id": "curve_shape",
+        "label": "Forward Curve Shape",
+        "signal": "BULLISH",
+        "score": 3,
+        "weight": 0.2
+      },
+      {
+        "id": "brent_wti_spread",
+        "label": "Brent\u2013WTI Spread",
+        "signal": "NEUTRAL",
+        "score": 0,
+        "weight": 0.25
+      }
+    ]
+  }
+}

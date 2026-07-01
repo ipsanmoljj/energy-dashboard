@@ -1,0 +1,441 @@
+{
+  "fetcher": "futures_fetcher",
+  "fetched_at": "2026-06-30T12:44:17Z",
+  "source": "Stooq (primary) + Yahoo Finance (fallback)",
+  "contracts": {
+    "brent": {
+      "ticker": "BZ=F",
+      "label": "ICE Brent Crude (front-month)",
+      "exchange": "ICE Futures Europe",
+      "raw_price": 74.0,
+      "raw_unit": "usd_per_bbl",
+      "price_bbl": 74.0,
+      "prev_close": 99.58,
+      "change": -25.58,
+      "change_pct": -25.688,
+      "high_52w": 126.1,
+      "low_52w": 58.72,
+      "market_state": "unknown",
+      "lot_size_bbl": 1000,
+      "signal_note": "Global crude benchmark (~70% of internationally traded crude). Backwardation in M1-M2 = physical tightness. Contango > $1.5/bbl/mo = storage economic. Watch vs WTI for US export signal.",
+      "history": [
+        {
+          "date": "2026-06-30",
+          "close": 74.0
+        },
+        {
+          "date": "2026-06-29",
+          "close": 73.15
+        },
+        {
+          "date": "2026-06-26",
+          "close": 71.99
+        },
+        {
+          "date": "2026-06-25",
+          "close": 75.26
+        },
+        {
+          "date": "2026-06-24",
+          "close": 73.74
+        },
+        {
+          "date": "2026-06-23",
+          "close": 77.08
+        },
+        {
+          "date": "2026-06-22",
+          "close": 77.9
+        },
+        {
+          "date": "2026-06-18",
+          "close": 79.85
+        },
+        {
+          "date": "2026-06-17",
+          "close": 79.55
+        },
+        {
+          "date": "2026-06-16",
+          "close": 78.96
+        },
+        {
+          "date": "2026-06-15",
+          "close": 83.17
+        },
+        {
+          "date": "2026-06-12",
+          "close": 87.33
+        },
+        {
+          "date": "2026-06-11",
+          "close": 90.38
+        },
+        {
+          "date": "2026-06-10",
+          "close": 93.1
+        },
+        {
+          "date": "2026-06-09",
+          "close": 91.45
+        },
+        {
+          "date": "2026-06-08",
+          "close": 94.25
+        },
+        {
+          "date": "2026-06-05",
+          "close": 93.09
+        },
+        {
+          "date": "2026-06-04",
+          "close": 95.03
+        },
+        {
+          "date": "2026-06-03",
+          "close": 97.81
+        },
+        {
+          "date": "2026-06-02",
+          "close": 96.0
+        },
+        {
+          "date": "2026-06-01",
+          "close": 94.98
+        },
+        {
+          "date": "2026-05-29",
+          "close": 92.05
+        },
+        {
+          "date": "2026-05-28",
+          "close": 93.71
+        },
+        {
+          "date": "2026-05-27",
+          "close": 94.29
+        },
+        {
+          "date": "2026-05-26",
+          "close": 99.58
+        }
+      ],
+      "source": "yahoo"
+    },
+    "wti": {
+      "ticker": "CL=F",
+      "label": "NYMEX WTI Crude (front-month)",
+      "exchange": "CME/NYMEX",
+      "raw_price": 70.58,
+      "raw_unit": "usd_per_bbl",
+      "price_bbl": 70.58,
+      "prev_close": null,
+      "change": null,
+      "change_pct": null,
+      "market_state": "delayed_11min",
+      "lot_size_bbl": 1000,
+      "signal_note": "US domestic crude benchmark. Physical delivery at Cushing, Oklahoma. WTI-Brent < $2/bbl \u2192 US exports flooding market. WTI-Brent > $8/bbl \u2192 US export bottleneck or North Sea disruption.",
+      "source": "oilprice_com",
+      "history": []
+    },
+    "rbob": {
+      "ticker": "RB=F",
+      "label": "NYMEX RBOB Gasoline (front-month)",
+      "exchange": "CME/NYMEX",
+      "raw_price": 2.9067,
+      "raw_unit": "usd_per_gal",
+      "price_bbl": 122.0814,
+      "prev_close": 3.2205,
+      "change": -0.3138,
+      "change_pct": -9.744,
+      "high_52w": 3.8232,
+      "low_52w": 1.6656,
+      "market_state": "unknown",
+      "lot_size_bbl": 1000,
+      "signal_note": "US gasoline benchmark. Seasonal peak crack Feb-May (driving season build). Long RBOB crack vs WTI in Feb-Apr = most reliable seasonal energy trade.",
+      "history": [
+        {
+          "date": "2026-06-30",
+          "close": 2.9067
+        },
+        {
+          "date": "2026-06-29",
+          "close": 3.0614
+        },
+        {
+          "date": "2026-06-26",
+          "close": 2.9571
+        },
+        {
+          "date": "2026-06-25",
+          "close": 3.0273
+        },
+        {
+          "date": "2026-06-24",
+          "close": 2.8818
+        },
+        {
+          "date": "2026-06-23",
+          "close": 2.959
+        },
+        {
+          "date": "2026-06-22",
+          "close": 2.987
+        },
+        {
+          "date": "2026-06-18",
+          "close": 2.9949
+        },
+        {
+          "date": "2026-06-17",
+          "close": 2.9096
+        },
+        {
+          "date": "2026-06-16",
+          "close": 2.8805
+        },
+        {
+          "date": "2026-06-15",
+          "close": 2.9472
+        },
+        {
+          "date": "2026-06-12",
+          "close": 3.0498
+        },
+        {
+          "date": "2026-06-11",
+          "close": 3.1014
+        },
+        {
+          "date": "2026-06-10",
+          "close": 3.1099
+        },
+        {
+          "date": "2026-06-09",
+          "close": 3.0211
+        },
+        {
+          "date": "2026-06-08",
+          "close": 3.0706
+        },
+        {
+          "date": "2026-06-05",
+          "close": 3.0459
+        },
+        {
+          "date": "2026-06-04",
+          "close": 3.0383
+        },
+        {
+          "date": "2026-06-03",
+          "close": 3.1316
+        },
+        {
+          "date": "2026-06-02",
+          "close": 3.1443
+        },
+        {
+          "date": "2026-06-01",
+          "close": 3.0847
+        },
+        {
+          "date": "2026-05-29",
+          "close": 3.1267
+        },
+        {
+          "date": "2026-05-28",
+          "close": 3.1852
+        },
+        {
+          "date": "2026-05-27",
+          "close": 3.1337
+        },
+        {
+          "date": "2026-05-26",
+          "close": 3.2205
+        }
+      ],
+      "source": "yahoo"
+    },
+    "heating_oil": {
+      "ticker": "HO=F",
+      "label": "NYMEX Heating Oil / ULSD (front-month)",
+      "exchange": "CME/NYMEX",
+      "raw_price": 3.1337,
+      "raw_unit": "usd_per_gal",
+      "price_bbl": 131.6154,
+      "prev_close": 3.7146,
+      "change": -0.5809,
+      "change_pct": -15.638,
+      "high_52w": 4.8353,
+      "low_52w": 2.0469,
+      "market_state": "unknown",
+      "lot_size_bbl": 1000,
+      "signal_note": "US distillate benchmark (ULSD 15ppm). Proxy for global diesel tightness. HO crack widens = diesel supply tight = supports crude demand. HO-RBOB spread: wide diesel premium \u2192 industrial demand > driving demand.",
+      "history": [
+        {
+          "date": "2026-06-30",
+          "close": 3.1337
+        },
+        {
+          "date": "2026-06-29",
+          "close": 3.3317
+        },
+        {
+          "date": "2026-06-26",
+          "close": 3.2082
+        },
+        {
+          "date": "2026-06-25",
+          "close": 3.2982
+        },
+        {
+          "date": "2026-06-24",
+          "close": 3.1762
+        },
+        {
+          "date": "2026-06-23",
+          "close": 3.1546
+        },
+        {
+          "date": "2026-06-22",
+          "close": 3.0931
+        },
+        {
+          "date": "2026-06-18",
+          "close": 3.1273
+        },
+        {
+          "date": "2026-06-17",
+          "close": 3.1946
+        },
+        {
+          "date": "2026-06-16",
+          "close": 3.1702
+        },
+        {
+          "date": "2026-06-15",
+          "close": 3.2665
+        },
+        {
+          "date": "2026-06-12",
+          "close": 3.4044
+        },
+        {
+          "date": "2026-06-11",
+          "close": 3.5131
+        },
+        {
+          "date": "2026-06-10",
+          "close": 3.6126
+        },
+        {
+          "date": "2026-06-09",
+          "close": 3.5418
+        },
+        {
+          "date": "2026-06-08",
+          "close": 3.5999
+        },
+        {
+          "date": "2026-06-05",
+          "close": 3.5874
+        },
+        {
+          "date": "2026-06-04",
+          "close": 3.6738
+        },
+        {
+          "date": "2026-06-03",
+          "close": 3.8481
+        },
+        {
+          "date": "2026-06-02",
+          "close": 3.6987
+        },
+        {
+          "date": "2026-06-01",
+          "close": 3.6394
+        },
+        {
+          "date": "2026-05-29",
+          "close": 3.5373
+        },
+        {
+          "date": "2026-05-28",
+          "close": 3.6187
+        },
+        {
+          "date": "2026-05-27",
+          "close": 3.5975
+        },
+        {
+          "date": "2026-05-26",
+          "close": 3.7146
+        }
+      ],
+      "source": "yahoo"
+    },
+    "ice_gasoil": {
+      "error": "stale_price",
+      "ticker": "BG=F",
+      "label": "ULSD/Gasoil (EIA proxy)",
+      "raw_price": 120.1,
+      "note": "Yahoo BG=F returns stale data. Barchart LFY00 to be added when API key available."
+    },
+    "dubai": {
+      "ticker": "MCL=F",
+      "label": "Dubai/Oman Crude (front-month)",
+      "exchange": "DME",
+      "raw_price": 64.22,
+      "raw_unit": "usd_per_bbl",
+      "price_bbl": 64.22,
+      "prev_close": null,
+      "change": null,
+      "change_pct": null,
+      "market_state": "delayed_11min",
+      "lot_size_bbl": 1000,
+      "signal_note": "Middle East sour crude benchmark. Reference for all Persian Gulf crude priced into Asia. Brent-Dubai spread = light-heavy quality premium and Atlantic-Pacific arbitrage signal.",
+      "source": "oilprice_com",
+      "history": []
+    }
+  },
+  "derived": {
+    "crack_321": {
+      "value_bbl": 54.68,
+      "components": {
+        "wti_bbl": 70.58,
+        "rbob_bbl": 122.0814,
+        "ho_bbl": 131.6154
+      },
+      "formula": "[(2xRBOB + 1xHO) - (3xWTI)] / 3",
+      "signal": "BULLISH",
+      "note": "3-2-1 crack $54.68/bbl > $20: product demand outpaces crude \u2192 refiners run harder \u2192 crude demand grows."
+    },
+    "brent_wti_spread": {
+      "value_bbl": 3.42,
+      "brent_bbl": 74.0,
+      "wti_bbl": 70.58,
+      "signal": "NORMAL",
+      "note": "Brent-WTI $3.42: normal range. US exports flowing."
+    },
+    "ho_rbob_spread": {
+      "value_bbl": 9.53,
+      "ho_bbl": 131.6154,
+      "rbob_bbl": 122.0814,
+      "signal": "NORMAL",
+      "note": "HO-RBOB $9.53: normal diesel premium over gasoline."
+    },
+    "gasoil_crack": {
+      "value_bbl": null,
+      "signal": "INSUFFICIENT_DATA",
+      "note": "Insufficient data \u2014 Barchart LFY00 to be added when API key available"
+    },
+    "composite_signal": {
+      "crack_321_signal": "BULLISH",
+      "brent_wti_signal": "NORMAL",
+      "brent_price_momentum": "BEARISH",
+      "interpretation": "Crack BULLISH | Brent-WTI NORMAL | Brent momentum BEARISH. Wide crack + backwardation = strongest bullish setup."
+    }
+  }
+}

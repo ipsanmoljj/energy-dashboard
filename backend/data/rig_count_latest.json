@@ -1,0 +1,113 @@
+{
+  "fetched_at": "2026-06-19T01:47:31.639157+00:00",
+  "source": "AOGR.com (Baker Hughes weekly mirror)",
+  "latest": {
+    "date": "2026-06-19",
+    "total_rigs": 563,
+    "oil_rigs": 433,
+    "wow_total": 1,
+    "wow_oil": 0,
+    "prev_total": 554
+  },
+  "signal": {
+    "label": "FLAT",
+    "direction": "neutral",
+    "trend": "flat (+0 WoW, within \u00b15 noise)",
+    "five_week_trend": "+8 over 5 weeks",
+    "note": "Oil rigs flat, flat (+0 WoW, within \u00b15 noise). Impact in 4-6 months."
+  },
+  "history": [
+    {
+      "date": "2026-04-17",
+      "total_rigs": 543,
+      "oil_rigs": 410,
+      "wow_total": -2,
+      "wow_oil": -1,
+      "prev_total": 585
+    },
+    {
+      "date": "2026-04-24",
+      "total_rigs": 544,
+      "oil_rigs": 407,
+      "wow_total": 1,
+      "wow_oil": -3,
+      "prev_total": 587
+    },
+    {
+      "date": "2026-05-01",
+      "total_rigs": 547,
+      "oil_rigs": 408,
+      "wow_total": 3,
+      "wow_oil": 1,
+      "prev_total": 584
+    },
+    {
+      "date": "2026-05-08",
+      "total_rigs": 548,
+      "oil_rigs": 410,
+      "wow_total": 1,
+      "wow_oil": 2,
+      "prev_total": 578
+    },
+    {
+      "date": "2026-05-15",
+      "total_rigs": 551,
+      "oil_rigs": 415,
+      "wow_total": 3,
+      "wow_oil": 5,
+      "prev_total": 576
+    },
+    {
+      "date": "2026-05-22",
+      "total_rigs": 558,
+      "oil_rigs": 425,
+      "wow_total": 7,
+      "wow_oil": 10,
+      "prev_total": 566
+    },
+    {
+      "date": "2026-05-29",
+      "total_rigs": 562,
+      "oil_rigs": 429,
+      "wow_total": 4,
+      "wow_oil": 4,
+      "prev_total": 563
+    },
+    {
+      "date": "2026-06-05",
+      "total_rigs": 563,
+      "oil_rigs": 431,
+      "wow_total": 1,
+      "wow_oil": 2,
+      "prev_total": 559
+    },
+    {
+      "date": "2026-06-12",
+      "total_rigs": 562,
+      "oil_rigs": 433,
+      "wow_total": -1,
+      "wow_oil": 2,
+      "prev_total": 555
+    },
+    {
+      "date": "2026-06-19",
+      "total_rigs": 563,
+      "oil_rigs": 433,
+      "wow_total": 1,
+      "wow_oil": 0,
+      "prev_total": 554
+    }
+  ],
+  "thresholds": {
+    "growing": 600,
+    "flat_lo": 350
+  },
+  "wow_threshold": 5,
+  "notes": {
+    "release": "Every Friday 1PM CT",
+    "lag": "4-6 month lag: rig change \u2192 production change",
+    "wow_band": "\u00b15 rigs WoW treated as noise",
+    "peak": "1,609 rigs Oct 2014 | low: 172 rigs Aug 2020",
+    "current_range": "~480-560 rigs (2025-2026 baseline)"
+  }
+}

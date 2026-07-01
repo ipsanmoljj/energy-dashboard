@@ -1,0 +1,172 @@
+{
+  "generated_at": "2026-06-30T11:24:19.636503+00:00",
+  "signals": {
+    "cushing_stocks": {
+      "id": "cushing_stocks",
+      "label": "Cushing Crude Stocks",
+      "value": 20.034,
+      "unit": "mmbbls",
+      "wow": -1.606,
+      "dev_5yr": -6.97,
+      "signal": "BULLISH",
+      "strength": 2,
+      "weight": 0.2,
+      "score": 2,
+      "note": "Cushing 1.6 mmbbls draw WoW; 7.0 mmbbls below 5yr avg"
+    },
+    "total_crude_stocks": {
+      "id": "total_crude_stocks",
+      "label": "Total US Crude Stocks",
+      "value": 418.222,
+      "unit": "mmbbls",
+      "wow": -8.263,
+      "dev_5yr": -31.78,
+      "signal": "BULLISH",
+      "strength": 3,
+      "weight": 0.15,
+      "score": 3,
+      "note": "Total crude 31.8 mmbbls below 5yr avg"
+    },
+    "gasoline_stocks": {
+      "id": "gasoline_stocks",
+      "label": "US Gasoline Stocks",
+      "value": 214.235,
+      "unit": "mmbbls",
+      "wow": -0.906,
+      "dev_5yr": -20.76,
+      "driving_season": true,
+      "signal": "BULLISH",
+      "strength": 3,
+      "weight": 0.15,
+      "score": 3,
+      "note": "Gasoline 20.8 mmbbls below 5yr avg \u2014 driving season active"
+    },
+    "distillate_stocks": {
+      "id": "distillate_stocks",
+      "label": "US Distillate Stocks",
+      "value": 103.052,
+      "unit": "mmbbls",
+      "wow": 0.951,
+      "dev_5yr": -16.95,
+      "heating_season": false,
+      "signal": "BULLISH",
+      "strength": 2,
+      "weight": 0.15,
+      "score": 2,
+      "note": "Distillates 16.9 mmbbls below 5yr avg"
+    },
+    "crude_production": {
+      "id": "crude_production",
+      "label": "US Crude Production",
+      "value": 13.806,
+      "unit": "mbd",
+      "wow": 0.007,
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "weight": 0.1,
+      "score": 0,
+      "note": "US output 13.81 mbd, +0.007 mbd WoW"
+    },
+    "refinery_util": {
+      "id": "refinery_util",
+      "label": "US Refinery Utilisation",
+      "value": 96.7,
+      "unit": "%",
+      "wow": 1.4,
+      "signal": "BULLISH",
+      "strength": 2,
+      "weight": 0.1,
+      "score": 2,
+      "note": "Refinery runs at 96.7% \u2014 running hot, strong crude pull"
+    },
+    "days_cover": {
+      "id": "days_cover",
+      "label": "Days of Forward Demand Cover",
+      "value": 57.1,
+      "unit": "days",
+      "critical_threshold": 54.0,
+      "normal_range": [
+        54.0,
+        58.0
+      ],
+      "signal": "NEUTRAL",
+      "strength": 1,
+      "weight": 0.15,
+      "score": 0,
+      "note": "57.1 days cover \u2014 normal range"
+    },
+    "gie_storage": {
+      "id": "gie_storage",
+      "label": "EU Gas Storage Fill",
+      "value": 37.47,
+      "unit": "%",
+      "composite_signal": "BULLISH",
+      "composite_score": 0.75,
+      "signal": "BULLISH",
+      "strength": 2,
+      "weight": 0.0,
+      "score": 2,
+      "note": "EU gas storage: Germany 37.5% full \u2014 BULLISH (score 0.75)"
+    }
+  },
+  "composite": {
+    "score": 6.0,
+    "overall_signal": "BULLISH",
+    "interpretation": "Bullish inventory backdrop \u2014 stocks drawing, demand support evident",
+    "components": [
+      {
+        "id": "cushing_stocks",
+        "label": "Cushing Crude Stocks",
+        "signal": "BULLISH",
+        "score": 2,
+        "weight": 0.2
+      },
+      {
+        "id": "total_crude_stocks",
+        "label": "Total US Crude Stocks",
+        "signal": "BULLISH",
+        "score": 3,
+        "weight": 0.15
+      },
+      {
+        "id": "gasoline_stocks",
+        "label": "US Gasoline Stocks",
+        "signal": "BULLISH",
+        "score": 3,
+        "weight": 0.15
+      },
+      {
+        "id": "distillate_stocks",
+        "label": "US Distillate Stocks",
+        "signal": "BULLISH",
+        "score": 2,
+        "weight": 0.15
+      },
+      {
+        "id": "crude_production",
+        "label": "US Crude Production",
+        "signal": "NEUTRAL",
+        "score": 0,
+        "weight": 0.1
+      },
+      {
+        "id": "refinery_util",
+        "label": "US Refinery Utilisation",
+        "signal": "BULLISH",
+        "score": 2,
+        "weight": 0.1
+      },
+      {
+        "id": "days_cover",
+        "label": "Days of Forward Demand Cover",
+        "signal": "NEUTRAL",
+        "score": 0,
+        "weight": 0.15
+      }
+    ]
+  },
+  "meta": {
+    "days_cover_critical": 54.0,
+    "days_cover_normal": 58.0
+  }
+}

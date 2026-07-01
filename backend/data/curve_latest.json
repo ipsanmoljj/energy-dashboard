@@ -1,0 +1,396 @@
+{
+  "fetcher": "curve_fetcher",
+  "fetched_at": "2026-06-30T11:44:20Z",
+  "note": "M1 prices live from futures feed. M2-M12 synthetic shape based on current carry cost and market structure. Full curve requires ICE/CME paid data.",
+  "front_month_prices": {
+    "brent": 73.96,
+    "wti": 70.76,
+    "rbob": 115.12,
+    "ho": 131.565,
+    "ng": null
+  },
+  "curves": {
+    "brent": [
+      {
+        "month": "M1",
+        "month_num": 1,
+        "price": 73.96,
+        "offset": 0,
+        "full_carry": 0.0
+      },
+      {
+        "month": "M2",
+        "month_num": 2,
+        "price": 73.46,
+        "offset": -0.5,
+        "full_carry": 0.77
+      },
+      {
+        "month": "M3",
+        "month_num": 3,
+        "price": 73.16,
+        "offset": -0.8,
+        "full_carry": 1.54
+      },
+      {
+        "month": "M4",
+        "month_num": 4,
+        "price": 72.96,
+        "offset": -1.0,
+        "full_carry": 2.3
+      },
+      {
+        "month": "M5",
+        "month_num": 5,
+        "price": 72.76,
+        "offset": -1.2,
+        "full_carry": 3.07
+      },
+      {
+        "month": "M6",
+        "month_num": 6,
+        "price": 72.66,
+        "offset": -1.3,
+        "full_carry": 3.84
+      },
+      {
+        "month": "M7",
+        "month_num": 7,
+        "price": 72.61,
+        "offset": -1.35,
+        "full_carry": 4.61
+      },
+      {
+        "month": "M8",
+        "month_num": 8,
+        "price": 72.56,
+        "offset": -1.4,
+        "full_carry": 5.38
+      },
+      {
+        "month": "M9",
+        "month_num": 9,
+        "price": 72.54,
+        "offset": -1.42,
+        "full_carry": 6.14
+      },
+      {
+        "month": "M10",
+        "month_num": 10,
+        "price": 72.52,
+        "offset": -1.44,
+        "full_carry": 6.91
+      },
+      {
+        "month": "M11",
+        "month_num": 11,
+        "price": 72.51,
+        "offset": -1.45,
+        "full_carry": 7.68
+      },
+      {
+        "month": "M12",
+        "month_num": 12,
+        "price": 72.5,
+        "offset": -1.46,
+        "full_carry": 8.45
+      }
+    ],
+    "wti": [
+      {
+        "month": "M1",
+        "month_num": 1,
+        "price": 70.76,
+        "offset": 0,
+        "full_carry": 0.0
+      },
+      {
+        "month": "M2",
+        "month_num": 2,
+        "price": 70.36,
+        "offset": -0.4,
+        "full_carry": 0.77
+      },
+      {
+        "month": "M3",
+        "month_num": 3,
+        "price": 70.06,
+        "offset": -0.7,
+        "full_carry": 1.54
+      },
+      {
+        "month": "M4",
+        "month_num": 4,
+        "price": 69.86,
+        "offset": -0.9,
+        "full_carry": 2.3
+      },
+      {
+        "month": "M5",
+        "month_num": 5,
+        "price": 69.66,
+        "offset": -1.1,
+        "full_carry": 3.07
+      },
+      {
+        "month": "M6",
+        "month_num": 6,
+        "price": 69.56,
+        "offset": -1.2,
+        "full_carry": 3.84
+      },
+      {
+        "month": "M7",
+        "month_num": 7,
+        "price": 69.46,
+        "offset": -1.3,
+        "full_carry": 4.61
+      },
+      {
+        "month": "M8",
+        "month_num": 8,
+        "price": 69.41,
+        "offset": -1.35,
+        "full_carry": 5.38
+      },
+      {
+        "month": "M9",
+        "month_num": 9,
+        "price": 69.36,
+        "offset": -1.4,
+        "full_carry": 6.14
+      },
+      {
+        "month": "M10",
+        "month_num": 10,
+        "price": 69.34,
+        "offset": -1.42,
+        "full_carry": 6.91
+      },
+      {
+        "month": "M11",
+        "month_num": 11,
+        "price": 69.32,
+        "offset": -1.44,
+        "full_carry": 7.68
+      },
+      {
+        "month": "M12",
+        "month_num": 12,
+        "price": 69.31,
+        "offset": -1.45,
+        "full_carry": 8.45
+      }
+    ],
+    "rbob": [
+      {
+        "month": "M1",
+        "month_num": 1,
+        "price": 115.12,
+        "offset": 0,
+        "full_carry": 0.0
+      },
+      {
+        "month": "M2",
+        "month_num": 2,
+        "price": 114.82,
+        "offset": -0.3,
+        "full_carry": 0.77
+      },
+      {
+        "month": "M3",
+        "month_num": 3,
+        "price": 114.52,
+        "offset": -0.6,
+        "full_carry": 1.54
+      },
+      {
+        "month": "M4",
+        "month_num": 4,
+        "price": 114.12,
+        "offset": -1.0,
+        "full_carry": 2.3
+      },
+      {
+        "month": "M5",
+        "month_num": 5,
+        "price": 113.82,
+        "offset": -1.3,
+        "full_carry": 3.07
+      },
+      {
+        "month": "M6",
+        "month_num": 6,
+        "price": 113.62,
+        "offset": -1.5,
+        "full_carry": 3.84
+      },
+      {
+        "month": "M7",
+        "month_num": 7,
+        "price": 113.52,
+        "offset": -1.6,
+        "full_carry": 4.61
+      },
+      {
+        "month": "M8",
+        "month_num": 8,
+        "price": 113.47,
+        "offset": -1.65,
+        "full_carry": 5.38
+      },
+      {
+        "month": "M9",
+        "month_num": 9,
+        "price": 113.42,
+        "offset": -1.7,
+        "full_carry": 6.14
+      },
+      {
+        "month": "M10",
+        "month_num": 10,
+        "price": 113.4,
+        "offset": -1.72,
+        "full_carry": 6.91
+      },
+      {
+        "month": "M11",
+        "month_num": 11,
+        "price": 113.38,
+        "offset": -1.74,
+        "full_carry": 7.68
+      },
+      {
+        "month": "M12",
+        "month_num": 12,
+        "price": 113.37,
+        "offset": -1.75,
+        "full_carry": 8.45
+      }
+    ],
+    "ho": [
+      {
+        "month": "M1",
+        "month_num": 1,
+        "price": 131.56,
+        "offset": 0,
+        "full_carry": 0.0
+      },
+      {
+        "month": "M2",
+        "month_num": 2,
+        "price": 131.37,
+        "offset": -0.2,
+        "full_carry": 0.77
+      },
+      {
+        "month": "M3",
+        "month_num": 3,
+        "price": 131.16,
+        "offset": -0.4,
+        "full_carry": 1.54
+      },
+      {
+        "month": "M4",
+        "month_num": 4,
+        "price": 130.97,
+        "offset": -0.6,
+        "full_carry": 2.3
+      },
+      {
+        "month": "M5",
+        "month_num": 5,
+        "price": 130.76,
+        "offset": -0.8,
+        "full_carry": 3.07
+      },
+      {
+        "month": "M6",
+        "month_num": 6,
+        "price": 130.56,
+        "offset": -1.0,
+        "full_carry": 3.84
+      },
+      {
+        "month": "M7",
+        "month_num": 7,
+        "price": 130.47,
+        "offset": -1.1,
+        "full_carry": 4.61
+      },
+      {
+        "month": "M8",
+        "month_num": 8,
+        "price": 130.41,
+        "offset": -1.15,
+        "full_carry": 5.38
+      },
+      {
+        "month": "M9",
+        "month_num": 9,
+        "price": 130.37,
+        "offset": -1.2,
+        "full_carry": 6.14
+      },
+      {
+        "month": "M10",
+        "month_num": 10,
+        "price": 130.34,
+        "offset": -1.22,
+        "full_carry": 6.91
+      },
+      {
+        "month": "M11",
+        "month_num": 11,
+        "price": 130.32,
+        "offset": -1.24,
+        "full_carry": 7.68
+      },
+      {
+        "month": "M12",
+        "month_num": 12,
+        "price": 130.31,
+        "offset": -1.25,
+        "full_carry": 8.45
+      }
+    ]
+  },
+  "signals": {
+    "brent": {
+      "structure": "MILD_BACKWARDATION",
+      "signal": "BULLISH",
+      "note": "Mild tightness \u2014 market slightly undersupplied",
+      "m1_m2": 0.5,
+      "m1_m6": 1.3,
+      "m1_m12": 1.46
+    },
+    "wti": {
+      "structure": "MILD_BACKWARDATION",
+      "signal": "BULLISH",
+      "note": "Mild tightness \u2014 market slightly undersupplied",
+      "m1_m2": 0.4,
+      "m1_m6": 1.2,
+      "m1_m12": 1.45
+    },
+    "rbob": {
+      "structure": "MILD_BACKWARDATION",
+      "signal": "BULLISH",
+      "note": "Mild tightness \u2014 market slightly undersupplied",
+      "m1_m2": 0.3,
+      "m1_m6": 1.5,
+      "m1_m12": 1.75
+    },
+    "ho": {
+      "structure": "FLAT",
+      "signal": "NEUTRAL",
+      "note": "Balanced market \u2014 no strong directional signal",
+      "m1_m2": 0.19,
+      "m1_m6": 1.0,
+      "m1_m12": 1.25
+    }
+  },
+  "key_spreads": {
+    "brent_wti": 3.2,
+    "brent_wti_signal": "NORMAL"
+  }
+}

@@ -1,0 +1,195 @@
+{
+  "fetcher": "geo_scorer",
+  "fetched_at": "2026-06-11T07:51:41Z",
+  "spare_capacity_used_mbd": 4.5,
+  "aggregate": {
+    "composite": 7.88,
+    "dominant_score": 4.8,
+    "event_count": 5,
+    "signal": "HIGH_RISK",
+    "label": "ELEVATED",
+    "implied_premium": {
+      "low": 15,
+      "high": 25,
+      "label": "ELEVATED",
+      "color": "BEARISH"
+    },
+    "composite_signal_score": 3.94
+  },
+  "active_events": [
+    {
+      "id": "houthi_red_sea",
+      "name": "Houthi Red Sea Campaign",
+      "region": "Middle East / Red Sea",
+      "chokepoint": "Bab el-Mandeb",
+      "supply_at_risk_mbd": 1.5,
+      "duration": "multi_year",
+      "notes": "Rerouting via Cape adds 10-15 days; freight +200-400%",
+      "start_date": "2023-11-01",
+      "active": true,
+      "scoring": {
+        "supply_pts": 6,
+        "capacity_pts": 2,
+        "duration_pts": 8,
+        "composite": 4.8
+      },
+      "implied_premium": {
+        "low": 5,
+        "high": 10,
+        "label": "MODERATE",
+        "color": "NEUTRAL"
+      },
+      "signal": "MODERATE_RISK"
+    },
+    {
+      "id": "russia_ukraine",
+      "name": "Russia-Ukraine War",
+      "region": "Eastern Europe",
+      "chokepoint": "Baltic / Black Sea / Bosphorus",
+      "supply_at_risk_mbd": 1.0,
+      "duration": "multi_year",
+      "notes": "Russian barrels rerouted to India/China; EU embargo active",
+      "start_date": "2022-02-24",
+      "active": true,
+      "scoring": {
+        "supply_pts": 6,
+        "capacity_pts": 2,
+        "duration_pts": 8,
+        "composite": 4.8
+      },
+      "implied_premium": {
+        "low": 5,
+        "high": 10,
+        "label": "MODERATE",
+        "color": "NEUTRAL"
+      },
+      "signal": "MODERATE_RISK"
+    },
+    {
+      "id": "iran_sanctions",
+      "name": "Iran Nuclear Sanctions",
+      "region": "Persian Gulf",
+      "chokepoint": "Strait of Hormuz",
+      "supply_at_risk_mbd": 0.8,
+      "duration": "structural",
+      "notes": "Iranian exports ~3.2mbd despite sanctions; China absorbing",
+      "start_date": "2018-05-01",
+      "active": true,
+      "scoring": {
+        "supply_pts": 4,
+        "capacity_pts": 2,
+        "duration_pts": 10,
+        "composite": 4.4
+      },
+      "implied_premium": {
+        "low": 5,
+        "high": 10,
+        "label": "MODERATE",
+        "color": "NEUTRAL"
+      },
+      "signal": "MODERATE_RISK"
+    },
+    {
+      "id": "nigeria_militant",
+      "name": "Nigeria Niger Delta Disruptions",
+      "region": "West Africa",
+      "chokepoint": null,
+      "supply_at_risk_mbd": 0.3,
+      "duration": "structural",
+      "notes": "Pipeline vandalism; force majeure declarations periodic",
+      "start_date": "2022-01-01",
+      "active": true,
+      "scoring": {
+        "supply_pts": 2,
+        "capacity_pts": 2,
+        "duration_pts": 10,
+        "composite": 3.6
+      },
+      "implied_premium": {
+        "low": 2,
+        "high": 5,
+        "label": "LOW",
+        "color": "NEUTRAL"
+      },
+      "signal": "MODERATE_RISK"
+    },
+    {
+      "id": "libya_instability",
+      "name": "Libya Field Disruptions",
+      "region": "North Africa",
+      "chokepoint": null,
+      "supply_at_risk_mbd": 0.4,
+      "duration": "weeks_months",
+      "notes": "Rival faction control of terminals; chronic 0.3-0.6 mbd risk",
+      "start_date": "2024-01-01",
+      "active": true,
+      "scoring": {
+        "supply_pts": 2,
+        "capacity_pts": 2,
+        "duration_pts": 5,
+        "composite": 2.6
+      },
+      "implied_premium": {
+        "low": 2,
+        "high": 5,
+        "label": "LOW",
+        "color": "NEUTRAL"
+      },
+      "signal": "LOW_RISK"
+    }
+  ],
+  "all_event_count": 5,
+  "active_event_count": 5,
+  "news_geo_alerts": 0,
+  "chokepoints": [
+    {
+      "name": "Strait of Hormuz",
+      "flow_mbd": 17.0,
+      "bypass_mbd": 3.5,
+      "risk_level": "CRITICAL",
+      "active_threat": true
+    },
+    {
+      "name": "Bab el-Mandeb",
+      "flow_mbd": 4.5,
+      "bypass_mbd": null,
+      "risk_level": "HIGH",
+      "active_threat": true
+    },
+    {
+      "name": "Suez Canal",
+      "flow_mbd": 5.5,
+      "bypass_mbd": 1.5,
+      "risk_level": "HIGH",
+      "active_threat": false
+    },
+    {
+      "name": "Strait of Malacca",
+      "flow_mbd": 16.0,
+      "bypass_mbd": null,
+      "risk_level": "MODERATE",
+      "active_threat": false
+    },
+    {
+      "name": "Bosphorus",
+      "flow_mbd": 2.5,
+      "bypass_mbd": null,
+      "risk_level": "MODERATE",
+      "active_threat": false
+    },
+    {
+      "name": "Danish Straits",
+      "flow_mbd": 2.0,
+      "bypass_mbd": null,
+      "risk_level": "MODERATE",
+      "active_threat": false
+    },
+    {
+      "name": "Cape of Good Hope",
+      "flow_mbd": 0.0,
+      "bypass_mbd": null,
+      "risk_level": "LOW",
+      "active_threat": false
+    }
+  ]
+}

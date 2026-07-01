@@ -1,0 +1,1178 @@
+{
+  "fetcher": "weather_fetcher",
+  "fetched_at": "2026-06-19T08:24:00Z",
+  "source": "Open-Meteo (https://open-meteo.com) \u2014 free, no key",
+  "base_temp_c": 18.0,
+  "hdd_note": "HDD = max(0, 18\u00b0C - avg_daily_temp). Each HDD-day = 1\u00b0C below 18\u00b0C base.",
+  "cdd_note": "CDD = max(0, avg_daily_temp - 18\u00b0C). Each CDD-day = 1\u00b0C above 18\u00b0C base.",
+  "locations": {
+    "new_york": {
+      "label": "New York (US NE)",
+      "region": "north_america",
+      "oil_impact": "US NE heating oil (HO futures). High HDD \u2192 strong HO demand. Coldest winter region for US distillate demand.",
+      "hdd_7d_forecast": 0.0,
+      "cdd_7d_forecast": 36.15,
+      "tavg_7d_c": 23.16,
+      "hist_hdd_avg_14d": 0.0,
+      "hist_cdd_avg_14d": 6.49,
+      "anomaly": "NORMAL",
+      "anomaly_detail": "",
+      "demand_signal": "NEUTRAL",
+      "forecast_7d": [
+        {
+          "date": "2026-06-18",
+          "tmax_c": 31.8,
+          "tmin_c": 20.4,
+          "tavg_c": 26.1,
+          "hdd": 0.0,
+          "cdd": 8.1
+        },
+        {
+          "date": "2026-06-19",
+          "tmax_c": 29.6,
+          "tmin_c": 19.5,
+          "tavg_c": 24.6,
+          "hdd": 0.0,
+          "cdd": 6.55
+        },
+        {
+          "date": "2026-06-20",
+          "tmax_c": 28.9,
+          "tmin_c": 17.6,
+          "tavg_c": 23.2,
+          "hdd": 0.0,
+          "cdd": 5.25
+        },
+        {
+          "date": "2026-06-21",
+          "tmax_c": 27.5,
+          "tmin_c": 17.3,
+          "tavg_c": 22.4,
+          "hdd": 0.0,
+          "cdd": 4.4
+        },
+        {
+          "date": "2026-06-22",
+          "tmax_c": 23.4,
+          "tmin_c": 17.1,
+          "tavg_c": 20.2,
+          "hdd": 0.0,
+          "cdd": 2.25
+        },
+        {
+          "date": "2026-06-23",
+          "tmax_c": 28.6,
+          "tmin_c": 16.5,
+          "tavg_c": 22.6,
+          "hdd": 0.0,
+          "cdd": 4.55
+        },
+        {
+          "date": "2026-06-24",
+          "tmax_c": 26.4,
+          "tmin_c": 19.7,
+          "tavg_c": 23.0,
+          "hdd": 0.0,
+          "cdd": 5.05
+        }
+      ],
+      "history_14d": [
+        {
+          "date": "2026-06-17",
+          "tmax_c": 25.8,
+          "tmin_c": 16.9,
+          "tavg_c": 21.4,
+          "hdd": 0.0,
+          "cdd": 3.35
+        },
+        {
+          "date": "2026-06-16",
+          "tmax_c": 26.2,
+          "tmin_c": 14.2,
+          "tavg_c": 20.2,
+          "hdd": 0.0,
+          "cdd": 2.2
+        },
+        {
+          "date": "2026-06-15",
+          "tmax_c": 24.5,
+          "tmin_c": 17.9,
+          "tavg_c": 21.2,
+          "hdd": 0.0,
+          "cdd": 3.2
+        },
+        {
+          "date": "2026-06-14",
+          "tmax_c": 33.3,
+          "tmin_c": 21.8,
+          "tavg_c": 27.5,
+          "hdd": 0.0,
+          "cdd": 9.55
+        },
+        {
+          "date": "2026-06-13",
+          "tmax_c": 32.5,
+          "tmin_c": 21.8,
+          "tavg_c": 27.1,
+          "hdd": 0.0,
+          "cdd": 9.15
+        },
+        {
+          "date": "2026-06-12",
+          "tmax_c": 33.7,
+          "tmin_c": 24.1,
+          "tavg_c": 28.9,
+          "hdd": 0.0,
+          "cdd": 10.9
+        },
+        {
+          "date": "2026-06-11",
+          "tmax_c": 35.4,
+          "tmin_c": 22.5,
+          "tavg_c": 28.9,
+          "hdd": 0.0,
+          "cdd": 10.95
+        },
+        {
+          "date": "2026-06-10",
+          "tmax_c": 29.2,
+          "tmin_c": 20.6,
+          "tavg_c": 24.9,
+          "hdd": 0.0,
+          "cdd": 6.9
+        },
+        {
+          "date": "2026-06-09",
+          "tmax_c": 27.6,
+          "tmin_c": 14.5,
+          "tavg_c": 21.1,
+          "hdd": 0.0,
+          "cdd": 3.05
+        },
+        {
+          "date": "2026-06-08",
+          "tmax_c": 24.4,
+          "tmin_c": 17.6,
+          "tavg_c": 21.0,
+          "hdd": 0.0,
+          "cdd": 3.0
+        },
+        {
+          "date": "2026-06-07",
+          "tmax_c": 29.2,
+          "tmin_c": 19.9,
+          "tavg_c": 24.5,
+          "hdd": 0.0,
+          "cdd": 6.55
+        },
+        {
+          "date": "2026-06-06",
+          "tmax_c": 34.2,
+          "tmin_c": 21.0,
+          "tavg_c": 27.6,
+          "hdd": 0.0,
+          "cdd": 9.6
+        },
+        {
+          "date": "2026-06-05",
+          "tmax_c": 33.7,
+          "tmin_c": 18.3,
+          "tavg_c": 26.0,
+          "hdd": 0.0,
+          "cdd": 8.0
+        },
+        {
+          "date": "2026-06-04",
+          "tmax_c": 32.0,
+          "tmin_c": 16.5,
+          "tavg_c": 24.2,
+          "hdd": 0.0,
+          "cdd": 6.25
+        },
+        {
+          "date": "2026-06-03",
+          "tmax_c": 29.5,
+          "tmin_c": 15.8,
+          "tavg_c": 22.6,
+          "hdd": 0.0,
+          "cdd": 4.65
+        }
+      ]
+    },
+    "chicago": {
+      "label": "Chicago (US Midwest)",
+      "region": "north_america",
+      "oil_impact": "US Midwest diesel and heating oil demand. Also tracks natural gas pipeline flows.",
+      "hdd_7d_forecast": 2.65,
+      "cdd_7d_forecast": 3.75,
+      "tavg_7d_c": 18.16,
+      "hist_hdd_avg_14d": 0.02,
+      "hist_cdd_avg_14d": 3.66,
+      "anomaly": "COLDER_THAN_RECENT",
+      "anomaly_detail": "Forecast HDD/day 0.4 vs recent avg 0.0 \u2014 significantly colder",
+      "demand_signal": "NEUTRAL",
+      "forecast_7d": [
+        {
+          "date": "2026-06-18",
+          "tmax_c": 20.5,
+          "tmin_c": 15.6,
+          "tavg_c": 18.1,
+          "hdd": 0.0,
+          "cdd": 0.05
+        },
+        {
+          "date": "2026-06-19",
+          "tmax_c": 23.7,
+          "tmin_c": 13.2,
+          "tavg_c": 18.4,
+          "hdd": 0.0,
+          "cdd": 0.45
+        },
+        {
+          "date": "2026-06-20",
+          "tmax_c": 24.0,
+          "tmin_c": 14.5,
+          "tavg_c": 19.2,
+          "hdd": 0.0,
+          "cdd": 1.25
+        },
+        {
+          "date": "2026-06-21",
+          "tmax_c": 18.8,
+          "tmin_c": 15.0,
+          "tavg_c": 16.9,
+          "hdd": 1.1,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-22",
+          "tmax_c": 19.0,
+          "tmin_c": 15.1,
+          "tavg_c": 17.1,
+          "hdd": 0.95,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-23",
+          "tmax_c": 20.1,
+          "tmin_c": 14.7,
+          "tavg_c": 17.4,
+          "hdd": 0.6,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-24",
+          "tmax_c": 23.3,
+          "tmin_c": 16.7,
+          "tavg_c": 20.0,
+          "hdd": 0.0,
+          "cdd": 2.0
+        }
+      ],
+      "history_14d": [
+        {
+          "date": "2026-06-17",
+          "tmax_c": 20.6,
+          "tmin_c": 14.9,
+          "tavg_c": 17.8,
+          "hdd": 0.25,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-16",
+          "tmax_c": 22.6,
+          "tmin_c": 16.4,
+          "tavg_c": 19.5,
+          "hdd": 0.0,
+          "cdd": 1.5
+        },
+        {
+          "date": "2026-06-15",
+          "tmax_c": 23.5,
+          "tmin_c": 12.8,
+          "tavg_c": 18.1,
+          "hdd": 0.0,
+          "cdd": 0.15
+        },
+        {
+          "date": "2026-06-14",
+          "tmax_c": 21.4,
+          "tmin_c": 16.1,
+          "tavg_c": 18.8,
+          "hdd": 0.0,
+          "cdd": 0.75
+        },
+        {
+          "date": "2026-06-13",
+          "tmax_c": 27.9,
+          "tmin_c": 18.2,
+          "tavg_c": 23.0,
+          "hdd": 0.0,
+          "cdd": 5.05
+        },
+        {
+          "date": "2026-06-12",
+          "tmax_c": 26.0,
+          "tmin_c": 17.0,
+          "tavg_c": 21.5,
+          "hdd": 0.0,
+          "cdd": 3.5
+        },
+        {
+          "date": "2026-06-11",
+          "tmax_c": 27.6,
+          "tmin_c": 19.9,
+          "tavg_c": 23.8,
+          "hdd": 0.0,
+          "cdd": 5.75
+        },
+        {
+          "date": "2026-06-10",
+          "tmax_c": 30.8,
+          "tmin_c": 21.1,
+          "tavg_c": 26.0,
+          "hdd": 0.0,
+          "cdd": 7.95
+        },
+        {
+          "date": "2026-06-09",
+          "tmax_c": 29.9,
+          "tmin_c": 20.5,
+          "tavg_c": 25.2,
+          "hdd": 0.0,
+          "cdd": 7.2
+        },
+        {
+          "date": "2026-06-08",
+          "tmax_c": 26.2,
+          "tmin_c": 18.7,
+          "tavg_c": 22.4,
+          "hdd": 0.0,
+          "cdd": 4.45
+        },
+        {
+          "date": "2026-06-07",
+          "tmax_c": 23.3,
+          "tmin_c": 18.5,
+          "tavg_c": 20.9,
+          "hdd": 0.0,
+          "cdd": 2.9
+        },
+        {
+          "date": "2026-06-06",
+          "tmax_c": 26.6,
+          "tmin_c": 18.5,
+          "tavg_c": 22.6,
+          "hdd": 0.0,
+          "cdd": 4.55
+        },
+        {
+          "date": "2026-06-05",
+          "tmax_c": 24.9,
+          "tmin_c": 20.1,
+          "tavg_c": 22.5,
+          "hdd": 0.0,
+          "cdd": 4.5
+        },
+        {
+          "date": "2026-06-04",
+          "tmax_c": 30.1,
+          "tmin_c": 17.2,
+          "tavg_c": 23.6,
+          "hdd": 0.0,
+          "cdd": 5.65
+        },
+        {
+          "date": "2026-06-03",
+          "tmax_c": 24.8,
+          "tmin_c": 13.3,
+          "tavg_c": 19.1,
+          "hdd": 0.0,
+          "cdd": 1.05
+        }
+      ]
+    },
+    "london": {
+      "label": "London (UK / NW Europe)",
+      "region": "europe",
+      "oil_impact": "NW European heating demand \u2192 ICE Gasoil / gasoil crack. Also tracks gas-to-oil switching risk when UK storage is low.",
+      "hdd_7d_forecast": 0.0,
+      "cdd_7d_forecast": 49.85,
+      "tavg_7d_c": 25.1,
+      "hist_hdd_avg_14d": 2.55,
+      "hist_cdd_avg_14d": 0.35,
+      "anomaly": "WARMER_THAN_RECENT",
+      "anomaly_detail": "Forecast HDD/day 0.0 vs recent avg 2.5 \u2014 significantly warmer",
+      "demand_signal": "NEUTRAL",
+      "forecast_7d": [
+        {
+          "date": "2026-06-19",
+          "tmax_c": 29.4,
+          "tmin_c": 19.4,
+          "tavg_c": 24.4,
+          "hdd": 0.0,
+          "cdd": 6.4
+        },
+        {
+          "date": "2026-06-20",
+          "tmax_c": 27.0,
+          "tmin_c": 17.9,
+          "tavg_c": 22.4,
+          "hdd": 0.0,
+          "cdd": 4.45
+        },
+        {
+          "date": "2026-06-21",
+          "tmax_c": 28.9,
+          "tmin_c": 19.9,
+          "tavg_c": 24.4,
+          "hdd": 0.0,
+          "cdd": 6.4
+        },
+        {
+          "date": "2026-06-22",
+          "tmax_c": 31.7,
+          "tmin_c": 20.2,
+          "tavg_c": 25.9,
+          "hdd": 0.0,
+          "cdd": 7.95
+        },
+        {
+          "date": "2026-06-23",
+          "tmax_c": 33.8,
+          "tmin_c": 23.1,
+          "tavg_c": 28.4,
+          "hdd": 0.0,
+          "cdd": 10.45
+        },
+        {
+          "date": "2026-06-24",
+          "tmax_c": 32.1,
+          "tmin_c": 23.5,
+          "tavg_c": 27.8,
+          "hdd": 0.0,
+          "cdd": 9.8
+        },
+        {
+          "date": "2026-06-25",
+          "tmax_c": 26.2,
+          "tmin_c": 18.6,
+          "tavg_c": 22.4,
+          "hdd": 0.0,
+          "cdd": 4.4
+        }
+      ],
+      "history_14d": [
+        {
+          "date": "2026-06-17",
+          "tmax_c": 25.3,
+          "tmin_c": 16.1,
+          "tavg_c": 20.7,
+          "hdd": 0.0,
+          "cdd": 2.7
+        },
+        {
+          "date": "2026-06-16",
+          "tmax_c": 26.0,
+          "tmin_c": 15.0,
+          "tavg_c": 20.5,
+          "hdd": 0.0,
+          "cdd": 2.5
+        },
+        {
+          "date": "2026-06-15",
+          "tmax_c": 22.2,
+          "tmin_c": 12.6,
+          "tavg_c": 17.4,
+          "hdd": 0.6,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-14",
+          "tmax_c": 20.5,
+          "tmin_c": 11.6,
+          "tavg_c": 16.1,
+          "hdd": 1.95,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-13",
+          "tmax_c": 19.9,
+          "tmin_c": 12.5,
+          "tavg_c": 16.2,
+          "hdd": 1.8,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-12",
+          "tmax_c": 20.9,
+          "tmin_c": 14.4,
+          "tavg_c": 17.6,
+          "hdd": 0.35,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-11",
+          "tmax_c": 16.9,
+          "tmin_c": 9.1,
+          "tavg_c": 13.0,
+          "hdd": 5.0,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-10",
+          "tmax_c": 16.9,
+          "tmin_c": 9.1,
+          "tavg_c": 13.0,
+          "hdd": 5.0,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-09",
+          "tmax_c": 17.1,
+          "tmin_c": 8.9,
+          "tavg_c": 13.0,
+          "hdd": 5.0,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-08",
+          "tmax_c": 16.9,
+          "tmin_c": 11.9,
+          "tavg_c": 14.4,
+          "hdd": 3.6,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-07",
+          "tmax_c": 18.6,
+          "tmin_c": 10.9,
+          "tavg_c": 14.8,
+          "hdd": 3.25,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-06",
+          "tmax_c": 16.9,
+          "tmin_c": 12.1,
+          "tavg_c": 14.5,
+          "hdd": 3.5,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-05",
+          "tmax_c": 17.6,
+          "tmin_c": 11.5,
+          "tavg_c": 14.6,
+          "hdd": 3.45,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-04",
+          "tmax_c": 17.8,
+          "tmin_c": 13.0,
+          "tavg_c": 15.4,
+          "hdd": 2.6,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-03",
+          "tmax_c": 19.0,
+          "tmin_c": 12.6,
+          "tavg_c": 15.8,
+          "hdd": 2.2,
+          "cdd": 0.0
+        }
+      ]
+    },
+    "berlin": {
+      "label": "Berlin (Germany / Central Europe)",
+      "region": "europe",
+      "oil_impact": "Central European heating demand. Germany largest EU gas/heating oil consumer.",
+      "hdd_7d_forecast": 0.05,
+      "cdd_7d_forecast": 45.95,
+      "tavg_7d_c": 24.56,
+      "hist_hdd_avg_14d": 1.45,
+      "hist_cdd_avg_14d": 0.22,
+      "anomaly": "NORMAL",
+      "anomaly_detail": "",
+      "demand_signal": "NEUTRAL",
+      "forecast_7d": [
+        {
+          "date": "2026-06-19",
+          "tmax_c": 33.5,
+          "tmin_c": 20.2,
+          "tavg_c": 26.9,
+          "hdd": 0.0,
+          "cdd": 8.85
+        },
+        {
+          "date": "2026-06-20",
+          "tmax_c": 32.9,
+          "tmin_c": 22.1,
+          "tavg_c": 27.5,
+          "hdd": 0.0,
+          "cdd": 9.5
+        },
+        {
+          "date": "2026-06-21",
+          "tmax_c": 30.1,
+          "tmin_c": 21.4,
+          "tavg_c": 25.8,
+          "hdd": 0.0,
+          "cdd": 7.75
+        },
+        {
+          "date": "2026-06-22",
+          "tmax_c": 29.3,
+          "tmin_c": 16.5,
+          "tavg_c": 22.9,
+          "hdd": 0.0,
+          "cdd": 4.9
+        },
+        {
+          "date": "2026-06-23",
+          "tmax_c": 34.0,
+          "tmin_c": 19.6,
+          "tavg_c": 26.8,
+          "hdd": 0.0,
+          "cdd": 8.8
+        },
+        {
+          "date": "2026-06-24",
+          "tmax_c": 28.1,
+          "tmin_c": 20.2,
+          "tavg_c": 24.1,
+          "hdd": 0.0,
+          "cdd": 6.15
+        },
+        {
+          "date": "2026-06-25",
+          "tmax_c": 22.0,
+          "tmin_c": 13.9,
+          "tavg_c": 17.9,
+          "hdd": 0.05,
+          "cdd": 0.0
+        }
+      ],
+      "history_14d": [
+        {
+          "date": "2026-06-17",
+          "tmax_c": 23.6,
+          "tmin_c": 10.2,
+          "tavg_c": 16.9,
+          "hdd": 1.1,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-16",
+          "tmax_c": 20.5,
+          "tmin_c": 9.6,
+          "tavg_c": 15.1,
+          "hdd": 2.95,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-15",
+          "tmax_c": 18.2,
+          "tmin_c": 11.4,
+          "tavg_c": 14.8,
+          "hdd": 3.2,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-14",
+          "tmax_c": 17.0,
+          "tmin_c": 11.6,
+          "tavg_c": 14.3,
+          "hdd": 3.7,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-13",
+          "tmax_c": 20.2,
+          "tmin_c": 13.2,
+          "tavg_c": 16.7,
+          "hdd": 1.3,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-12",
+          "tmax_c": 18.9,
+          "tmin_c": 10.8,
+          "tavg_c": 14.8,
+          "hdd": 3.15,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-11",
+          "tmax_c": 19.3,
+          "tmin_c": 11.4,
+          "tavg_c": 15.4,
+          "hdd": 2.65,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-10",
+          "tmax_c": 19.8,
+          "tmin_c": 11.1,
+          "tavg_c": 15.4,
+          "hdd": 2.55,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-09",
+          "tmax_c": 20.8,
+          "tmin_c": 14.8,
+          "tavg_c": 17.8,
+          "hdd": 0.2,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-08",
+          "tmax_c": 25.1,
+          "tmin_c": 13.1,
+          "tavg_c": 19.1,
+          "hdd": 0.0,
+          "cdd": 1.1
+        },
+        {
+          "date": "2026-06-07",
+          "tmax_c": 21.6,
+          "tmin_c": 16.0,
+          "tavg_c": 18.8,
+          "hdd": 0.0,
+          "cdd": 0.8
+        },
+        {
+          "date": "2026-06-06",
+          "tmax_c": 24.0,
+          "tmin_c": 11.5,
+          "tavg_c": 17.8,
+          "hdd": 0.25,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-05",
+          "tmax_c": 20.6,
+          "tmin_c": 14.1,
+          "tavg_c": 17.4,
+          "hdd": 0.65,
+          "cdd": 0.0
+        },
+        {
+          "date": "2026-06-04",
+          "tmax_c": 24.0,
+          "tmin_c": 14.2,
+          "tavg_c": 19.1,
+          "hdd": 0.0,
+          "cdd": 1.1
+        },
+        {
+          "date": "2026-06-03",
+          "tmax_c": 20.9,
+          "tmin_c": 15.6,
+          "tavg_c": 18.2,
+          "hdd": 0.0,
+          "cdd": 0.25
+        }
+      ]
+    },
+    "dubai": {
+      "label": "Dubai (Middle East)",
+      "region": "middle_east",
+      "oil_impact": "Middle East A/C demand \u2192 direct burn of crude / fuel oil for power. Peak summer (Jun\u2013Sep) CDD surge can add 0.3-0.5 mbd to regional demand.",
+      "hdd_7d_forecast": 0.0,
+      "cdd_7d_forecast": 116.6,
+      "tavg_7d_c": 34.66,
+      "hist_hdd_avg_14d": 0.0,
+      "hist_cdd_avg_14d": 14.96,
+      "anomaly": "NORMAL",
+      "anomaly_detail": "",
+      "demand_signal": "BULLISH",
+      "forecast_7d": [
+        {
+          "date": "2026-06-19",
+          "tmax_c": 41.3,
+          "tmin_c": 30.2,
+          "tavg_c": 35.8,
+          "hdd": 0.0,
+          "cdd": 17.75
+        },
+        {
+          "date": "2026-06-20",
+          "tmax_c": 39.4,
+          "tmin_c": 29.8,
+          "tavg_c": 34.6,
+          "hdd": 0.0,
+          "cdd": 16.6
+        },
+        {
+          "date": "2026-06-21",
+          "tmax_c": 37.5,
+          "tmin_c": 28.5,
+          "tavg_c": 33.0,
+          "hdd": 0.0,
+          "cdd": 15.0
+        },
+        {
+          "date": "2026-06-22",
+          "tmax_c": 36.8,
+          "tmin_c": 27.5,
+          "tavg_c": 32.1,
+          "hdd": 0.0,
+          "cdd": 14.15
+        },
+        {
+          "date": "2026-06-23",
+          "tmax_c": 42.4,
+          "tmin_c": 29.6,
+          "tavg_c": 36.0,
+          "hdd": 0.0,
+          "cdd": 18.0
+        },
+        {
+          "date": "2026-06-24",
+          "tmax_c": 42.7,
+          "tmin_c": 29.7,
+          "tavg_c": 36.2,
+          "hdd": 0.0,
+          "cdd": 18.2
+        },
+        {
+          "date": "2026-06-25",
+          "tmax_c": 39.4,
+          "tmin_c": 30.4,
+          "tavg_c": 34.9,
+          "hdd": 0.0,
+          "cdd": 16.9
+        }
+      ],
+      "history_14d": [
+        {
+          "date": "2026-06-17",
+          "tmax_c": 39.7,
+          "tmin_c": 27.2,
+          "tavg_c": 33.5,
+          "hdd": 0.0,
+          "cdd": 15.45
+        },
+        {
+          "date": "2026-06-16",
+          "tmax_c": 36.7,
+          "tmin_c": 29.2,
+          "tavg_c": 33.0,
+          "hdd": 0.0,
+          "cdd": 14.95
+        },
+        {
+          "date": "2026-06-15",
+          "tmax_c": 37.2,
+          "tmin_c": 28.0,
+          "tavg_c": 32.6,
+          "hdd": 0.0,
+          "cdd": 14.6
+        },
+        {
+          "date": "2026-06-14",
+          "tmax_c": 38.2,
+          "tmin_c": 29.0,
+          "tavg_c": 33.6,
+          "hdd": 0.0,
+          "cdd": 15.6
+        },
+        {
+          "date": "2026-06-13",
+          "tmax_c": 36.5,
+          "tmin_c": 26.5,
+          "tavg_c": 31.5,
+          "hdd": 0.0,
+          "cdd": 13.5
+        },
+        {
+          "date": "2026-06-12",
+          "tmax_c": 36.9,
+          "tmin_c": 28.8,
+          "tavg_c": 32.9,
+          "hdd": 0.0,
+          "cdd": 14.85
+        },
+        {
+          "date": "2026-06-11",
+          "tmax_c": 37.5,
+          "tmin_c": 29.9,
+          "tavg_c": 33.7,
+          "hdd": 0.0,
+          "cdd": 15.7
+        },
+        {
+          "date": "2026-06-10",
+          "tmax_c": 36.3,
+          "tmin_c": 28.5,
+          "tavg_c": 32.4,
+          "hdd": 0.0,
+          "cdd": 14.4
+        },
+        {
+          "date": "2026-06-09",
+          "tmax_c": 36.8,
+          "tmin_c": 29.9,
+          "tavg_c": 33.3,
+          "hdd": 0.0,
+          "cdd": 15.35
+        },
+        {
+          "date": "2026-06-08",
+          "tmax_c": 38.5,
+          "tmin_c": 28.3,
+          "tavg_c": 33.4,
+          "hdd": 0.0,
+          "cdd": 15.4
+        },
+        {
+          "date": "2026-06-07",
+          "tmax_c": 38.7,
+          "tmin_c": 26.9,
+          "tavg_c": 32.8,
+          "hdd": 0.0,
+          "cdd": 14.8
+        },
+        {
+          "date": "2026-06-06",
+          "tmax_c": 36.3,
+          "tmin_c": 28.0,
+          "tavg_c": 32.1,
+          "hdd": 0.0,
+          "cdd": 14.15
+        },
+        {
+          "date": "2026-06-05",
+          "tmax_c": 37.3,
+          "tmin_c": 29.5,
+          "tavg_c": 33.4,
+          "hdd": 0.0,
+          "cdd": 15.4
+        },
+        {
+          "date": "2026-06-04",
+          "tmax_c": 36.8,
+          "tmin_c": 28.8,
+          "tavg_c": 32.8,
+          "hdd": 0.0,
+          "cdd": 14.8
+        },
+        {
+          "date": "2026-06-03",
+          "tmax_c": 37.5,
+          "tmin_c": 29.5,
+          "tavg_c": 33.5,
+          "hdd": 0.0,
+          "cdd": 15.5
+        }
+      ]
+    },
+    "tokyo": {
+      "label": "Tokyo (NE Asia)",
+      "region": "asia",
+      "oil_impact": "Japan heating oil (kerosene) demand in winter. Summer CDD = power demand \u2192 LNG + crude burn for generation.",
+      "hdd_7d_forecast": 0.0,
+      "cdd_7d_forecast": 26.7,
+      "tavg_7d_c": 21.81,
+      "hist_hdd_avg_14d": 0.0,
+      "hist_cdd_avg_14d": 2.54,
+      "anomaly": "NORMAL",
+      "anomaly_detail": "",
+      "demand_signal": "NEUTRAL",
+      "forecast_7d": [
+        {
+          "date": "2026-06-19",
+          "tmax_c": 27.5,
+          "tmin_c": 19.6,
+          "tavg_c": 23.6,
+          "hdd": 0.0,
+          "cdd": 5.55
+        },
+        {
+          "date": "2026-06-20",
+          "tmax_c": 23.0,
+          "tmin_c": 20.2,
+          "tavg_c": 21.6,
+          "hdd": 0.0,
+          "cdd": 3.6
+        },
+        {
+          "date": "2026-06-21",
+          "tmax_c": 21.0,
+          "tmin_c": 19.1,
+          "tavg_c": 20.1,
+          "hdd": 0.0,
+          "cdd": 2.05
+        },
+        {
+          "date": "2026-06-22",
+          "tmax_c": 28.4,
+          "tmin_c": 18.9,
+          "tavg_c": 23.6,
+          "hdd": 0.0,
+          "cdd": 5.65
+        },
+        {
+          "date": "2026-06-23",
+          "tmax_c": 23.6,
+          "tmin_c": 17.7,
+          "tavg_c": 20.6,
+          "hdd": 0.0,
+          "cdd": 2.65
+        },
+        {
+          "date": "2026-06-24",
+          "tmax_c": 25.7,
+          "tmin_c": 17.3,
+          "tavg_c": 21.5,
+          "hdd": 0.0,
+          "cdd": 3.5
+        },
+        {
+          "date": "2026-06-25",
+          "tmax_c": 24.4,
+          "tmin_c": 19.0,
+          "tavg_c": 21.7,
+          "hdd": 0.0,
+          "cdd": 3.7
+        }
+      ],
+      "history_14d": [
+        {
+          "date": "2026-06-17",
+          "tmax_c": 27.4,
+          "tmin_c": 18.4,
+          "tavg_c": 22.9,
+          "hdd": 0.0,
+          "cdd": 4.9
+        },
+        {
+          "date": "2026-06-16",
+          "tmax_c": 26.6,
+          "tmin_c": 16.1,
+          "tavg_c": 21.4,
+          "hdd": 0.0,
+          "cdd": 3.35
+        },
+        {
+          "date": "2026-06-15",
+          "tmax_c": 22.0,
+          "tmin_c": 17.2,
+          "tavg_c": 19.6,
+          "hdd": 0.0,
+          "cdd": 1.6
+        },
+        {
+          "date": "2026-06-14",
+          "tmax_c": 26.3,
+          "tmin_c": 18.5,
+          "tavg_c": 22.4,
+          "hdd": 0.0,
+          "cdd": 4.4
+        },
+        {
+          "date": "2026-06-13",
+          "tmax_c": 27.3,
+          "tmin_c": 17.2,
+          "tavg_c": 22.2,
+          "hdd": 0.0,
+          "cdd": 4.25
+        },
+        {
+          "date": "2026-06-12",
+          "tmax_c": 25.0,
+          "tmin_c": 17.2,
+          "tavg_c": 21.1,
+          "hdd": 0.0,
+          "cdd": 3.1
+        },
+        {
+          "date": "2026-06-11",
+          "tmax_c": 24.6,
+          "tmin_c": 16.4,
+          "tavg_c": 20.5,
+          "hdd": 0.0,
+          "cdd": 2.5
+        },
+        {
+          "date": "2026-06-10",
+          "tmax_c": 23.1,
+          "tmin_c": 17.8,
+          "tavg_c": 20.5,
+          "hdd": 0.0,
+          "cdd": 2.45
+        },
+        {
+          "date": "2026-06-09",
+          "tmax_c": 22.6,
+          "tmin_c": 18.9,
+          "tavg_c": 20.8,
+          "hdd": 0.0,
+          "cdd": 2.75
+        },
+        {
+          "date": "2026-06-08",
+          "tmax_c": 24.0,
+          "tmin_c": 18.1,
+          "tavg_c": 21.1,
+          "hdd": 0.0,
+          "cdd": 3.05
+        },
+        {
+          "date": "2026-06-07",
+          "tmax_c": 21.4,
+          "tmin_c": 15.4,
+          "tavg_c": 18.4,
+          "hdd": 0.0,
+          "cdd": 0.4
+        },
+        {
+          "date": "2026-06-06",
+          "tmax_c": 23.0,
+          "tmin_c": 15.1,
+          "tavg_c": 19.1,
+          "hdd": 0.0,
+          "cdd": 1.05
+        },
+        {
+          "date": "2026-06-05",
+          "tmax_c": 21.0,
+          "tmin_c": 15.6,
+          "tavg_c": 18.3,
+          "hdd": 0.0,
+          "cdd": 0.3
+        },
+        {
+          "date": "2026-06-04",
+          "tmax_c": 23.8,
+          "tmin_c": 17.8,
+          "tavg_c": 20.8,
+          "hdd": 0.0,
+          "cdd": 2.8
+        },
+        {
+          "date": "2026-06-03",
+          "tmax_c": 20.4,
+          "tmin_c": 18.0,
+          "tavg_c": 19.2,
+          "hdd": 0.0,
+          "cdd": 1.2
+        }
+      ]
+    }
+  },
+  "composite": {
+    "signal": "BULLISH",
+    "weighted_hdd_7d": 0.54,
+    "weighted_cdd_7d": 54.6,
+    "demand_impact_note": "Significant weather-driven demand: weighted HDD=0.5, CDD=54.6 per week.",
+    "bullish_locations": [
+      "Dubai (Middle East): BULLISH (HDD=0, CDD=117)"
+    ],
+    "oil_market_context": "Rule of thumb: +5 HDD/week surprise above seasonal norm in US NE + N. Europe can add ~0.1-0.2 mbd distillate demand vs IEA forecast. Dubai CDD peak in Jun-Sep can add 0.3-0.5 mbd crude/fuel oil for power."
+  }
+}

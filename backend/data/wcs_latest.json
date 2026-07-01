@@ -1,0 +1,243 @@
+{
+  "fetched_at": "2026-06-30T11:24:19.618474+00:00",
+  "source": "Alberta Economic Dashboard \u2014 api.economicdata.alberta.ca",
+  "note": "Monthly data, ~1-2 month lag. Official Government of Alberta source.",
+  "latest": {
+    "wcs": {
+      "value": 83.14,
+      "date": "2026-05-01"
+    },
+    "wti": {
+      "value": 102.13,
+      "date": "2026-05-01"
+    },
+    "differential": {
+      "value": 18.99,
+      "date": "2026-05-01"
+    }
+  },
+  "signal": {
+    "signal": "BULLISH",
+    "strength": 2,
+    "interpretation": "WTI-WCS at $19.0/bbl \u2014 Canadian heavy crude discounted, above historical avg"
+  },
+  "history": [
+    {
+      "date": "2023-06",
+      "wti": 70.25,
+      "wcs": 56.42,
+      "differential": 13.83
+    },
+    {
+      "date": "2023-07",
+      "wti": 76.07,
+      "wcs": 64.12,
+      "differential": 11.95
+    },
+    {
+      "date": "2023-08",
+      "wti": 81.39,
+      "wcs": 70.13,
+      "differential": 11.26
+    },
+    {
+      "date": "2023-09",
+      "wti": 89.43,
+      "wcs": 73.85,
+      "differential": 15.58
+    },
+    {
+      "date": "2023-10",
+      "wti": 85.64,
+      "wcs": 67.23,
+      "differential": 18.41
+    },
+    {
+      "date": "2023-11",
+      "wti": 77.69,
+      "wcs": 56.61,
+      "differential": 21.08
+    },
+    {
+      "date": "2023-12",
+      "wti": 71.9,
+      "wcs": 45.48,
+      "differential": 26.42
+    },
+    {
+      "date": "2024-01",
+      "wti": 74.15,
+      "wcs": 53.77,
+      "differential": 20.38
+    },
+    {
+      "date": "2024-02",
+      "wti": 77.25,
+      "wcs": 57.83,
+      "differential": 19.42
+    },
+    {
+      "date": "2024-03",
+      "wti": 81.28,
+      "wcs": 61.28,
+      "differential": 20.0
+    },
+    {
+      "date": "2024-04",
+      "wti": 85.35,
+      "wcs": 68.65,
+      "differential": 16.7
+    },
+    {
+      "date": "2024-05",
+      "wti": 80.02,
+      "wcs": 65.59,
+      "differential": 14.43
+    },
+    {
+      "date": "2024-06",
+      "wti": 79.77,
+      "wcs": 66.83,
+      "differential": 12.94
+    },
+    {
+      "date": "2024-07",
+      "wti": 81.8,
+      "wcs": 67.49,
+      "differential": 14.31
+    },
+    {
+      "date": "2024-08",
+      "wti": 76.68,
+      "wcs": 61.37,
+      "differential": 15.31
+    },
+    {
+      "date": "2024-09",
+      "wti": 70.24,
+      "wcs": 55.9,
+      "differential": 14.34
+    },
+    {
+      "date": "2024-10",
+      "wti": 71.99,
+      "wcs": 57.86,
+      "differential": 14.13
+    },
+    {
+      "date": "2024-11",
+      "wti": 69.95,
+      "wcs": 57.56,
+      "differential": 12.39
+    },
+    {
+      "date": "2024-12",
+      "wti": 70.12,
+      "wcs": 57.76,
+      "differential": 12.36
+    },
+    {
+      "date": "2025-01",
+      "wti": 75.74,
+      "wcs": 62.86,
+      "differential": 12.88
+    },
+    {
+      "date": "2025-02",
+      "wti": 71.53,
+      "wcs": 59.07,
+      "differential": 12.46
+    },
+    {
+      "date": "2025-03",
+      "wti": 68.24,
+      "wcs": 54.38,
+      "differential": 13.86
+    },
+    {
+      "date": "2025-04",
+      "wti": 63.54,
+      "wcs": 50.83,
+      "differential": 12.71
+    },
+    {
+      "date": "2025-05",
+      "wti": 62.17,
+      "wcs": 51.57,
+      "differential": 10.6
+    },
+    {
+      "date": "2025-06",
+      "wti": 68.17,
+      "wcs": 58.22,
+      "differential": 9.95
+    },
+    {
+      "date": "2025-07",
+      "wti": 68.39,
+      "wcs": 58.31,
+      "differential": 10.08
+    },
+    {
+      "date": "2025-08",
+      "wti": 64.86,
+      "wcs": 53.7,
+      "differential": 11.16
+    },
+    {
+      "date": "2025-09",
+      "wti": 63.96,
+      "wcs": 51.63,
+      "differential": 12.33
+    },
+    {
+      "date": "2025-10",
+      "wti": 60.89,
+      "wcs": 48.62,
+      "differential": 12.27
+    },
+    {
+      "date": "2025-11",
+      "wti": 60.06,
+      "wcs": 48.77,
+      "differential": 11.29
+    },
+    {
+      "date": "2025-12",
+      "wti": 57.97,
+      "wcs": 46.45,
+      "differential": 11.52
+    },
+    {
+      "date": "2026-01",
+      "wti": 60.04,
+      "wcs": 47.22,
+      "differential": 12.82
+    },
+    {
+      "date": "2026-02",
+      "wti": 64.51,
+      "wcs": 50.33,
+      "differential": 14.18
+    },
+    {
+      "date": "2026-03",
+      "wti": 91.38,
+      "wcs": 75.85,
+      "differential": 15.53
+    },
+    {
+      "date": "2026-04",
+      "wti": 100.32,
+      "wcs": 85.48,
+      "differential": 14.84
+    },
+    {
+      "date": "2026-05",
+      "wti": 102.13,
+      "wcs": 83.14,
+      "differential": 18.99
+    }
+  ],
+  "history_months": 36
+}

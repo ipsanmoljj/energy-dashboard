@@ -1,0 +1,98 @@
+{
+  "engine": "crack_spread_engine",
+  "computed_at": "2026-06-30T12:45:17Z",
+  "month": 6,
+  "prices": {
+    "brent_bbl": 74.0,
+    "wti_bbl": 70.58,
+    "rbob_bbl": 122.0814,
+    "ho_bbl": 131.6154,
+    "ice_gasoil_bbl": null
+  },
+  "spreads": {
+    "crack_321": {
+      "value_bbl": 54.68,
+      "five_yr_avg": 26.4,
+      "deviation": 28.28,
+      "deviation_pct": 107.12,
+      "signal": "BULLISH",
+      "note": "3-2-1 crack $54.7/bbl: Wide \u2014 product demand outpacing crude. Refiners run harder \u2192 crude demand grows."
+    },
+    "gasoline_crack": {
+      "value_bbl": 51.5,
+      "five_yr_avg": 27.1,
+      "deviation": 24.4,
+      "deviation_pct": 90.04,
+      "signal": "BULLISH"
+    },
+    "gasoil_crack_ice": {
+      "value_bbl": null,
+      "five_yr_avg": 20.8,
+      "deviation": null,
+      "signal": "NEUTRAL",
+      "note": "Insufficient data (BG=F unavailable)"
+    },
+    "ho_crack": {
+      "value_bbl": 57.62,
+      "five_yr_avg": 20.8,
+      "deviation": 36.82,
+      "signal": "BULLISH"
+    },
+    "ho_rbob_spread": {
+      "value_bbl": 9.53,
+      "signal": "NORMAL",
+      "note": "Normal diesel/gasoline premium"
+    },
+    "brent_wti": {
+      "value_bbl": 3.42,
+      "five_yr_avg": 4.1,
+      "deviation": -0.68,
+      "signal": "NORMAL",
+      "alert": null,
+      "note": "Brent-WTI $3.42/bbl: Normal range \u2014 US exports flowing, North Sea intact"
+    }
+  },
+  "component_scores": {
+    "crack_321_score": 5,
+    "gasoline_crack_score": 5,
+    "seasonal_position": 3,
+    "brent_wti_score": 1,
+    "ho_rbob_score": 1,
+    "raw_weighted_sum": 34.0
+  },
+  "nci_crack": {
+    "score": 8.83,
+    "label": "CRACKS_VERY_WIDE",
+    "crude_direction": "BULLISH",
+    "scale": "-10 (very narrow cracks) to +10 (very wide cracks)",
+    "interpretation": "NCI Crack +8.8 (CRACKS_VERY_WIDE): Exceptional refinery margins. Strong crude demand pull."
+  },
+  "forward_curve": {
+    "estimated_shape": "BACKWARDATION",
+    "score": 4,
+    "signals": [
+      "High refinery util (>92%) \u2192 physical demand strong \u2192 backwardation pressure",
+      "Cushing only 26% full \u2192 tight prompt crude \u2192 backwardation",
+      "Normal Brent-WTI spread \u2192 US exports flowing \u2192 balanced"
+    ],
+    "note": "Physical market signals point to prompt tightness. M1-M2 likely in backwardation.",
+    "storage_economic": false,
+    "context": "Full curve shape requires M1-M12 strip data (Day 9 FastAPI will add this). Current estimate based on Cushing util, refinery runs, and Brent-WTI spread."
+  },
+  "seasonal": {
+    "phase": "PEAK_DRIVING",
+    "dominant_product": "gasoline",
+    "note": "Peak US driving + EM A/C power demand. Highest crack spread month historically.",
+    "month": 6,
+    "is_driving_season": true,
+    "is_heating_season": false,
+    "crack_peak_window": false,
+    "typical_5yr_crack": 26.4
+  },
+  "refinery": {
+    "utilisation_pct": 96.7,
+    "gasoline_demand_mbd": 9.212,
+    "distillate_demand_mbd": 3.659,
+    "cushing_util_pct": 26.4
+  }
+}

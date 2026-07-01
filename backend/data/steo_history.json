@@ -1,0 +1,75 @@
+[
+  {
+    "as_of": "2026-06-18T08:26:12.188103+00:00",
+    "report_period_latest": "2027-12",
+    "world_production_mbd": 110.880594,
+    "world_consumption_mbd": 106.9042211,
+    "global_balance_mbd": 3.976,
+    "global_balance_signal": "BUILD (oversupplied) \u2014 bearish",
+    "production_mom_change_mbd": -0.099,
+    "consumption_mom_change_mbd": 1.146,
+    "production_mom_pct": -0.09,
+    "consumption_mom_pct": 1.08,
+    "call_on_opec_mbd": 24.375,
+    "call_on_opec_method": "eia_published",
+    "opec_actual_production_mbd": 29.36240263,
+    "opec_vs_call_mbd": 4.987,
+    "opec_balance_signal": "OPEC overproducing vs call \u2014 bearish",
+    "spare_capacity_mbd": null,
+    "revision_note": "Direction shown is month-over-month change in the latest STEO read. True 'revision' (this month's STEO restating a PRIOR period's number) requires storing each month's full vintage and diffing \u2014 see steo_history.json accumulation; revision tracking improves after 2+ months of history collected.",
+    "series_available": {
+      "PAPR_WORLD": true,
+      "PATC_WORLD": true,
+      "PAPR_OPEC": true,
+      "PAPR_NONOPEC": true,
+      "PASC_OPEC": false,
+      "COPR_OPEC": true
+    },
+    "series_labels": {
+      "PAPR_WORLD": "World production",
+      "PATC_WORLD": "World consumption",
+      "PAPR_OPEC": "OPEC production",
+      "PAPR_NONOPEC": "Non-OPEC production",
+      "PASC_OPEC": "OPEC spare capacity",
+      "COPR_OPEC": "Call on OPEC (EIA-published)"
+    },
+    "_fetch_date": "2026-06-18"
+  },
+  {
+    "as_of": "2026-06-19T07:04:30.438014+00:00",
+    "report_period_latest": null,
+    "is_forecast_period": null,
+    "world_production_mbd": null,
+    "world_consumption_mbd": null,
+    "global_balance_mbd": null,
+    "global_balance_signal": "INSUFFICIENT_DATA",
+    "production_mom_change_mbd": null,
+    "consumption_mom_change_mbd": null,
+    "production_mom_pct": null,
+    "consumption_mom_pct": null,
+    "call_on_opec_mbd": null,
+    "call_on_opec_method": null,
+    "opec_actual_production_mbd": null,
+    "opec_vs_call_mbd": null,
+    "opec_balance_signal": "INSUFFICIENT_DATA",
+    "spare_capacity_mbd": null,
+    "revision_note": "Direction shown is month-over-month change in the latest STEO read. True 'revision' (this month's STEO restating a PRIOR period's number) requires storing each month's full vintage and diffing \u2014 see steo_history.json accumulation; revision tracking improves after 2+ months of history collected.",
+    "series_available": {
+      "PAPR_WORLD": false,
+      "PATC_WORLD": false,
+      "PAPR_OPEC": false,
+      "PAPR_NONOPEC": false,
+      "PASC_OPEC": false,
+      "COPR_OPEC": false
+    },
+    "series_labels": {
+      "PAPR_WORLD": "World production",
+      "PATC_WORLD": "World consumption",
+      "PAPR_OPEC": "OPEC production",
+      "PAPR_NONOPEC": "Non-OPEC production",
+      "PASC_OPEC": "OPEC spare capacity",
+      "COPR_OPEC": "Call on OPEC (EIA-published)"
+    },
+    "_fetch_date": "2026-06-19"
+  }
+]

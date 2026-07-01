@@ -1,0 +1,45 @@
+{
+  "fetcher": "demsup_fetcher",
+  "fetched_at": "2026-06-30T11:24:25Z",
+  "source": "demsup (R) \u2014 Bai-Perron/Kalman/Markov/ARIMA consensus regime classifier",
+  "note": "11-label curve-structure regime, statistically validated against market history. Independent of this dashboard's own slope-threshold signal in curve_fetcher.py \u2014 shown alongside it, not replacing it.",
+  "regimes": {
+    "wti": {
+      "status": "OK",
+      "regime_label": "Deep-Backwardation",
+      "regime_simple": "STRONG_BACKWARDATION",
+      "confidence_score": 0.8963,
+      "level_z_126": 6.7089,
+      "consensus_scope": null,
+      "date": "2026-05-22"
+    },
+    "brent": {
+      "status": "OK",
+      "regime_label": "Deep-Backwardation",
+      "regime_simple": "STRONG_BACKWARDATION",
+      "confidence_score": 0.8603,
+      "level_z_126": 8.9065,
+      "consensus_scope": null,
+      "date": "2026-05-22"
+    },
+    "ho": {
+      "status": "OK",
+      "regime_label": "Stable-Elevated",
+      "regime_simple": "FLAT",
+      "confidence_score": 0.8786,
+      "level_z_126": 1.08,
+      "consensus_scope": "LOCAL",
+      "date": "2026-05-20"
+    },
+    "lgo": {
+      "status": "OK",
+      "regime_label": "Stable-Elevated",
+      "regime_simple": "FLAT",
+      "confidence_score": 0.8461,
+      "level_z_126": 1.1007,
+      "consensus_scope": "LOCAL",
+      "date": "2026-05-20"
+    }
+  },
+  "consensus_scope": "LOCAL"
+}
