@@ -1,0 +1,31 @@
+# backend:
+$env:EIA_API_KEY = "jIklUoLif3sC7L0wgwKTRK4njU9rv5eG4ePRc5QR"
+python backend\fetchers\eia_fetcher.py
+python backend\fetchers\fred_fetcher.py
+python backend\fetchers\futures_fetcher.py
+python backend\fetchers\steo_fetcher.py
+python backend\nci_composite.py
+python backend\fetchers\demsup_fetcher.py
+python backend\fetchers\signal_engine_fetcher.py
+python backend\fetchers\regime_history_fetcher.py
+
+python -m uvicorn backend.api:app --reload --port 8000 
+
+#frontend:
+cd "C:\Users\kanwar.singh\OneDrive - hertshtengroup.com\Documents\energy-dashboard\frontend"   #here the file path where frontend is saved
+$env:PATH = "C:\Users\kanwar.singh\OneDrive - hertshtengroup.com\Documents\node-v24.16.0-win-x64;" + $env:PATH  		#node zip file path
+cmd /c npm run dev
+
+# R plumber:
+# Create a tiny launcher script and run it
+"library(plumber); pr <- plumb('plumber.R'); pr`$run(port=8001)" | Out-File -Encoding ASCII run_plumber.R
+
+& "C:\Users\kanwar.singh\AppData\Local\Programs\R\R-4.6.0\bin\x64\Rscript.exe" run_plumber.R
+
+# Git push:
+ git status
+ git commit -m "<any comment as to what changes made>"
+ git push
+
+#open R terminal:
+ & "C:\Users\kanwar.singh\AppData\Local\Programs\R\R-4.6.0\bin\x64\R.exe"

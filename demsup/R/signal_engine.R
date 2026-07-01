@@ -268,8 +268,12 @@ run_signal_engine <- function(products   = c("CL","LCO","HO","LGO"),
     cfg    <- PRODUCT_CONFIG[[prod]]
     thresh <- SIGNAL_THRESHOLDS[prod]
 
-    labels_path <- file.path(output_dir,
+    labels_path <- file.path(output_dir, prod,
                               paste0("regime_labels_", prod, ".csv"))
+    if (!file.exists(labels_path)) {
+      labels_path <- file.path(output_dir,
+                                paste0("regime_labels_", prod, ".csv"))
+    }
     if (!file.exists(labels_path)) {
       cat("  SKIP: regime labels not found\n\n"); next
     }
@@ -441,6 +445,24 @@ run_signal_engine <- function(products   = c("CL","LCO","HO","LGO"),
       cat("\n")
     }
 
+    # ── Live signal (structured, for plumber /signal endpoint) ─────────────
+    live_signal <- if (nrow(last) > 0) {
+      s     <- as.character(last$signal)
+      sdist <- if (s != "FLAT") round(as.numeric(last$atr14) * cfg$atr_multiplier, 4) else NA
+      hstop <- if (s != "FLAT") round(as.numeric(last$M1M2) - ifelse(s=="BUY",1,-1)*sdist, 4) else NA
+      list(
+        date      = as.character(last$date),
+        signal    = s,
+        regime    = as.character(last$regime_label),
+        m1m2      = round(as.numeric(last$M1M2), 4),
+        z_score   = round(as.numeric(last$level_z_126), 3),
+        atr14     = round(ifelse(is.na(last$atr14), 0, as.numeric(last$atr14)), 4),
+        vol_gate  = ifelse(isTRUE(last$atr_filter_pass), "PASS", "BLOCKED"),
+        stop_dist = sdist,
+        hard_stop = hstop
+      )
+    } else NULL
+
     # ── Save ────────────────────────────────────────────────────────────────
     fwrite(trades_dt,
            file.path(output_dir, paste0("trades_", prod, ".csv")))
@@ -465,7 +487,7 @@ run_signal_engine <- function(products   = c("CL","LCO","HO","LGO"),
       )
     }
 
-    all_results[[prod]] <- list(trades=trades_dt, config=cfg, thresh=thresh)
+    all_results[[prod]] <- list(trades=trades_dt, config=cfg, thresh=thresh, live_signal=live_signal)
   }
 
   # ── Cross-product summary ──────────────────────────────────────────────────

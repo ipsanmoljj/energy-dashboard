@@ -1068,8 +1068,14 @@ function TabCurve({ d, curveHistory, curveSel, setCurveSel, curveRange, setCurve
   }
   return (
     <>
-      <div style={{ fontSize:9, color:"#374151", marginBottom:12, fontStyle:"italic" }}>
-        M1 live (Stooq / Yahoo query2) · M2–M12 synthetic shape · Carry ${carry.toFixed(2)}/bbl/mo
+      <div style={{ background:"#1a1a00", border:"1px solid #3d3400", borderRadius:6, padding:"8px 12px", marginBottom:12 }}>
+        <div style={{ fontSize:10, fontWeight:700, color:"#facc15", marginBottom:3 }}>Data Notice</div>
+        <div style={{ fontSize:10, color:"#a16207", lineHeight:1.5 }}>
+          <strong style={{ color:"#fbbf24" }}>M1 (front-month)</strong> is live market data via Yahoo Finance (~15 min delay).{" "}
+          <strong style={{ color:"#f97316" }}>M2–M12 are synthetic</strong> — estimated from a fixed carry cost (${carry.toFixed(2)}/bbl/mo from SOFR) and a hardcoded backwardation/contango shape, <em>not real forward curve prices</em>.
+          Spreads (M1-M2, M1-M6, flies) and the historical chart are therefore also derived from this synthetic shape.
+          Real forward curves require a paid CME/ICE data feed.
+        </div>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
         {PRODUCTS.map(p => <ProductChart key={p.key} product={p.key} color={p.color} label={p.label} />)}
